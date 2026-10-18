@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A personal vehicle service-book web app. You sign in with Google, log services manually or by scanning a receipt, see what's due, and print a vehicle's history to PDF.
+**Goal:** A vehicle service-book web app that anyone can join with a Google account, where each user sees only their own data. Users sign in with Google, log services manually or by scanning a receipt, see what's due, and print a vehicle's history to PDF.
 
 **Architecture:** One Cloudflare Worker running a Hono app that renders HTML on the server with Hono JSX. D1 holds all records and R2 holds receipt images. Due-date logic is a pure module (`src/lib/due.ts`). Everything that talks to the network (Google, OpenRouter) takes an injectable `fetchFn` so tests never hit the real services.
 
@@ -13,7 +13,8 @@
 ## Global Constraints
 - **Hosting:** Workers Free plan, with a limit of about 10 ms CPU per request. Do no heavy hashing, and don't do image processing on the server.
 - **Dependencies:** runtime deps are `hono` only, plus `arctic` if you choose it. There is no React or bundled SPA. Browser JS is one plain `public/app.js`.
-- **Secrets:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAIL`, `SESSION_SECRET`, `OPENROUTER_API_KEY`. The var is `SCAN_MODEL`, default `google/gemini-2.5-flash`.
+- **Secrets:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENROUTER_API_KEY`. Vars: `SCAN_MODEL` = `google/gemini-2.5-flash`, `SCAN_CAP_PER_USER` = `20`, `SCAN_CAP_GLOBAL` = `300`, `CONTACT_EMAIL` (set by the user).
+- **Ownership:** every `db.ts` function that reads or writes user data takes `userId` and filters by it, through `vehicles.user_id`. Every route that sees an id belonging to another user returns **404** (not 403), so it doesn't reveal that the record exists.
 - **Bindings:** D1 `DB` (database `kereta`) and R2 `RECEIPTS` (bucket `kereta-receipts`).
 - **Dates:** stored as ISO `YYYY-MM-DD` and shown as `DD/MM/YYYY`. "Today" is always computed in `Asia/Kuala_Lumpur`.
 - **Money:** stored as integer **sen** (`*_sen` columns) and shown as `RM 1,234.50`. This is Claude's call, to avoid float drift. The spec's `total_rm` / `cost_rm` become `total_sen` / `cost_sen`.
@@ -25,7 +26,7 @@
 1. **Odometer typo or out of order:** a service or reading whose km is lower than an earlier-dated reading, or higher than a later-dated one, for the same vehicle. Reject it with "Odometer X km conflicts with DD/MM/YYYY reading of Y km". This matters because backdated entry is common. Covered by a test in Task 5.
 2. **Scan fails:** OpenRouter errors, times out, or returns something that isn't JSON. The form still opens with the receipt attached, the fields empty, and a banner saying "Couldn't read receipt — fill in manually". It must never return a 500. Covered by a test in Task 7.
 3. **Month-end date maths:** last done 31/08 plus 6 months is due 28/02 (or 29/02), never 03/03. Covered by a test in Task 4.
-4. **Bad sessions and email case:** forged, expired or tampered cookies redirect to `/login`. `ALLOWED_EMAIL` is compared ignoring case and surrounding spaces. Covered by tests in Task 2.
+4. **One user reaching another's data:** user B opens, edits, deletes, prints, or attaches a service to user A's vehicle, service or receipt by changing an id in the URL or form. Every case returns 404 and changes nothing. Covered by tests in Tasks 3, 5, 7 and 8.
 5. **Upload that isn't a usable image:** a request over 2 MB or with a non-image content type gets a 413 or 415 with a readable message, and nothing is written to R2. Covered by a test in Task 7.
 
 ---
@@ -60,24 +61,26 @@ test/setup.ts  test/helpers.ts  test/*.test.ts
 
 **Interfaces:**
 - Produces:
-  - `type Env = { DB: D1Database; RECEIPTS: R2Bucket; ASSETS: Fetcher; GOOGLE_CLIENT_ID: string; GOOGLE_CLIENT_SECRET: string; ALLOWED_EMAIL: string; SESSION_SECRET: string; OPENROUTER_API_KEY: string; SCAN_MODEL: string }`
+  - `type Env = { DB: D1Database; RECEIPTS: R2Bucket; ASSETS: Fetcher; GOOGLE_CLIENT_ID: string; GOOGLE_CLIENT_SECRET: string; SESSION_SECRET: string; OPENROUTER_API_KEY: string; SCAN_MODEL: string; SCAN_CAP_PER_USER: string; SCAN_CAP_GLOBAL: string; CONTACT_EMAIL: string }`
   - `app: Hono<{ Bindings: Env }>`, exported default from `src/index.tsx`.
   - In `test/helpers.ts`: `testEnv(): Env`, which spreads `env` from `cloudflare:test` and adds fixed fake secrets.
 
 **Notes:**
 - `wrangler.jsonc` needs: name `kereta`, `main: src/index.tsx`, a recent `compatibility_date`, `compatibility_flags: ["nodejs_compat"]`, `assets: { directory: "public", binding: "ASSETS" }`, the `d1_databases` binding `DB` with `migrations_dir: "migrations"`, the `r2_buckets` binding `RECEIPTS`, and `vars.SCAN_MODEL`.
 - The vitest config uses `defineWorkersConfig`, reads migrations with `readD1Migrations`, and passes them as the `TEST_MIGRATIONS` binding. `test/setup.ts` runs `applyD1Migrations(env.DB, env.TEST_MIGRATIONS)`.
-- Schema, all tables with `id INTEGER PRIMARY KEY`:
-  - `vehicles(type TEXT CHECK in ('car','motorbike'), name, plate, make, model, year INTEGER, roadtax_expiry TEXT, insurance_expiry TEXT, insurer TEXT, archived INTEGER DEFAULT 0)`
+- Schema, all tables with `id INTEGER PRIMARY KEY` unless stated:
+  - `users(google_sub TEXT UNIQUE NOT NULL, email TEXT NOT NULL, created_at TEXT NOT NULL)`
+  - `scan_usage(user_id INTEGER NOT NULL REFERENCES users, date TEXT NOT NULL, count INTEGER NOT NULL, PRIMARY KEY(user_id, date))`, with no id column.
+  - `vehicles(user_id INTEGER NOT NULL REFERENCES users, type TEXT CHECK in ('car','motorbike'), name, plate, make, model, year INTEGER, roadtax_expiry TEXT, insurance_expiry TEXT, insurer TEXT, archived INTEGER DEFAULT 0)`
   - `service_items(vehicle_id REFERENCES vehicles ON DELETE CASCADE, name, interval_km INTEGER, interval_months INTEGER, baseline_date TEXT, baseline_km INTEGER, sort INTEGER)`
   - `services(vehicle_id, date TEXT NOT NULL, odometer_km INTEGER NOT NULL, workshop TEXT, total_sen INTEGER, notes TEXT, receipt_key TEXT)`
   - `service_lines(service_id REFERENCES services ON DELETE CASCADE, description, cost_sen INTEGER, service_item_id REFERENCES service_items ON DELETE SET NULL)`
   - `odometer_readings(vehicle_id, date, km INTEGER, source TEXT CHECK in ('service','manual'), service_id INTEGER REFERENCES services ON DELETE CASCADE)`
-  - Indexes on `(vehicle_id, date)` for both `services` and `odometer_readings`.
+  - Indexes on `vehicles(user_id)`, and on `(vehicle_id, date)` for both `services` and `odometer_readings`.
 
 - [ ] **Step 1:** `npm init -y`. Install `hono` as a dependency. Install `wrangler typescript vitest @cloudflare/vitest-pool-workers @cloudflare/workers-types` as dev dependencies.
 - [ ] **Step 2:** Write `test/schema.test.ts`, with two tests:
-  - `it('creates all phase-1 tables')`: query `sqlite_master` and expect exactly `vehicles, service_items, services, service_lines, odometer_readings`, ignoring `d1_migrations`/`_cf_%`.
+  - `it('creates all phase-1 tables')`: query `sqlite_master` and expect exactly `users, scan_usage, vehicles, service_items, services, service_lines, odometer_readings`, ignoring `d1_migrations`/`_cf_%`.
   - `it('GET /healthz returns ok')`: `await app.request('/healthz', {}, testEnv())` returns status 200 with text `ok`.
 - [ ] **Step 3:** Run `npx vitest run test/schema.test.ts`. Expect FAIL.
 - [ ] **Step 4:** Write the config files, the migration, `env.ts`, and `index.tsx` with an unauthenticated `/healthz`.
@@ -86,7 +89,7 @@ test/setup.ts  test/helpers.ts  test/*.test.ts
 
 ---
 
-### Task 2: Sessions and Google sign-in
+### Task 2: Users, sessions and Google sign-in
 
 **Files:**
 - Create: `src/auth.ts`, `src/views/Layout.tsx`, `src/views/Login.tsx`, `test/auth.test.ts`
@@ -94,14 +97,16 @@ test/setup.ts  test/helpers.ts  test/*.test.ts
 
 **Interfaces:**
 - Produces:
-  - `signSession(email: string, secret: string, now?: number): Promise<string>`. The value is `base64url(email|expiresMs).base64url(HMAC-SHA256)`, and it expires after 30 days.
-  - `verifySession(cookie: string | undefined, secret: string, now?: number): Promise<string | null>`, which returns the email or null.
-  - `fetchGoogleEmail(code: string, verifier: string, redirectUri: string, env: Env, fetchFn?: typeof fetch): Promise<{ email: string; verified: boolean }>`. It POSTs to `https://oauth2.googleapis.com/token`, then GETs `https://openidconnect.googleapis.com/v1/userinfo`.
-  - `isAllowed(email: string, allowed: string): boolean`, which trims and compares ignoring case.
+  - `signSession(userId: number, secret: string, now?: number): Promise<string>`. The value is `base64url(userId|expiresMs).base64url(HMAC-SHA256)`, and it expires after 30 days.
+  - `verifySession(cookie: string | undefined, secret: string, now?: number): Promise<number | null>`, which returns the userId or null.
+  - `fetchGoogleEmail(code: string, verifier: string, redirectUri: string, env: Env, fetchFn?: typeof fetch): Promise<{ sub: string; email: string; verified: boolean }>`. It POSTs to `https://oauth2.googleapis.com/token`, then GETs `https://openidconnect.googleapis.com/v1/userinfo`.
+  - `upsertUser(db: D1Database, sub: string, email: string): Promise<number>`. It inserts or updates the email by `google_sub` and returns the user id.
   - `authRoutes(fetchFn?: typeof fetch): Hono<{Bindings: Env}>`, which serves `GET /login`, `GET /auth/google`, `GET /auth/google/callback`, and `POST /logout`.
-  - `requireAuth`: Hono middleware. A missing or invalid session sends `302 /login`. On success it sets `c.var.email`.
+  - `requireAuth`: Hono middleware. A missing or invalid session sends `302 /login`. On success it sets `c.var.userId` (number).
   - `Layout({ title, children })`: the HTML shell, with links to `/app.css` and `/manifest.webmanifest`, the apple-touch-icon, the meta viewport, and `apple-mobile-web-app-capable`.
-  - In `test/helpers.ts`: `authed(path, init?)`, which calls `app.request` with a valid session cookie for `ALLOWED_EMAIL`.
+  - In `test/helpers.ts`:
+    - `makeUser(email?: string): Promise<number>`, which inserts a user with a random `google_sub`.
+    - `authed(path, init?, userId?)`, which calls `app.request` with a valid session cookie. If no `userId` is given, it creates a user.
 
 **Cookie names:**
 - `kereta_session`: HttpOnly, Secure, SameSite=Lax, Path=/, Max-Age 30 days.
@@ -111,13 +116,12 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
 
 - [ ] **Step 1:** Write `test/auth.test.ts`:
   - `signSession`/`verifySession`: a round trip returns the email; a tampered payload returns null; an expired cookie (`now` past 30 days) returns null; a different secret returns null.
-  - `isAllowed(' Me@Gmail.com ', 'me@gmail.com')` is true, and `isAllowed('x@gmail.com','me@gmail.com')` is false.
+  - `upsertUser` called twice with the same `sub` returns the same id, and the second call updates the email.
   - `GET /` with no cookie returns 302 to `/login`. `GET /` with a forged cookie returns 302 to `/login`.
   - `GET /auth/google` returns 302. Its Location starts with `https://accounts.google.com/o/oauth2/v2/auth` and contains `code_challenge_method=S256`, and the response sets `kereta_oauth`.
   - Callback with a `state` that doesn't match the cookie returns 400, with no session cookie set.
-  - Callback with a mocked `fetchFn` returning `other@gmail.com` returns 403 "Not authorised", with no session cookie.
-  - Callback with a mocked allowed email where `email_verified: false` returns 403.
-  - Callback with a mocked allowed, verified email returns 302 to `/` with `kereta_session` set.
+  - Callback with a mocked `fetchFn` where `email_verified: false` returns 403 "Not authorised", with no session cookie and no `users` row.
+  - Callback with a mocked verified, never-seen email returns 302 to `/`, sets `kereta_session`, and creates 1 `users` row. A second sign-in with the same `sub` still leaves 1 row.
   - `POST /logout` clears `kereta_session`.
 - [ ] **Step 2:** Run `npx vitest run test/auth.test.ts`. Expect FAIL.
 - [ ] **Step 3:** Implement `src/auth.ts`, `Layout`, and `Login` (a single "Sign in with Google" button). Wire `requireAuth` onto everything except `/login`, `/auth/*`, `/healthz`, and static assets. Use WebCrypto `crypto.subtle` HMAC and a timing-safe comparison.
@@ -143,9 +147,10 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - `CAR_TEMPLATE`, `MOTORBIKE_TEMPLATE`: arrays of `TemplateItem` with exactly the spec's values (see the table below).
   - In `db.ts`:
     - `interface Vehicle`, `interface ServiceItem`, matching the columns.
-    - `createVehicle(db, v: Omit<Vehicle,'id'|'archived'>): Promise<number>`, which inserts the vehicle and seeds the template items with `sort` = index, in a single `db.batch`.
-    - `getVehicle(db, id)`, `listVehicles(db)` (non-archived, ordered by name), `updateVehicle(db, id, v)`, `archiveVehicle(db, id)`.
-    - `listItems(db, vehicleId)`, `saveItems(db, vehicleId, items: Array<Partial<ServiceItem> & {name:string}>)`. `saveItems` upserts by id, inserts rows without an id, and deletes rows that were removed.
+    - `createVehicle(db, userId, v: Omit<Vehicle,'id'|'archived'|'user_id'>): Promise<number>`, which inserts the vehicle and seeds the template items with `sort` = index, in a single `db.batch`.
+    - `getVehicle(db, userId, id): Promise<Vehicle | null>`, which returns null when the vehicle isn't the user's.
+    - `listVehicles(db, userId)` (non-archived, ordered by name), `updateVehicle(db, userId, id, v)`, `archiveVehicle(db, userId, id)`.
+    - `listItems(db, vehicleId)`, `saveItems(db, vehicleId, items: Array<Partial<ServiceItem> & {name:string}>)`. Callers check ownership with `getVehicle` first. `saveItems` ignores item ids that don't belong to that vehicle. `saveItems` upserts by id, inserts rows without an id, and deletes rows that were removed.
   - Routes:
     - `GET /vehicles/new` and `POST /vehicles`, which redirects to `/vehicles/:id/edit`.
     - `GET /vehicles/:id/edit` and `POST /vehicles/:id`, which saves details and the schedule table, including baseline date and km.
@@ -185,6 +190,7 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - `POST /vehicles/:id` with an edited interval, a new item, and a removed item persists all three changes.
   - Setting a baseline (`baseline_date=2026-01-10`, `baseline_km=50000`) persists it.
   - An unauthenticated `POST /vehicles` returns 302 to `/login`.
+  - User B: `GET /vehicles/<A's id>/edit` returns 404. `POST /vehicles/<A's id>` returns 404, and A's vehicle is unchanged. `listVehicles(db, B)` doesn't include A's vehicle.
 - [ ] **Step 3:** Run `npx vitest run test/lib.test.ts test/vehicles.test.ts`. Expect FAIL.
 - [ ] **Step 4:** Implement the code. The vehicle form is mobile-first, and the schedule table has inline inputs plus "Add item" (JS clones a row; without JS there is one blank row).
 - [ ] **Step 5:** Run `npx vitest run`. Expect PASS.
@@ -243,6 +249,7 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
 - Consumes: `parseRM`, `fmtRM`, `fmtDate`, `listItems`, `getVehicle`.
 - Produces (in `db.ts`):
   - `interface ServiceInput { vehicle_id: number; date: string; odometer_km: number; workshop: string | null; total_sen: number | null; notes: string | null; receipt_key: string | null; lines: Array<{ description: string; cost_sen: number | null; service_item_id: number | null }> }`
+  - Ownership: every service function below takes `userId` as its second argument and scopes by the vehicle's `user_id`. `getService(db, userId, id)` returns null when the service isn't the user's. `createService` returns 404 at the route level if `getVehicle(db, userId, vehicle_id)` is null.
   - `checkOdometer(db, vehicleId, date, km, excludeServiceId?): Promise<string | null>`
     - Returns null when the reading is consistent.
     - Otherwise it returns the message `Odometer {km} km conflicts with {DD/MM/YYYY} reading of {km} km`.
@@ -279,6 +286,7 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - Backdated date `2019-05-01` is accepted.
   - `deleteService` removes the lines and reading and returns the `receipt_key`.
   - `GET /vehicles/:id` lists services newest first and shows `fmtRM` year totals.
+  - User B: `GET`, `/edit`, `POST` and `/delete` on A's service each return 404, and A's data is unchanged. `POST /services` with `vehicle_id` set to A's vehicle returns 404 and inserts nothing. `POST /vehicles/<A's id>/readings` returns 404.
 - [ ] **Step 2:** Run `npx vitest run test/services.test.ts`. Expect FAIL.
 - [ ] **Step 3:** Implement. On delete, the route calls `deleteReceipt` from Task 7 once that exists; for now it ignores the returned key and Task 7 wires it in.
 - [ ] **Step 4:** Run `npx vitest run`. Expect PASS.
@@ -304,6 +312,7 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - A car with oil last done `{2026-04-01, 50000}` and an injected today of `2026-10-18` renders `s-overdue` next to "Engine oil".
   - Road tax `2026-11-01` renders a `s-soon` chip with "14 days".
   - Readings 40 days old render an "Update odometer" link.
+  - User B's dashboard doesn't contain user A's vehicle name.
 
   The route reads today via `c.get('today') ?? todayKL()`. Tests set it with a small test-only middleware in `helpers.ts`.
 - [ ] **Step 2:** Run it. Expect FAIL.
@@ -321,10 +330,14 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
 
 **Interfaces:**
 - Produces:
-  - `putReceipt(bucket: R2Bucket, body: ArrayBuffer, contentType: string): Promise<string>`, which returns key `receipts/<uuid>.jpg`.
+  - `putReceipt(bucket: R2Bucket, userId: number, body: ArrayBuffer, contentType: string): Promise<string>`, which returns key `receipts/<userId>/<uuid>.jpg`.
+  - `takeScan(db, userId: number, today: string, perUser: number, global: number): Promise<boolean>`.
+    - It returns false if `SUM(count)` for `today` across all users is ≥ `global`.
+    - Otherwise it runs `INSERT … ON CONFLICT(user_id,date) DO UPDATE SET count = count + 1 WHERE count < perUser` and returns `meta.changes === 1`.
+    - A scan counts when it's attempted, even if the AI then fails. This is Claude's call, to bound cost.
   - `deleteReceipt(bucket, key: string | null): Promise<void>`
   - `cleanupOrphans(bucket, db, now?: number): Promise<number>`. It lists the `receipts/` prefix, and deletes objects whose `uploaded` time is more than 24 h old and whose key isn't in `services.receipt_key`. It returns the count deleted.
-  - Route `GET /receipts/:name`: authed. It streams the object with its stored content type and `Cache-Control: private, max-age=86400`. Unknown keys give 404.
+  - Route `GET /receipts/:userId/:name`: authed. A `userId` that isn't the session user returns 404. It streams the object with its stored content type and `Cache-Control: private, max-age=86400`. Unknown keys give 404.
   - `type ScanResult = { date: string|null; odometer_km: number|null; workshop: string|null; total_sen: number|null; lines: Array<{description:string; cost_sen:number|null}> }`
   - `parseScanResponse(raw: string): ScanResult | null`
     - It strips markdown fences and parses JSON.
@@ -353,6 +366,9 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - Routes:
     - `GET /scan?vehicle=` shows a vehicle picker, if there's more than one vehicle, plus a file input `accept="image/*" capture="environment"`.
     - `POST /api/scan` takes a multipart `photo` plus `vehicle`.
+      - A vehicle that isn't the user's gives 404.
+      - If `takeScan` returns false, it gives 429 with the page "Daily scan limit reached — you can still log manually" and a link to `/services/new?vehicle=`. Nothing goes to R2 and OpenRouter isn't called. Check size and type before `takeScan`, so rejected uploads don't use up a scan.
+      - `GET /scan` shows "N scans left today".
       - A file over 2 MB gives 413 "Photo too large". A type outside `image/jpeg|png|webp` gives 415 "Unsupported image". Nothing is stored in either case.
       - Otherwise it puts the photo in R2, calls `ctx.waitUntil(cleanupOrphans(...))`, and runs `scanReceipt`.
       - It renders `ServiceForm` prefilled, with `receiptKey`, suggested `service_item_id`s, and `unreadFields` listing every null field.
@@ -370,10 +386,13 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - `POST /api/scan` with a mocked scan returning null gives 200, a body with "Couldn't read receipt", and one R2 object stored.
   - `POST /api/scan` with a 3 MB body gives 413, with zero R2 objects. With `text/plain` it gives 415.
   - `POST /api/scan` with a mocked result prefills the odometer input with `52310` and marks `workshop` unread when it's null.
+  - `takeScan` returns true 20 times, then false on the 21st for the same user and day. It's true again the next day, and true for a different user.
+  - With `global` = 2, a third scan by any user is false.
+  - The 21st `POST /api/scan` gives 429, the body contains "Daily scan limit reached", there's no new R2 object, and the mocked fetch isn't called.
 
   `/api/scan` gets its `fetchFn` from an injectable factory, the same pattern as `authRoutes`.
 - [ ] **Step 2:** Write `test/receipts.test.ts`:
-  - `putReceipt` then `GET /receipts/<name>` authed gives 200 with matching bytes. Unauthed it gives 302 to `/login`.
+  - `putReceipt` then `GET /receipts/<userId>/<name>` as that user gives 200 with matching bytes. Unauthed it gives 302 to `/login`. As user B it gives 404.
   - `POST /services/:id/delete` removes the service and its R2 object.
   - `cleanupOrphans` with `now` = 25 h later deletes an unreferenced object and keeps a referenced one.
 - [ ] **Step 3:** Run `npx vitest run test/scan.test.ts test/receipts.test.ts`. Expect FAIL.
@@ -384,10 +403,10 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
 
 ---
 
-### Task 8: Print view and PWA manifest
+### Task 8: Print view, privacy page, PWA manifest
 
 **Files:**
-- Create: `src/routes/print.tsx`, `src/views/PrintHistory.tsx`, `public/print.css`, `public/manifest.webmanifest`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `test/print.test.ts`
+- Create: `src/routes/print.tsx`, `src/views/PrintHistory.tsx`, `src/views/Privacy.tsx`, `public/print.css`, `public/manifest.webmanifest`, `public/icon-192.png`, `public/icon-512.png`, `public/apple-touch-icon.png`, `test/print.test.ts`
 
 **Interfaces:**
 - Consumes: `getVehicle`, `listServices`, `getService` lines, `yearTotals`, `fmtRM`, `fmtDate`.
@@ -396,11 +415,19 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - Each service lists date, odometer, workshop, line items with costs, and total, followed by the grand total.
   - A "Print / Save as PDF" button calls `window.print()` and is hidden in print media.
   - It does **not** show baselines.
+- `GET /privacy`: public, no auth needed. A plain-English policy covering:
+  - What's stored: the Google email, vehicles, services and receipt photos.
+  - That receipt photos are sent to OpenRouter to be read.
+  - That nothing is sold or shared.
+  - How to ask for deletion: email the contact address in the `CONTACT_EMAIL` var.
+  - Link to it from the login page footer.
 - Manifest: `name` "Kereta", `display: standalone`, `start_url: /`, the icons, and `theme_color`. Icons are simple generated PNGs (the design is the builder's call).
 
 - [ ] **Step 1:** Write `test/print.test.ts`:
   - The page contains each service's workshop and line descriptions, plus the grand total in `fmtRM`.
   - A vehicle with a baseline set (`baseline_date 2025-11-01`) renders no `01/11/2025` text.
+  - User B's `GET /vehicles/<A's id>/print` returns 404.
+  - `GET /privacy` without a cookie returns 200 and contains "OpenRouter".
   - `GET /manifest.webmanifest` is served (via ASSETS) with JSON whose `display` is `standalone`.
 - [ ] **Step 2:** Run it. Expect FAIL.
 - [ ] **Step 3:** Implement.
@@ -417,8 +444,9 @@ The redirect URI comes from the request origin + `/auth/google/callback`. Scope 
   - `npx wrangler d1 create kereta`, then put the `database_id` into `wrangler.jsonc`.
   - `npx wrangler r2 bucket create kereta-receipts`. R2 requires a card on file in the Cloudflare account.
   - `npx wrangler d1 migrations apply kereta --remote`.
-- [ ] **Step 4:** Run `npx wrangler secret put` for each of the 5 secrets, then `npx wrangler deploy`. Then:
+- [ ] **Step 4:** Run `npx wrangler secret put` for each of the 4 secrets, then `npx wrangler deploy`. Then:
   - `curl https://kereta.<subdomain>.workers.dev/healthz` should return `ok`.
   - Unauthenticated `/` should return 302 to `/login`.
-- [ ] **Step 5 (user):** on the iPhone, sign in, use Share → Add to Home Screen, and scan one receipt end to end.
-- [ ] **Step 6:** Commit the `wrangler.jsonc` database id with `git commit -m "Configure production D1 id"`.
+- [ ] **Step 5 (user):** in Google Cloud, set the consent screen's homepage to `https://kereta.<subdomain>.workers.dev/` and its privacy URL to `/privacy`, then **Publish app** so anyone can sign in. With only the `openid email` scopes, no security review is needed.
+- [ ] **Step 6 (user):** on the iPhone, sign in, use Share → Add to Home Screen, and scan one receipt end to end.
+- [ ] **Step 7:** Commit the `wrangler.jsonc` database id with `git commit -m "Configure production D1 id"`.
