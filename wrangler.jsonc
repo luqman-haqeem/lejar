@@ -19,11 +19,6 @@
 		{
 			"binding": "RECEIPTS",
 			"bucket_name": "kereta-receipts"
-		},
-		{
-			"bucket_name": "kereta-receipts",
-			"binding": "kereta_receipts",
-			"remote": true
 		}
 	],
 	"d1_databases": [
@@ -32,12 +27,6 @@
 			"database_name": "kereta",
 			"database_id": "a69ab5a1-8eef-4254-84b5-648c2d283713",
 			"migrations_dir": "migrations"
-		},
-		{
-			"binding": "kereta",
-			"database_name": "kereta",
-			"database_id": "a69ab5a1-8eef-4254-84b5-648c2d283713",
-			"remote": true
 		}
 	]
 }
