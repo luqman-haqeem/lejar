@@ -2,7 +2,8 @@
 
 type Rule = { keywords: string[]; item: string };
 
-// Order matters: more specific work comes first, so "oil filter" wins over "engine oil".
+// Order matters: more specific work comes first, so "oil filter" wins over "engine oil". Bare "plug"
+// and "belt" are left out: drain plugs and fan/timing belts are common on receipts and aren't these.
 // `item` matches a schedule item whose name starts with it (e.g. "Spark plug" → "Spark plugs").
 const RULES: Rule[] = [
   { keywords: ["oil filter", "penapis minyak"], item: "Oil filter" },
@@ -10,16 +11,17 @@ const RULES: Rule[] = [
   { keywords: ["cabin", "aircond filter", "penapis aircond"], item: "Cabin filter" },
   { keywords: ["atf", "cvt", "gear oil", "minyak gear"], item: "ATF/CVT fluid" },
   { keywords: ["brake fluid", "minyak brek"], item: "Brake fluid" },
-  { keywords: ["spark plug", "plug"], item: "Spark plug" },
+  { keywords: ["spark plug", "palam pencucuh"], item: "Spark plug" },
   { keywords: ["coolant", "radiator"], item: "Coolant" },
-  { keywords: ["chain", "rantai", "belt"], item: "Drive chain/belt" },
+  { keywords: ["chain", "rantai", "drive belt", "v-belt", "cvt belt", "tali sawat"], item: "Drive chain/belt" },
   { keywords: ["minyak hitam", "engine oil", "oil change", "fully synthetic", "semi synthetic"], item: "Engine oil" },
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 const COMPILED = RULES.map((r) => ({
   item: r.item.toLowerCase(),
-  pattern: new RegExp(`\\b(?:${r.keywords.map(escape).join("|")})\\b`, "i"),
+  // Whole words, allowing a plural "s": "spark plugs", "oil filters".
+  pattern: new RegExp(`\\b(?:${r.keywords.map(escape).join("|")})s?\\b`, "i"),
 }));
 
 /** The id of the vehicle's schedule item this line is most likely about, or null. */

@@ -97,7 +97,7 @@ export function ServiceForm({
   notice?: string;
 }) {
   const v = values.service;
-  const blank = new Set(unread);
+  const unreadFields = new Set(unread);
   const isNew = mode.kind === "new";
   return (
     <Layout title={isNew ? "Log a service" : "Edit service"} signedIn>
@@ -127,7 +127,7 @@ export function ServiceForm({
         <fieldset>
           <legend>Visit</legend>
           <div class="pair">
-            <Field label="Date" name="date" type="date" value={v.date} errors={errors} required highlight={blank.has("date")} />
+            <Field label="Date" name="date" type="date" value={v.date} errors={errors} required highlight={unreadFields.has("date")} />
             <Field
               label="Odometer (km)"
               name="odometer_km"
@@ -135,10 +135,10 @@ export function ServiceForm({
               errors={errors}
               inputmode="numeric"
               required
-              highlight={blank.has("odometer_km")}
+              highlight={unreadFields.has("odometer_km")}
             />
           </div>
-          <Field label="Workshop" name="workshop" value={v.workshop} errors={errors} highlight={blank.has("workshop")} />
+          <Field label="Workshop" name="workshop" value={v.workshop} errors={errors} highlight={unreadFields.has("workshop")} />
           <Field
             label="Total (RM)"
             name="total"
@@ -146,7 +146,7 @@ export function ServiceForm({
             errors={errors}
             inputmode="decimal"
             placeholder="Blank = sum of the lines"
-            highlight={blank.has("total")}
+            highlight={unreadFields.has("total")}
           />
           <label class="field">
             <span>Notes</span>
@@ -163,7 +163,7 @@ export function ServiceForm({
             rows={values.lines}
             blank={blankLine}
             addLabel="Add line"
-            render={(line, n) => <LineRow line={line} n={n} items={items} errors={errors} unread={blank} />}
+            render={(line, n) => <LineRow line={line} n={n} items={items} errors={errors} unread={unreadFields} />}
           />
         </fieldset>
         <div class="actions">

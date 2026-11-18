@@ -16,15 +16,21 @@ export type ScanResult = {
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const text = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
 
-/** RM as a number (245.5) or a string ("RM 245.50") → sen; anything else (or negative) → null. */
+/** No workshop bill is this big; a larger number is a misread. */
+const MAX_SEN = 10_000_000 * 100;
+const MAX_KM = 10_000_000;
+
+/** RM as a number (245.5) or a string ("RM 245.50") → sen; anything else, negative or implausible → null. */
 function sen(v: unknown): number | null {
-  if (typeof v === "number") return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) : null;
-  return typeof v === "string" ? parseRM(v) : null;
+  const parsed =
+    typeof v === "number" ? (Number.isFinite(v) && v >= 0 ? Math.round(v * 100) : null) : typeof v === "string" ? parseRM(v) : null;
+  return parsed !== null && parsed <= MAX_SEN ? parsed : null;
 }
 
+/** Whole km as a number or a string ("52,310"); anything else → null. */
 function km(v: unknown): number | null {
-  if (typeof v === "number") return Number.isInteger(v) && v >= 0 ? v : null;
-  return typeof v === "string" ? (parseCount(v.trim(), 0, 10_000_000) ?? null) : null;
+  const s = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : "";
+  return parseCount(s, 0, MAX_KM) ?? null;
 }
 
 /**
@@ -50,28 +56,32 @@ export function parseScanResponse(raw: string, today: string): ScanResult | null
     workshop: text(data.workshop),
     total_sen: sen(data.total),
     lines: lines.flatMap((l) => {
-      const description = isRecord(l) ? text(l.description) : null;
-      return description && isRecord(l) ? [{ description, cost_sen: sen(l.cost) }] : [];
+      if (!isRecord(l)) return [];
+      const description = text(l.description);
+      return description ? [{ description, cost_sen: sen(l.cost) }] : [];
     }),
   };
 }
 
-
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 export const SCAN_TIMEOUT_MS = 25_000;
 
-const nullable = (type: string) => ({ type: [type, "null"] });
+const str = (description: string) => ({ type: "string", description });
 
-/** What we ask the model to return. Money in RM as numbers; parseScanResponse converts. */
+/**
+ * What we ask the model to return. Every value is a plain string ("" when unreadable) because not
+ * every provider's strict mode accepts nullable unions; parseScanResponse reads RM, km and dates
+ * out of the strings.
+ */
 const RECEIPT_SCHEMA = {
   type: "object",
   additionalProperties: false,
   required: ["date", "odometer_km", "workshop", "total", "lines"],
   properties: {
-    date: { ...nullable("string"), description: "Date on the receipt as YYYY-MM-DD, or null if unreadable" },
-    odometer_km: { ...nullable("integer"), description: "Odometer / mileage reading in km, or null" },
-    workshop: { ...nullable("string"), description: "Workshop or shop name, or null" },
-    total: { ...nullable("number"), description: "Grand total in RM, or null" },
+    date: str("Date on the receipt as YYYY-MM-DD, or \"\" if unreadable"),
+    odometer_km: str("Odometer / mileage reading in km as digits, or \"\""),
+    workshop: str("Workshop or shop name, or \"\""),
+    total: str("Grand total in RM as a number like 245.50, or \"\""),
     lines: {
       type: "array",
       items: {
@@ -79,8 +89,8 @@ const RECEIPT_SCHEMA = {
         additionalProperties: false,
         required: ["description", "cost"],
         properties: {
-          description: { type: "string", description: "The part or work as written on the receipt" },
-          cost: { ...nullable("number"), description: "Line amount in RM, or null" },
+          description: str("The part or work as written on the receipt"),
+          cost: str("Line amount in RM as a number like 180.00, or \"\""),
         },
       },
     },
@@ -90,14 +100,15 @@ const RECEIPT_SCHEMA = {
 const PROMPT = `This is a photo of a vehicle workshop receipt or invoice from Malaysia, possibly in English or Malay.
 Read it and return the receipt's date, the odometer (mileage) reading in km if written, the workshop name,
 the grand total in RM, and each line item with its amount in RM. Dates on Malaysian receipts are usually
-day/month/year; return them as YYYY-MM-DD. Use null for anything you can't read with confidence: don't guess.`;
+day/month/year; return them as YYYY-MM-DD. Use "" for anything you can't read with confidence: don't guess.`;
 
 export type ScanConfig = { apiKey: string; model: string };
 export type ReceiptImage = { bytes: Uint8Array | ArrayBuffer; contentType: string };
 
 /**
  * Asks the model to read the receipt. Returns null (never throws) on any failure: network error,
- * the ${SCAN_TIMEOUT_MS / 1000} s timeout, a non-200 reply, or a reply that isn't usable JSON.
+ * the 25 s timeout (SCAN_TIMEOUT_MS), a non-200 reply, an error body, or a reply that isn't usable
+ * JSON. Failures are logged so `wrangler tail` shows why a scan came back empty.
  */
 export async function scanReceipt(
   image: ReceiptImage,
@@ -122,15 +133,23 @@ export async function scanReceipt(
           },
         ],
         response_format: { type: "json_schema", json_schema: { name: "receipt", strict: true, schema: RECEIPT_SCHEMA } },
+        // Only route to a provider that honours response_format.
+        provider: { require_parameters: true },
         temperature: 0,
       }),
       signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
-    const reply = (await res.json()) as { choices?: { message?: { content?: unknown } }[] };
+    if (!res.ok) {
+      console.warn("receipt scan failed", res.status, (await res.text()).slice(0, 500));
+      return null;
+    }
+    const reply = (await res.json()) as { choices?: { message?: { content?: unknown } }[]; error?: unknown };
     const content = reply.choices?.[0]?.message?.content;
-    return typeof content === "string" ? parseScanResponse(content, today) : null;
-  } catch {
+    const result = typeof content === "string" ? parseScanResponse(content, today) : null;
+    if (!result) console.warn("receipt scan unusable", JSON.stringify(reply.error ?? content ?? reply).slice(0, 500));
+    return result;
+  } catch (e) {
+    console.warn("receipt scan error", e instanceof Error ? e.name : e);
     return null;
   }
 }

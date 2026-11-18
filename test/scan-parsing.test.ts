@@ -29,6 +29,20 @@ describe("suggesting a schedule item for a receipt line", () => {
     expect(suggestItem("Oil filter + engine oil change", car)).toBe(idOf(car, "Oil filter"));
   });
 
+  it("matches plurals", () => {
+    expect(suggestItem("SPARK PLUGS (4)", car)).toBe(idOf(car, "Spark plugs"));
+    expect(suggestItem("Oil filters", car)).toBe(idOf(car, "Oil filter"));
+    expect(suggestItem("Palam pencucuh", car)).toBe(idOf(car, "Spark plugs"));
+  });
+
+  it("doesn't mistake other plugs and belts for spark plugs and drive belts", () => {
+    expect(suggestItem("Drain plug washer", car)).toBeNull();
+    expect(suggestItem("Sump plug", car)).toBeNull();
+    expect(suggestItem("Fan belt", bike)).toBeNull();
+    expect(suggestItem("Drive belt", bike)).toBe(idOf(bike, "Drive chain/belt"));
+    expect(suggestItem("V-belt", bike)).toBe(idOf(bike, "Drive chain/belt"));
+  });
+
   it("matches whole words, not pieces of them", () => {
     expect(suggestItem("Platform fee", car)).toBeNull(); // contains "atf"
   });
@@ -86,6 +100,23 @@ describe("reading the model's reply", () => {
       total_sen: null,
       lines: [{ description: "Oil", cost_sen: null }],
     });
+  });
+
+  it("treats empty strings as unread, as the model is asked to send them", () => {
+    const blank = { date: "", odometer_km: "", workshop: "", total: "", lines: [{ description: "Oil", cost: "" }] };
+    expect(parseScanResponse(JSON.stringify(blank), TODAY)).toEqual({
+      date: null,
+      odometer_km: null,
+      workshop: null,
+      total_sen: null,
+      lines: [{ description: "Oil", cost_sen: null }],
+    });
+  });
+
+  it("drops implausible numbers however they're sent", () => {
+    const huge = { ...reply, odometer_km: 99_000_000, total: 1e12 };
+    expect(parseScanResponse(JSON.stringify(huge), TODAY)).toMatchObject({ odometer_km: null, total_sen: null });
+    expect(parseScanResponse(JSON.stringify({ ...reply, odometer_km: 52310.4 }), TODAY)?.odometer_km).toBeNull();
   });
 
   it("gives up on a reply that isn't a JSON object", () => {

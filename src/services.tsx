@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
+import { idOf, notFound } from "./http";
 import {
   createService,
   deleteService,
@@ -25,13 +26,10 @@ import {
   uploadTooLarge,
 } from "./receipts";
 import { blankServiceForm, parseServiceForm, readServiceForm, serviceFormValuesOf } from "./service-form";
-import { NotFound } from "./views/NotFound";
 import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { ServiceForm, type ServiceFormMode } from "./views/ServiceForm";
 import { ServiceView } from "./views/ServiceView";
 
-const notFound = (c: Context<AppEnv>) => c.html(<NotFound />, 404);
-const idOf = (s: unknown) => (typeof s === "string" && /^\d+$/.test(s) ? Number(s) : null);
 
 /** The user's service from the :id param, with its vehicle; null if it isn't theirs. */
 async function ownedService(c: Context<AppEnv>) {

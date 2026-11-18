@@ -21,3 +21,5 @@
 - Scan posts to `POST /scan` (the plan's `/api/scan`); it renders the service form, which saves through the normal `POST /services`.
 - The data URL uses the uploaded photo's real type, so a PNG/WebP fallback upload is sent correctly.
 - The daily scan cap is ticket 07: it goes in `POST /scan` after the photo checks and before `putReceipt`.
+- The schema sends every value as a plain string ("" when unreadable) rather than `["string","null"]` unions, which OpenRouter's docs don't confirm for Gemini's strict mode; `provider.require_parameters` keeps routing to providers that honour `response_format`. Scan failures are logged (`npx wrangler tail`) with the status or reason, so the manual check can tell a schema rejection from an unreadable photo.
+- Bare "plug" and "belt" aren't keywords (drain plugs, fan/timing belts); plurals match.

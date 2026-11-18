@@ -29,9 +29,11 @@ describe("asking the model to read a receipt", () => {
     const body = (await req.json()) as any;
     expect(body.model).toBe("google/gemini-2.5-flash");
     expect(body.response_format.type).toBe("json_schema");
-    expect(Object.keys(body.response_format.json_schema.schema.properties).sort()).toEqual(
-      ["date", "lines", "odometer_km", "total", "workshop"],
-    );
+    const schema = body.response_format.json_schema.schema;
+    expect(Object.keys(schema.properties).sort()).toEqual(["date", "lines", "odometer_km", "total", "workshop"]);
+    // Plain types only: no ["string", "null"] unions, which not every provider's strict mode accepts.
+    expect(JSON.stringify(schema)).not.toMatch(/"type":\[/);
+    expect(body.provider).toEqual({ require_parameters: true });
     const parts = body.messages[0].content;
     const imagePart = parts.find((p: any) => p.type === "image_url");
     expect(imagePart.image_url.url).toBe("data:image/png;base64,/9j/2Q==");

@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
+import { notFound } from "./http";
 import {
   addReading,
   createVehicle,
@@ -19,12 +20,10 @@ import { type FormErrors, parseCount, readFields } from "./form";
 import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
 import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
-import { NotFound } from "./views/NotFound";
 import { ArchivedVehicles } from "./views/ArchivedVehicles";
 import { EditVehicle, NewVehicle } from "./views/VehicleForm";
 import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 
-const notFound = (c: Context<AppEnv>) => c.html(<NotFound />, 404);
 
 async function history(c: Context<AppEnv>, vehicle: Vehicle, reading: ReadingValues, errors: FormErrors = {}) {
   const userId = c.get("userId");

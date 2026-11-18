@@ -1,18 +1,15 @@
-import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
+import { idOf, notFound } from "./http";
 import { inBackground } from "./background";
 import { getVehicle, listItems, listVehicles } from "./db";
 import { scanReceipt } from "./openrouter";
 import { cleanupOrphans, photoProblem, putReceipt, uploadTooLarge } from "./receipts";
 import { blankServiceForm, scanFormValues } from "./service-form";
-import { NotFound } from "./views/NotFound";
 import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { ScanPage } from "./views/ScanPage";
 import { ServiceForm } from "./views/ServiceForm";
 
-const notFound = (c: Context<AppEnv>) => c.html(<NotFound />, 404);
-const idOf = (s: unknown) => (typeof s === "string" && /^\d+$/.test(s) ? Number(s) : null);
 
 export const SCAN_FAILED = "Couldn't read receipt — fill in manually";
 export const SCAN_READ = "Check what was read from the receipt, fill in anything highlighted, then save.";
@@ -39,14 +36,20 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
     const vehicle = vehicleId === null ? null : await getVehicle(c.env.DB, userId, vehicleId);
     if (!vehicle) return notFound(c);
 
-    const page = async (error: string, status: 400 | 413 | 415) =>
+    const page = async (error: string, status: 400 | 413 | 415 | 503) =>
       c.html(<ScanPage vehicles={await listVehicles(c.env.DB, userId)} selected={vehicle.id} error={error} />, status);
     const file = body.photo instanceof File && body.photo.size > 0 ? body.photo : null;
     if (!file) return page("Choose or take a photo of the receipt.", 400);
     const problem = photoProblem(file);
     if (problem) return page(problem.message, problem.status);
 
-    const key = await putReceipt(c.env.RECEIPTS, userId, file);
+    let key: string;
+    try {
+      key = await putReceipt(c.env.RECEIPTS, userId, file);
+    } catch (e) {
+      console.warn("receipt upload failed", e instanceof Error ? e.message : e);
+      return page("Couldn't store the photo just now. Please try again.", 503);
+    }
     await inBackground(c, cleanupOrphans(c.env.RECEIPTS, c.env.DB));
     const items = await listItems(c.env.DB, userId, vehicle.id);
     const today = c.get("today");
