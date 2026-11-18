@@ -4,9 +4,9 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] A print stylesheet hides the navigation and the Print button. Nothing is rendered on the server as a PDF.
-- [ ] Baselines never appear on this page.
-- [ ] Another user opening this page gets 404.
-- [ ] Tests and the typecheck pass.
+- [x] A print stylesheet hides the navigation and the Print button. Nothing is rendered on the server as a PDF.
+- [x] Baselines never appear on this page.
+- [x] Another user opening this page gets 404.
+- [x] Tests and the typecheck pass.

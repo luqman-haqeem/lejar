@@ -1,6 +1,17 @@
 import type { Child } from "hono/jsx";
 
-export function Layout({ title, signedIn = false, children }: { title: string; signedIn?: boolean; children: Child }) {
+export function Layout({
+  title,
+  signedIn = false,
+  stylesheet,
+  children,
+}: {
+  title: string;
+  signedIn?: boolean;
+  /** An extra stylesheet for this page, after app.css. */
+  stylesheet?: string;
+  children: Child;
+}) {
   return (
     <html lang="en">
       <head>
@@ -8,6 +19,7 @@ export function Layout({ title, signedIn = false, children }: { title: string; s
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <title>{title === "Kereta" ? title : `${title} · Kereta`}</title>
         <link rel="stylesheet" href="/app.css" />
+        {stylesheet && <link rel="stylesheet" href={stylesheet} />}
       </head>
       <body>
         {signedIn && (

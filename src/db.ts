@@ -533,3 +533,25 @@ export async function giveBackScan(db: D1Database, userId: number, today: string
     .bind(userId, today)
     .run();
 }
+
+/** The vehicle's services with their lines, oldest first (as a service book reads), in one round trip. */
+export async function listServicesWithLines(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+): Promise<ServiceWithLines[]> {
+  const [services, lines] = await db.batch<unknown>([
+    db
+      .prepare(`SELECT * FROM services WHERE ${OWNED_VEHICLE} ORDER BY date, odometer_km, id`)
+      .bind(vehicleId, userId),
+    db
+      .prepare(
+        `SELECT l.* FROM service_lines l JOIN services s ON s.id = l.service_id
+         WHERE s.${OWNED_VEHICLE} ORDER BY l.service_id, l.sort, l.id`,
+      )
+      .bind(vehicleId, userId),
+  ]);
+  const byService = new Map<number, ServiceLine[]>();
+  for (const l of lines.results as ServiceLine[]) byService.set(l.service_id, [...(byService.get(l.service_id) ?? []), l]);
+  return (services.results as Service[]).map((s) => ({ ...s, lines: byService.get(s.id) ?? [] }));
+}

@@ -102,3 +102,8 @@ for (const form of document.querySelectorAll("form[data-busy]")) {
     }
   });
 }
+
+// "Print / Save as PDF": the browser's own print dialog (Save as PDF on iPhone via Share → Print).
+for (const button of document.querySelectorAll("button[data-print]")) {
+  button.addEventListener("click", () => window.print());
+}
