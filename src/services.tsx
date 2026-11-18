@@ -7,16 +7,26 @@ import {
   getService,
   getVehicle,
   listItems,
-  receiptKeysInUse,
+  receiptKeyInUse,
   type ServiceInput,
   updateService,
   type Vehicle,
 } from "./db";
 import type { Body } from "./form";
 import { checkOdometer } from "./odometer";
-import { cleanupOrphans, deleteReceipt, isOwnKey, photoProblem, putReceipt, receiptExists } from "./receipts";
+import { inBackground } from "./background";
+import {
+  cleanupOrphans,
+  deleteReceipt,
+  isOwnKey,
+  photoProblem,
+  putReceipt,
+  receiptExists,
+  uploadTooLarge,
+} from "./receipts";
 import { blankServiceForm, parseServiceForm, readServiceForm, serviceFormValuesOf } from "./service-form";
 import { NotFound } from "./views/NotFound";
+import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { ServiceForm, type ServiceFormMode } from "./views/ServiceForm";
 import { ServiceView } from "./views/ServiceView";
 
@@ -31,19 +41,10 @@ async function ownedService(c: Context<AppEnv>) {
   return service && vehicle ? { service, vehicle } : null;
 }
 
-/** Runs work after the response when the runtime allows it (Workers), otherwise inline (tests). */
-async function inBackground(c: Context<AppEnv>, work: Promise<unknown>): Promise<void> {
-  try {
-    c.executionCtx.waitUntil(work.catch(() => {}));
-  } catch {
-    await work.catch(() => {});
-  }
-}
-
 type PhotoOutcome =
-  | { ok: true; key: string | null }
-  | { ok: false; notFound: true }
-  | { ok: false; error: { message: string; status: 400 | 413 | 415 }; key: string | null };
+  | { kind: "ok"; key: string | null }
+  | { kind: "not-found" }
+  | { kind: "problem"; problem: { message: string; status: 400 | 413 | 415 }; key: string | null };
 
 /**
  * Works out which receipt photo the submitted form ends up with. The hidden `receipt_key` field is
@@ -55,33 +56,33 @@ async function resolvePhoto(c: Context<AppEnv>, body: Body, currentKey: string |
   const userId = c.get("userId");
   const posted = typeof body.receipt_key === "string" ? body.receipt_key.trim() : "";
   let key: string | null = posted === "" ? null : posted;
+  const isCurrent = key !== null && key === currentKey;
 
-  if (key !== null && key !== currentKey) {
-    // A key that isn't this form's photo must be the user's own unsaved upload, not anyone else's
-    // photo and not one another service already uses.
-    if (!isOwnKey(key, userId) || (await receiptKeysInUse(c.env.DB, userId)).has(key)) {
-      return { ok: false, notFound: true };
-    }
+  // A key that isn't this service's photo must be the user's own unsaved upload: not anyone else's
+  // photo and not one another service already uses.
+  if (key !== null && !isCurrent && (!isOwnKey(key, userId) || (await receiptKeyInUse(c.env.DB, key)))) {
+    return { kind: "not-found" };
   }
   if (body.remove_photo === "1") key = null;
 
   const file = body.photo instanceof File && body.photo.size > 0 ? body.photo : null;
   if (file) {
     const problem = photoProblem(file);
-    if (problem) return { ok: false, error: problem, key };
+    if (problem) return { kind: "problem", problem, key };
     key = await putReceipt(c.env.RECEIPTS, userId, file);
-    await inBackground(c, cleanupOrphans(c.env.RECEIPTS, c.env.DB, userId));
-  } else if (key !== null && !(await receiptExists(c.env.RECEIPTS, key))) {
-    return { ok: false, error: { message: "The attached photo has expired. Please attach it again.", status: 400 }, key: null };
+    await inBackground(c, cleanupOrphans(c.env.RECEIPTS, c.env.DB));
+  } else if (key !== null && !isCurrent && !(await receiptExists(c.env.RECEIPTS, key))) {
+    const problem = { message: "The attached photo has expired. Please attach it again.", status: 400 } as const;
+    return { kind: "problem", problem, key: null };
   }
-  return { ok: true, key };
+  return { kind: "ok", key };
 }
 
 /**
  * Validates a posted service form, stores any new photo, and checks the odometer against the
  * vehicle's other readings. A line tagged with another vehicle's schedule item, or a photo key that
  * isn't the user's, is a 404. Otherwise it re-renders the form keeping what was typed (and the photo)
- * with 400 invalid, 413/415 bad photo, or 422 odometer conflict, or calls `save`.
+ * with 413/415 for a bad photo, 400 for other errors, or 422 for an odometer conflict, or calls `save`.
  */
 async function submitService(
   c: Context<AppEnv>,
@@ -99,23 +100,27 @@ async function submitService(
   if (values.lines.some((l) => l.item !== "" && !itemIds.has(l.item))) return notFound(c);
 
   const photo = await resolvePhoto(c, body, currentKey);
-  if ("notFound" in photo) return notFound(c);
-  const receiptKey = photo.key;
+  if (photo.kind === "not-found") return notFound(c);
   const render = (errors: Record<string, string>, status: 400 | 413 | 415 | 422) =>
     c.html(
-      <ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} receiptKey={receiptKey} />,
+      <ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} receiptKey={photo.key} />,
       status,
     );
-  if (!photo.ok) return render({ photo: photo.error.message }, photo.error.status);
 
   const parsed = parseServiceForm(values, items, c.get("today"));
+  if (photo.kind === "problem") {
+    return render({ photo: photo.problem.message, ...(parsed.ok ? {} : parsed.errors) }, photo.problem.status);
+  }
   if (!parsed.ok) return render(parsed.errors, 400);
   const { date, odometer_km } = parsed.value;
   const editing = mode.kind === "edit" ? mode.serviceId : null;
   const conflict = await checkOdometer(c.env.DB, c.get("userId"), vehicle.id, date, odometer_km, editing);
   if (conflict) return render({ odometer_km: conflict }, 422);
-  return save({ ...parsed.value, receipt_key: receiptKey });
+  return save({ ...parsed.value, receipt_key: photo.key });
 }
+
+/** A form post too big to hold an acceptable photo is refused before it's read. */
+const tooLarge = (c: Context<AppEnv>) => c.html(<PhotoTooLarge />, 413);
 
 export function serviceRoutes() {
   const routes = new Hono<AppEnv>();
@@ -136,6 +141,7 @@ export function serviceRoutes() {
   });
 
   routes.post("/services", async (c) => {
+    if (uploadTooLarge(c.req.raw)) return tooLarge(c);
     const userId = c.get("userId");
     const body = await c.req.parseBody();
     const vehicleId = idOf(body.vehicle_id);
@@ -172,6 +178,7 @@ export function serviceRoutes() {
   });
 
   routes.post("/services/:id{[0-9]+}", async (c) => {
+    if (uploadTooLarge(c.req.raw)) return tooLarge(c);
     const owned = await ownedService(c);
     if (!owned) return notFound(c);
     const { id, receipt_key: oldKey } = owned.service;

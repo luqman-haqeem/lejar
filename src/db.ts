@@ -459,14 +459,24 @@ export async function dashboardData(
   };
 }
 
-/** Receipt keys referenced by any of the user's services (archived vehicles included). */
-export async function receiptKeysInUse(db: D1Database, userId: number): Promise<Set<string>> {
-  const { results } = await db
-    .prepare(
-      `SELECT s.receipt_key FROM services s JOIN vehicles v ON v.id = s.vehicle_id
-       WHERE v.user_id = ? AND s.receipt_key IS NOT NULL`,
-    )
-    .bind(userId)
-    .all<{ receipt_key: string }>();
-  return new Set(results.map((r) => r.receipt_key));
+/** True if any service already uses this receipt key. */
+export async function receiptKeyInUse(db: D1Database, key: string): Promise<boolean> {
+  return (await db.prepare("SELECT 1 FROM services WHERE receipt_key = ? LIMIT 1").bind(key).first()) !== null;
+}
+
+/**
+ * Which of `keys` a service references. Storage maintenance across all users, so unlike the rest of
+ * this module it isn't scoped to one user; it returns only keys the caller already holds.
+ */
+export async function referencedReceiptKeys(db: D1Database, keys: string[]): Promise<Set<string>> {
+  const found = new Set<string>();
+  for (let i = 0; i < keys.length; i += 50) {
+    const chunk = keys.slice(i, i + 50);
+    const { results } = await db
+      .prepare(`SELECT receipt_key FROM services WHERE receipt_key IN (${chunk.map(() => "?").join(", ")})`)
+      .bind(...chunk)
+      .all<{ receipt_key: string }>();
+    for (const r of results) found.add(r.receipt_key);
+  }
+  return found;
 }

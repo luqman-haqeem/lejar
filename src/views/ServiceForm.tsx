@@ -2,6 +2,7 @@ import type { ServiceItem, Vehicle } from "../db";
 import type { FormErrors } from "../form";
 import type { LineValues, ServiceFormValues } from "../service-form";
 import { ErrorSummary, Field, RepeatableRows } from "./fields";
+import { receiptUrl } from "../receipts";
 import { Layout } from "./Layout";
 
 const blankLine: LineValues = { description: "", cost: "", item: "" };
@@ -36,7 +37,7 @@ function ReceiptPhoto({ receiptKey, errors }: { receiptKey: string | null; error
       <input type="hidden" name="receipt_key" value={receiptKey ?? ""} />
       {receiptKey && (
         <>
-          <img class="receipt-img" src={`/${receiptKey}`} alt="Receipt photo" />
+          <img class="receipt-img" src={receiptUrl(receiptKey)} alt="Receipt photo" />
           <label class="remove">
             <input type="checkbox" name="remove_photo" value="1" /> Remove this photo
           </label>

@@ -29,7 +29,7 @@ What the user decided:
 ## Stack (Claude's calls; the user can override)
 - **Code:** a new git repo at **`~/kereta`**, TypeScript, **Hono** on Cloudflare Workers. Pages are server-rendered with Hono JSX, plus a little vanilla JS for photo compression and upload. There is no React/SPA build.
 - **Data:** **D1** (SQLite) holds all data.
-- **Receipts:** stored in an **R2** bucket called `kereta-receipts`. The browser compresses each photo to a JPEG of about 500 KB before upload. Each object is keyed `receipts/<user_id>/<uuid>.jpg`, and D1 stores only the key. The worker serves images through an auth-guarded route `/receipts/:key`, and the bucket is never public.
+- **Receipts:** stored in an **R2** bucket called `kereta-receipts`. The browser compresses each photo to a JPEG of about 500 KB before upload. Each object is keyed `receipts/<user_id>/<uuid>.jpg` (`.png`/`.webp` if the browser couldn't convert it), and D1 stores only the key. The worker serves images through an auth-guarded route `/receipts/:key`, and the bucket is never public.
 - **PWA:** a manifest and icons, so the app can be added to the iPhone Home Screen and feel like an app. The service worker comes in Phase 2 along with push.
 - **Free plan:** everything is built to fit the Workers Free plan's limit of about 10 ms CPU per request. Images are compressed on the client, and OpenRouter and Google calls are network waits, which don't count as CPU time.
 - **Secrets** (set with `wrangler secret`): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENROUTER_API_KEY`.

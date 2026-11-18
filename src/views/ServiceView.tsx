@@ -2,6 +2,7 @@ import type { ServiceItem, ServiceWithLines, Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
 import { fmtRM } from "../lib/money";
+import { receiptUrl } from "../receipts";
 import { Layout } from "./Layout";
 
 export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; service: ServiceWithLines; items: ServiceItem[] }) {
@@ -28,8 +29,8 @@ export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; ser
       </dl>
       {service.notes && <p class="notes">{service.notes}</p>}
       {service.receipt_key && (
-        <a href={`/${service.receipt_key}`}>
-          <img class="receipt-img" src={`/${service.receipt_key}`} alt="Receipt photo" />
+        <a href={receiptUrl(service.receipt_key)}>
+          <img class="receipt-img" src={receiptUrl(service.receipt_key)} alt="Receipt photo" />
         </a>
       )}
       {service.lines.length > 0 && (

@@ -23,7 +23,15 @@ async function addCar(userId: number): Promise<number> {
 async function postMultipart(path: string, userId: number, fields: Record<string, string | File>) {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
-  return app.request(path, { method: "POST", headers: await sessionHeaders(userId), body: form }, env);
+  // Serialise it the way a browser sends it, Content-Length included.
+  const encoded = new Request("https://kereta.test", { method: "POST", body: form });
+  const body = await encoded.arrayBuffer();
+  const headers = {
+    ...(await sessionHeaders(userId)),
+    "content-type": encoded.headers.get("content-type")!,
+    "content-length": String(body.byteLength),
+  };
+  return app.request(path, { method: "POST", headers, body }, env);
 }
 
 const visit = { date: "2026-03-14", odometer_km: "52000", total: "150" };
@@ -51,6 +59,7 @@ describe("attaching a receipt photo", () => {
     expect(image.status).toBe(200);
     expect(image.headers.get("content-type")).toBe("image/jpeg");
     expect(image.headers.get("cache-control")).toBe("private, max-age=86400");
+    expect(image.headers.get("x-content-type-options")).toBe("nosniff");
     expect(new Uint8Array(await image.arrayBuffer())).toEqual(JPEG);
   });
 
@@ -81,6 +90,29 @@ describe("refusing an upload", () => {
     expect(html).toContain('value="Ah Seng"');
     expect(await storedKeys(user)).toEqual([]);
     expect(await listServices(env.DB, user, car)).toEqual([]);
+  });
+
+  it("refuses a huge upload before reading it", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const huge = photo(new Uint8Array(5 * 1024 * 1024));
+    const res = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, photo: huge });
+    expect(res.status).toBe(413);
+    const html = await res.text();
+    expect(html).toContain("Photo too large");
+    expect(html).not.toContain('name="odometer_km"'); // refused before the form was even read
+    expect(await storedKeys(user)).toEqual([]);
+  });
+
+  it("shows a photo problem alongside the form's other errors", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const pdf = photo(new Uint8Array([1]), "application/pdf", "r.pdf");
+    const res = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: pdf });
+    expect(res.status).toBe(415);
+    const html = await res.text();
+    expect(html).toContain("Unsupported image");
+    expect(html).toContain("Enter the odometer reading.");
   });
 
   it("rejects a file that isn't JPEG, PNG or WebP with 415", async () => {
@@ -181,9 +213,21 @@ describe("cleaning up unsaved uploads", () => {
     await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: photo() });
     const orphan = (await storedKeys(user)).find((k) => k !== saved)!;
 
-    expect(await cleanupOrphans(env.RECEIPTS, env.DB, user, Date.now() + 23 * 3600_000)).toBe(0);
-    expect(await cleanupOrphans(env.RECEIPTS, env.DB, user, Date.now() + 25 * 3600_000)).toBe(1);
-    expect(await storedKeys(user)).toEqual([saved]);
     expect(orphan).not.toBe(saved);
+
+    expect(await cleanupOrphans(env.RECEIPTS, env.DB, Date.now() + 23 * 3600_000)).toBe(0);
+    expect(await storedKeys(user)).toHaveLength(2);
+    expect(await cleanupOrphans(env.RECEIPTS, env.DB, Date.now() + 25 * 3600_000)).toBeGreaterThanOrEqual(1);
+    expect(await storedKeys(user)).toEqual([saved]);
+  });
+
+  it("also clears another user's abandoned upload, even if they never upload again", async () => {
+    const quitter = await makeUser("quitter@example.com");
+    const quittersCar = await addCar(quitter);
+    await postMultipart("/services", quitter, { vehicle_id: String(quittersCar), ...visit, odometer_km: "", photo: photo() });
+    expect(await storedKeys(quitter)).toHaveLength(1);
+
+    await cleanupOrphans(env.RECEIPTS, env.DB, Date.now() + 25 * 3600_000);
+    expect(await storedKeys(quitter)).toEqual([]);
   });
 });

@@ -27,31 +27,44 @@ for (const form of document.querySelectorAll("form[data-confirm]")) {
 const LONG_EDGE = 1600;
 const TARGET_BYTES = 500 * 1024;
 
+/** The decoded image plus a function to free it (iOS Safari is tight on canvas memory). */
 async function decode(file) {
   try {
-    return await createImageBitmap(file, { imageOrientation: "from-image" });
+    const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    return { image: bitmap, release: () => bitmap.close() };
   } catch {
+    const url = URL.createObjectURL(file);
     const img = new Image();
-    img.src = URL.createObjectURL(file);
-    await img.decode();
-    return img;
+    img.src = url;
+    try {
+      await img.decode();
+    } catch (e) {
+      URL.revokeObjectURL(url);
+      throw e;
+    }
+    return { image: img, release: () => URL.revokeObjectURL(url) };
   }
 }
 
 const toJpeg = (canvas, quality) => new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
 
 async function shrink(file) {
-  const image = await decode(file);
-  const scale = Math.min(1, LONG_EDGE / Math.max(image.width, image.height));
+  const { image, release } = await decode(file);
   const canvas = document.createElement("canvas");
-  canvas.width = Math.round(image.width * scale);
-  canvas.height = Math.round(image.height * scale);
-  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+  try {
+    const scale = Math.min(1, LONG_EDGE / Math.max(image.width, image.height));
+    canvas.width = Math.round(image.width * scale);
+    canvas.height = Math.round(image.height * scale);
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+  } finally {
+    release();
+  }
   let blob = null;
   for (const quality of [0.8, 0.7, 0.6]) {
     blob = await toJpeg(canvas, quality);
     if (blob && blob.size <= TARGET_BYTES) break;
   }
+  canvas.width = canvas.height = 0; // free the canvas backing store
   if (!blob) throw new Error("could not encode");
   return new File([blob], file.name.replace(/\.[^.]*$/, "") + ".jpg", { type: "image/jpeg" });
 }
