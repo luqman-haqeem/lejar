@@ -202,15 +202,52 @@ run_wizard() {
 
 TOTAL_STAGES=13
 ENV_FILE=".dev.vars"   # local dev secrets (gitignored); production copies go to Cloudflare in stage 9
+CF_ENV_FILE=".cloudflare.env"   # Cloudflare API token for headless servers (gitignored, never deployed)
 cd "$(dirname "$0")/.."
+
+# On a server with no desktop (e.g. over SSH), opening a browser here either fails or starts a
+# text browser inside this terminal. Print the link to open on your own computer instead.
+HEADLESS=0
+if [[ -n "${SSH_CONNECTION:-}${SSH_TTY:-}" ]] ||
+   [[ "$(uname)" == Linux && -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && ! command -v wslview >/dev/null 2>&1; then
+  HEADLESS=1
+  open_url() {
+    printf '  %s↗ open on your computer:%s %s\n' "$GREEN" "$RESET" "$1"
+  }
+fi
+
+# Values for Cloudflare go in their own file so they never become Worker bindings via .dev.vars.
+cf_ask() { local f="$ENV_FILE"; ENV_FILE="$CF_ENV_FILE"; "$@"; ENV_FILE="$f"; }
+if [[ -f "$CF_ENV_FILE" ]]; then
+  set -a; . "./$CF_ENV_FILE"; set +a
+fi
 
 banner "Kereta: go live on workers.dev"
 
 # ── 1 ────────────────────────────────────────────────────────────────────
 stage "Cloudflare: sign in"
-if npx wrangler whoami 2>/dev/null | grep -q "You are logged in"; then
+if npx wrangler whoami 2>/dev/null | grep -qE "You are logged in|associated with"; then
   say "Already signed in to Cloudflare:"
-  npx wrangler whoami 2>/dev/null | grep -E "logged in|Account Name|│" | head -6 || true
+  npx wrangler whoami 2>/dev/null | grep -E "logged in|associated with|│" | head -6 || true
+elif (( HEADLESS )); then
+  say "This machine has no browser, so 'wrangler login' can't finish here. Use an API token instead."
+  open_url "https://dash.cloudflare.com/profile/api-tokens"
+  step "Create Token → use the 'Edit Cloudflare Workers' template."
+  step "Under Permissions, also add: Account → D1 → Edit, and Account → Workers R2 Storage → Edit."
+  step "Account Resources: your account. Zone Resources: All zones (or any). Continue → Create Token → copy it."
+  cf_ask ask_secret CLOUDFLARE_API_TOKEN "Paste the API token:"
+  open_url "https://dash.cloudflare.com/"
+  step "Your Account ID is on the account home page (right-hand side, or in the URL after dash.cloudflare.com/)."
+  cf_ask ask CLOUDFLARE_ACCOUNT_ID "Paste the Account ID:"
+  cf_ask write_env CLOUDFLARE_API_TOKEN "$CLOUDFLARE_API_TOKEN"
+  cf_ask write_env CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
+  export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
+  if npx wrangler whoami 2>/dev/null | grep -qE "API Token|associated with|Account"; then
+    say "${GREEN}✓${RESET} Wrangler can use the token."
+  else
+    warn "Wrangler didn't accept the token; check its permissions and re-run."
+    exit 1
+  fi
 else
   say "Wrangler will open a browser to sign in to your Cloudflare account."
   step "Approve the access request in the browser, then come back here."
@@ -341,7 +378,7 @@ HEALTH=$(curl -fsS "$KERETA_URL/healthz" 2>/dev/null || true)
 ROOT=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$KERETA_URL/" || true)
 if [[ "$HEALTH" == "ok" ]]; then say "${GREEN}✓${RESET} /healthz returns ok"; else warn "/healthz returned '$HEALTH'"; SKIPPED+=("/healthz check"); fi
 if [[ "$ROOT" == 302*"/login" ]]; then say "${GREEN}✓${RESET} / redirects to /login when signed out"; else warn "/ returned '$ROOT'"; SKIPPED+=("sign-in redirect check"); fi
-step "Now sign in at $KERETA_URL from this computer (you're a test user while the app is in Testing)."
+step "Now sign in at $KERETA_URL from your computer's browser (you're a test user while the app is in Testing)."
 open_url "$KERETA_URL"
 pause "Signed in and saw the dashboard? Press Enter"
 
