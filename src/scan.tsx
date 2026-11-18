@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
 import { idOf, notFound } from "./http";
 import { inBackground } from "./background";
-import { getVehicle, listItems, listVehicles } from "./db";
+import type { Context } from "hono";
+import { getVehicle, listItems, listVehicles, scansLeft, takeScan } from "./db";
 import { scanReceipt } from "./openrouter";
 import { cleanupOrphans, photoProblem, putReceipt, uploadTooLarge } from "./receipts";
 import { blankServiceForm, scanFormValues } from "./service-form";
@@ -10,6 +11,13 @@ import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { ScanPage } from "./views/ScanPage";
 import { ServiceForm } from "./views/ServiceForm";
 
+
+export const SCAN_LIMIT_REACHED = "Daily scan limit reached — you can still log manually";
+
+function caps(c: Context<AppEnv>) {
+  const n = (v: string | undefined, fallback: number) => (v !== undefined && /^\d+$/.test(v) ? Number(v) : fallback);
+  return { perUser: n(c.env.SCAN_CAP_PER_USER, 20), global: n(c.env.SCAN_CAP_GLOBAL, 300) };
+}
 
 export const SCAN_FAILED = "Couldn't read receipt — fill in manually";
 export const SCAN_READ = "Check what was read from the receipt, fill in anything highlighted, then save.";
@@ -23,7 +31,9 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
     const requested = idOf(c.req.query("vehicle"));
     if (requested !== null && !(await getVehicle(c.env.DB, userId, requested))) return notFound(c);
     if (vehicles.length === 0) return c.redirect("/vehicles/new", 302);
-    return c.html(<ScanPage vehicles={vehicles} selected={requested ?? vehicles[0].id} />);
+    const { perUser, global } = caps(c);
+    const left = await scansLeft(c.env.DB, userId, c.get("today"), perUser, global);
+    return c.html(<ScanPage vehicles={vehicles} selected={requested ?? vehicles[0].id} left={left} />);
   });
 
   // Stores the photo, has the AI read it, and opens the service form prefilled. Nothing is saved to
@@ -36,12 +46,21 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
     const vehicle = vehicleId === null ? null : await getVehicle(c.env.DB, userId, vehicleId);
     if (!vehicle) return notFound(c);
 
-    const page = async (error: string, status: 400 | 413 | 415 | 503) =>
-      c.html(<ScanPage vehicles={await listVehicles(c.env.DB, userId)} selected={vehicle.id} error={error} />, status);
+    const { perUser, global } = caps(c);
+    const page = async (error: string, status: 400 | 413 | 415 | 429 | 503) => {
+      const [vehicles, left] = await Promise.all([
+        listVehicles(c.env.DB, userId),
+        scansLeft(c.env.DB, userId, c.get("today"), perUser, global),
+      ]);
+      return c.html(<ScanPage vehicles={vehicles} selected={vehicle.id} error={error} left={left} />, status);
+    };
     const file = body.photo instanceof File && body.photo.size > 0 ? body.photo : null;
     if (!file) return page("Choose or take a photo of the receipt.", 400);
     const problem = photoProblem(file);
     if (problem) return page(problem.message, problem.status);
+    // Counted once the upload is acceptable, before anything is stored or sent: a scan counts even
+    // if the AI then fails, which bounds the bill.
+    if (!(await takeScan(c.env.DB, userId, c.get("today"), perUser, global))) return page(SCAN_LIMIT_REACHED, 429);
 
     let key: string;
     try {

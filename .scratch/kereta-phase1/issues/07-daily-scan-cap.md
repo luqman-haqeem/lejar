@@ -4,11 +4,11 @@
 
 **Blocked by:** 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Both limits are config values: `SCAN_CAP_PER_USER` = 20 and `SCAN_CAP_GLOBAL` = 300.
-- [ ] A scan counts when it's attempted, even if the AI then fails. Uploads rejected for size or type don't count.
-- [ ] The counter increments atomically, so two scans fired at the same moment can't both slip past the limit.
-- [ ] Over the limit, the response is 429 with "Daily scan limit reached — you can still log manually" and a link to the manual form. Nothing is uploaded and OpenRouter isn't called.
-- [ ] The count resets the next Malaysia day. One user hitting their limit doesn't affect other users, unless the overall limit is reached.
-- [ ] Tests and the typecheck pass.
+- [x] Both limits are config values: `SCAN_CAP_PER_USER` = 20 and `SCAN_CAP_GLOBAL` = 300.
+- [x] A scan counts when it's attempted, even if the AI then fails. Uploads rejected for size or type don't count.
+- [x] The counter increments atomically, so two scans fired at the same moment can't both slip past the limit.
+- [x] Over the limit, the response is 429 with "Daily scan limit reached — you can still log manually" and a link to the manual form. Nothing is uploaded and OpenRouter isn't called.
+- [x] The count resets the next Malaysia day. One user hitting their limit doesn't affect other users, unless the overall limit is reached.
+- [x] Tests and the typecheck pass.

@@ -480,3 +480,48 @@ export async function referencedReceiptKeys(db: D1Database, keys: string[]): Pro
   }
   return found;
 }
+
+// ---- Daily scan caps ----
+
+/**
+ * Counts one scan for the user on `today` if they're under `perUser` and everyone together is under
+ * `global`. One statement, so it's atomic: simultaneous scans can't both slip past a limit. The
+ * SELECT's WHERE guards the overall limit (no row is proposed once it's reached); the upsert's WHERE
+ * guards the user's own.
+ * Returns whether the scan may go ahead.
+ */
+export async function takeScan(
+  db: D1Database,
+  userId: number,
+  today: string,
+  perUser: number,
+  global: number,
+): Promise<boolean> {
+  const res = await db
+    .prepare(
+      `INSERT INTO scan_usage (user_id, date, count)
+       SELECT ?1, ?2, 1 WHERE ?3 > 0 AND (SELECT coalesce(sum(count), 0) FROM scan_usage WHERE date = ?2) < ?4
+       ON CONFLICT (user_id, date) DO UPDATE SET count = count + 1 WHERE count < ?3`,
+    )
+    .bind(userId, today, perUser, global)
+    .run();
+  return res.meta.changes === 1;
+}
+
+/** Scans the user can still make on `today`: the smaller of their own and everyone's remaining allowance. */
+export async function scansLeft(
+  db: D1Database,
+  userId: number,
+  today: string,
+  perUser: number,
+  global: number,
+): Promise<number> {
+  const row = await db
+    .prepare(
+      `SELECT coalesce(sum(CASE WHEN user_id = ? THEN count END), 0) AS mine, coalesce(sum(count), 0) AS everyone
+       FROM scan_usage WHERE date = ?`,
+    )
+    .bind(userId, today)
+    .first<{ mine: number; everyone: number }>();
+  return Math.max(0, Math.min(perUser - row!.mine, global - row!.everyone));
+}

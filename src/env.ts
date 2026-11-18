@@ -9,4 +9,8 @@ export type Env = {
   OPENROUTER_API_KEY: string;
   /** OpenRouter vision model for receipt scans. */
   SCAN_MODEL: string;
+  /** AI scans allowed per user per Malaysia day (manual logging is never limited). */
+  SCAN_CAP_PER_USER: string;
+  /** AI scans allowed per Malaysia day across all users: a backstop on the OpenRouter bill. */
+  SCAN_CAP_GLOBAL: string;
 };
