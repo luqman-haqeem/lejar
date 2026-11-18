@@ -15,7 +15,7 @@ import {
   yearTotals,
 } from "./db";
 import { type FormErrors, parseCount, readFields } from "./form";
-import { parseDateInput, todayKL } from "./lib/dates";
+import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
 import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
 import { NotFound } from "./views/NotFound";
@@ -51,7 +51,7 @@ export function vehicleRoutes() {
 
   routes.post("/vehicles", async (c) => {
     const values = readDetails(await c.req.parseBody());
-    const details = parseDetails(values);
+    const details = parseDetails(values, c.get("today"));
     if (!details.ok) return c.html(<NewVehicle values={values} errors={details.errors} />, 400);
 
     const id = await createVehicle(c.env.DB, c.get("userId"), details.value);
@@ -61,7 +61,7 @@ export function vehicleRoutes() {
   routes.get("/vehicles/:id{[0-9]+}", async (c) => {
     const vehicle = await getVehicle(c.env.DB, c.get("userId"), Number(c.req.param("id")));
     if (!vehicle) return notFound(c);
-    return c.html(await history(c, vehicle, { date: todayKL(), km: "" }));
+    return c.html(await history(c, vehicle, { date: c.get("today"), km: "" }));
   });
 
   routes.post("/vehicles/:id{[0-9]+}/readings", async (c) => {
@@ -72,7 +72,7 @@ export function vehicleRoutes() {
     const errors: FormErrors = {};
     const date = parseDateInput(values.date);
     if (date === null) errors.date = "Enter the date of the reading.";
-    else if (date > todayKL()) errors.date = "The reading date can't be in the future.";
+    else if (date > c.get("today")) errors.date = "The reading date can't be in the future.";
     const km = parseCount(values.km, 0, 10_000_000);
     if (km == null) errors.km = "Enter the odometer reading in whole km.";
     if (Object.keys(errors).length > 0) return c.html(await history(c, vehicle, values, errors), 400);
@@ -110,8 +110,8 @@ export function vehicleRoutes() {
     const body = await c.req.parseBody();
     // The type is fixed at creation: the schedule was seeded for it, and due-soon thresholds depend on it.
     const values = { details: { ...readDetails(body), type: vehicle.type }, items: readItems(body) };
-    const details = parseDetails(values.details);
-    const items = parseItems(values.items);
+    const details = parseDetails(values.details, c.get("today"));
+    const items = parseItems(values.items, c.get("today"));
     if (!details.ok || !items.ok) {
       const errors = { ...(details.ok ? {} : details.errors), ...(items.ok ? {} : items.errors) };
       return c.html(<EditVehicle id={id} values={values} archived={vehicle.archived === 1} errors={errors} />, 400);

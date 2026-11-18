@@ -43,7 +43,7 @@ function ItemRow({ item, n, errors }: { item: ItemValues; n: number | "__N__"; e
     <Field label={label} name={name(f)} value={item[f]} errors={errors} {...extra} />
   );
   return (
-    <div class="item">
+    <div class="item" id={item.id ? `item-${item.id}` : undefined}>
       {item.id && <input type="hidden" name={name("id")} value={item.id} />}
       {field("Item", "name", { placeholder: "e.g. Tyre rotation" })}
       <div class="pair">

@@ -75,7 +75,7 @@ export function VehicleHistory({
         </section>
       )}
 
-      <section>
+      <section id="odometer">
         <h2>Add odometer reading</h2>
         <ErrorSummary errors={errors} />
         <form method="post" action={`/vehicles/${vehicle.id}/readings`} class="vehicle-form">

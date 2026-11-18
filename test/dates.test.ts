@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtDate, parseDateInput, todayKL } from "../src/lib/dates";
+import { addMonths, daysBetween, fmtDate, parseDateInput, todayKL } from "../src/lib/dates";
 
 describe("today in Malaysia", () => {
   it("rolls over at midnight Kuala Lumpur time, not UTC", () => {
@@ -31,5 +31,36 @@ describe("reading typed dates", () => {
 
   it("accepts 29 February in a leap year", () => {
     expect(parseDateInput("29/02/2028")).toBe("2028-02-29");
+  });
+});
+
+describe("adding months", () => {
+  it("keeps the day of the month when it exists", () => {
+    expect(addMonths("2026-01-15", 1)).toBe("2026-02-15");
+    expect(addMonths("2026-11-30", 3)).toBe("2027-02-28");
+    expect(addMonths("2026-06-01", 24)).toBe("2028-06-01");
+  });
+
+  it("clamps to the end of a shorter month instead of spilling into the next", () => {
+    expect(addMonths("2026-08-31", 6)).toBe("2027-02-28");
+    expect(addMonths("2027-08-31", 6)).toBe("2028-02-29");
+    expect(addMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(addMonths("2026-03-31", 1)).toBe("2026-04-30");
+  });
+
+  it("goes backwards too", () => {
+    expect(addMonths("2026-10-18", -12)).toBe("2025-10-18");
+    expect(addMonths("2028-02-29", -12)).toBe("2027-02-28");
+    expect(addMonths("2026-03-31", -1)).toBe("2026-02-28");
+  });
+});
+
+describe("days between dates", () => {
+  it("counts days from the first date to the second", () => {
+    expect(daysBetween("2026-10-18", "2026-11-17")).toBe(30);
+    expect(daysBetween("2026-10-18", "2026-10-01")).toBe(-17);
+    expect(daysBetween("2026-10-18", "2026-10-18")).toBe(0);
+    expect(daysBetween("2026-01-01", "2026-07-01")).toBe(181);
+    expect(daysBetween("2028-02-28", "2028-03-01")).toBe(2);
   });
 });

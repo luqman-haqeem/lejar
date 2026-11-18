@@ -4,7 +4,8 @@ import { getVehicle, listItems, listVehicles } from "../src/db";
 import { createApp } from "../src/index";
 import { makeUser, postForm, sessionHeaders } from "./helpers";
 
-const app = createApp();
+// A fixed "today", so renewal dates render the same way whenever the tests run.
+const app = createApp({ now: () => new Date("2026-11-18T02:00:00Z") });
 
 const post = (path: string, userId: number, fields: Record<string, string>) => postForm(app, path, userId, fields);
 

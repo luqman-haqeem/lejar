@@ -1,6 +1,5 @@
 import { DETAIL_COLUMNS, type ItemInput, type ServiceItem, type Vehicle, type VehicleDetails } from "./db";
 import { type Body, type FormErrors, isBlankRow, optionalDate, type Parsed, parseCount, readFields, readRows, toField } from "./form";
-import { todayKL } from "./lib/dates";
 import { isVehicleType, type VehicleType } from "./lib/templates";
 
 // The vehicle form posts flat fields: the details by name, and schedule rows as
@@ -39,9 +38,9 @@ export function formValuesOf(v: Vehicle, items: ServiceItem[]): FormValues {
 
 export const MAX_ITEMS = 50;
 
-export function parseDetails(d: DetailValues, now = new Date()): Parsed<VehicleDetails> {
+export function parseDetails(d: DetailValues, today: string): Parsed<VehicleDetails> {
   const errors: FormErrors = {};
-  const thisYear = Number(todayKL(now).slice(0, 4));
+  const thisYear = Number(today.slice(0, 4));
 
   if (!isVehicleType(d.type)) errors.type = "Choose car or motorbike.";
   if (!d.name) errors.name = "Give the vehicle a name.";
@@ -73,9 +72,8 @@ export function parseDetails(d: DetailValues, now = new Date()): Parsed<VehicleD
  * Rows ticked "remove" and blank new rows are dropped. Every kept row needs a name and at least one
  * interval. A baseline ("last done roughly here") can't be in the future.
  */
-export function parseItems(rows: ItemValues[], now = new Date()): Parsed<ItemInput[]> {
+export function parseItems(rows: ItemValues[], today: string): Parsed<ItemInput[]> {
   const errors: FormErrors = {};
-  const today = todayKL(now);
   const items: ItemInput[] = [];
 
   rows.forEach((r, n) => {

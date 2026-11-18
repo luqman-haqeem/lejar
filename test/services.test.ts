@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { getService, listItems, listReadings, listServices } from "../src/db";
+import { getService, lastDoneByItem, listItems, listReadings, listServices } from "../src/db";
 import { createApp } from "../src/index";
 import { makeUser, postForm, sessionHeaders } from "./helpers";
 
@@ -376,5 +376,29 @@ describe("fixing a mistyped reading", () => {
     expect((await post(`/readings/${fromService.id}/delete`, alice, {})).status).toBe(404);
     expect((await post(`/readings/${manual.id}/delete`, bob, {})).status).toBe(404);
     expect(await listReadings(env.DB, alice, car)).toHaveLength(2);
+  });
+});
+
+describe("when each schedule item was last done", () => {
+  it("is the latest service with a line linked to it, whatever order they were entered in", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const [engineOil, oilFilter] = await listItems(env.DB, car);
+    const oilChange = (date: string, km: string, ...items: number[]) =>
+      logged(user, car, {
+        date,
+        odometer_km: km,
+        total: "1",
+        ...Object.fromEntries(items.flatMap((id, n) => [[`line.${n}.item`, String(id)]])),
+      });
+    await oilChange("2026-06-01", "50000", engineOil.id, oilFilter.id);
+    await oilChange("2025-12-01", "40000", engineOil.id); // backlog entered later
+    await oilChange("2026-09-01", "55000", engineOil.id);
+
+    const last = await lastDoneByItem(env.DB, user, car);
+    expect(last.get(engineOil.id)).toEqual({ date: "2026-09-01", km: 55000 });
+    expect(last.get(oilFilter.id)).toEqual({ date: "2026-06-01", km: 50000 });
+    expect(last.size).toBe(2);
+    expect((await lastDoneByItem(env.DB, await makeUser(), car)).size).toBe(0);
   });
 });

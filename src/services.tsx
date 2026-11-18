@@ -45,7 +45,7 @@ async function submitService(
   const render = (errors: Record<string, string>, status: 400 | 422) =>
     c.html(<ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} />, status);
 
-  const parsed = parseServiceForm(values, items);
+  const parsed = parseServiceForm(values, items, c.get("today"));
   if (!parsed.ok) return render(parsed.errors, 400);
   const { date, odometer_km } = parsed.value;
   const editing = mode.kind === "edit" ? mode.serviceId : null;

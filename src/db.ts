@@ -363,3 +363,22 @@ export async function findOdometerConflict(
     .bind(vehicleId, userId, date, km, date, km, excludeServiceId, excludeServiceId, date)
     .first<Pick<Reading, "date" | "km">>();
 }
+
+/** Per schedule item, the date and odometer of the latest service with a line linked to it. */
+export async function lastDoneByItem(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+): Promise<Map<number, { date: string; km: number }>> {
+  const { results } = await db
+    .prepare(
+      `SELECT l.service_item_id AS item_id, s.date, s.odometer_km AS km
+       FROM service_lines l JOIN services s ON s.id = l.service_id
+       WHERE l.service_item_id IS NOT NULL AND s.${OWNED_VEHICLE}
+       ORDER BY s.date, s.odometer_km`,
+    )
+    .bind(vehicleId, userId)
+    .all<{ item_id: number; date: string; km: number }>();
+  // Rows come oldest first, so the latest service for each item wins.
+  return new Map(results.map((r) => [r.item_id, { date: r.date, km: r.km }]));
+}

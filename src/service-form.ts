@@ -1,6 +1,6 @@
 import type { LineInput, ServiceItem, ServiceInput, ServiceWithLines } from "./db";
 import { type Body, type FormErrors, isBlankRow, type Parsed, parseCount, readFields, readRows, toField } from "./form";
-import { parseDateInput, todayKL } from "./lib/dates";
+import { parseDateInput } from "./lib/dates";
 import { fmtRM, parseRM } from "./lib/money";
 
 // The service form posts the visit's fields by name, and its lines as "line.<n>.<field>".
@@ -46,14 +46,14 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
 export function parseServiceForm(
   { service: v, lines: rows }: ServiceFormValues,
   items: ServiceItem[],
-  now = new Date(),
+  today: string,
 ): Parsed<ServiceInput> {
   const errors: FormErrors = {};
 
   const date = v.date === "" ? null : parseDateInput(v.date);
   if (v.date === "") errors.date = "Enter the service date.";
   else if (date === null) errors.date = "The service date isn't a valid date.";
-  else if (date > todayKL(now)) errors.date = "The service date can't be in the future.";
+  else if (date > today) errors.date = "The service date can't be in the future.";
 
   const km = parseCount(v.odometer_km, 0, 10_000_000);
   if (km === null) errors.odometer_km = "Enter the odometer reading.";
