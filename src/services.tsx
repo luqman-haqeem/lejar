@@ -31,6 +31,7 @@ async function ownedService(c: Context<AppEnv>) {
 
 /**
  * Validates a posted service form and checks its odometer against the vehicle's other readings.
+ * A line tagged with another vehicle's schedule item is a 404.
  * Re-renders the form (400 invalid, 422 odometer conflict) keeping what was typed, or calls `save`.
  */
 async function submitService(
@@ -40,8 +41,12 @@ async function submitService(
   mode: ServiceFormMode,
   save: (s: ServiceInput) => Promise<Response>,
 ): Promise<Response> {
-  const items = await listItems(c.env.DB, vehicle.id);
+  const items = await listItems(c.env.DB, c.get("userId"), vehicle.id);
   const values = readServiceForm(body);
+  // Tagging a line with a schedule item that isn't this vehicle's is treated like any other id that
+  // isn't the user's: 404, nothing saved.
+  const itemIds = new Set(items.map((i) => String(i.id)));
+  if (values.lines.some((l) => l.item !== "" && !itemIds.has(l.item))) return notFound(c);
   const render = (errors: Record<string, string>, status: 400 | 422) =>
     c.html(<ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} />, status);
 
@@ -64,7 +69,7 @@ export function serviceRoutes() {
     return c.html(
       <ServiceForm
         vehicle={vehicle}
-        items={await listItems(c.env.DB, vehicle.id)}
+        items={await listItems(c.env.DB, c.get("userId"), vehicle.id)}
         values={blankServiceForm(c.req.query("workshop") ?? "")}
         mode={{ kind: "new" }}
         saved={c.req.query("saved") === "1"}
@@ -90,7 +95,7 @@ export function serviceRoutes() {
   routes.get("/services/:id{[0-9]+}", async (c) => {
     const owned = await ownedService(c);
     if (!owned) return notFound(c);
-    const items = await listItems(c.env.DB, owned.vehicle.id);
+    const items = await listItems(c.env.DB, c.get("userId"), owned.vehicle.id);
     return c.html(<ServiceView vehicle={owned.vehicle} service={owned.service} items={items} />);
   });
 
@@ -100,7 +105,7 @@ export function serviceRoutes() {
     return c.html(
       <ServiceForm
         vehicle={owned.vehicle}
-        items={await listItems(c.env.DB, owned.vehicle.id)}
+        items={await listItems(c.env.DB, c.get("userId"), owned.vehicle.id)}
         values={serviceFormValuesOf(owned.service)}
         mode={{ kind: "edit", serviceId: owned.service.id }}
       />,

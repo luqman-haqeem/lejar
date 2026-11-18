@@ -109,3 +109,4 @@ a.due-when { color: inherit; }
 .prompt { display: block; margin: 0 0 0.5rem; font-size: 0.92rem; color: var(--soon); }
 .more { font-size: 0.88rem; color: var(--muted); }
 .est-km { font-variant-numeric: tabular-nums; }
+.archived-link { text-align: center; margin-top: 1.5rem; } .archived-link a { color: var(--muted); }

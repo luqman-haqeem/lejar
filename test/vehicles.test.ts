@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { getVehicle, listItems, listVehicles } from "../src/db";
+import { getVehicle, listVehicles } from "../src/db";
 import { createApp } from "../src/index";
-import { makeUser, postForm, sessionHeaders } from "./helpers";
+import { itemsOf, makeUser, postForm, sessionHeaders } from "./helpers";
 
 // A fixed "today", so renewal dates render the same way whenever the tests run.
 const app = createApp({ now: () => new Date("2026-11-18T02:00:00Z") });
@@ -17,7 +17,7 @@ async function addVehicle(userId: number, fields: Record<string, string> = {}): 
 }
 
 const schedule = async (vehicleId: number) =>
-  (await listItems(env.DB, vehicleId)).map((i) => [i.name, i.interval_km, i.interval_months]);
+  (await itemsOf(vehicleId)).map((i) => [i.name, i.interval_km, i.interval_months]);
 
 describe("adding a vehicle", () => {
   it("creates a car with its details and opens its schedule for editing", async () => {
@@ -93,7 +93,7 @@ describe("refusing a bad vehicle", () => {
 /** The edit form's fields for the vehicle as it is now, the way the browser would post them back. */
 async function currentForm(vehicleId: number): Promise<Record<string, string>> {
   const fields: Record<string, string> = { type: "car", name: "Myvi", plate: "WXY 1234" };
-  (await listItems(env.DB, vehicleId)).forEach((i, n) => {
+  (await itemsOf(vehicleId)).forEach((i, n) => {
     fields[`item.${n}.id`] = String(i.id);
     fields[`item.${n}.name`] = i.name;
     fields[`item.${n}.km`] = i.interval_km === null ? "" : String(i.interval_km);
@@ -137,7 +137,7 @@ describe("editing the schedule", () => {
     form["item.2.baseline_km"] = "48,000";
 
     expect((await post(`/vehicles/${id}`, user, form)).status).toBe(302);
-    const baselines = (await listItems(env.DB, id)).slice(0, 4).map((i) => [i.baseline_date, i.baseline_km]);
+    const baselines = (await itemsOf(id)).slice(0, 4).map((i) => [i.baseline_date, i.baseline_km]);
     expect(baselines).toEqual([
       ["2026-01-10", 50000],
       ["2026-01-10", null],
@@ -162,7 +162,7 @@ describe("editing the schedule", () => {
   it("refuses an item with no interval, a future baseline or a garbage km, and changes nothing", async () => {
     const user = await makeUser();
     const id = await addVehicle(user);
-    const before = await listItems(env.DB, id);
+    const before = await itemsOf(id);
     const form = await currentForm(id);
     form["item.0.km"] = "";
     form["item.0.months"] = "";
@@ -177,7 +177,7 @@ describe("editing the schedule", () => {
     expect(html).toContain("Oil filter: last done date can&#39;t be in the future.");
     expect(html).toContain("Air filter: last done km must be a whole number.");
     expect(html).toContain('value="lots"');
-    expect(await listItems(env.DB, id)).toEqual(before);
+    expect(await itemsOf(id)).toEqual(before);
     expect((await getVehicle(env.DB, user, id))?.name).toBe("Myvi");
   });
 
@@ -197,7 +197,7 @@ describe("someone else's vehicle", () => {
     const alice = await makeUser("alice@example.com");
     const bob = await makeUser("bob@example.com");
     const id = await addVehicle(alice);
-    const before = { vehicle: await getVehicle(env.DB, alice, id), items: await listItems(env.DB, id) };
+    const before = { vehicle: await getVehicle(env.DB, alice, id), items: await itemsOf(id) };
     const hijack = { ...(await currentForm(id)), name: "Stolen", "item.0.km": "1" };
 
     expect((await app.request(`/vehicles/${id}/edit`, { headers: await sessionHeaders(bob) }, env)).status).toBe(404);
@@ -205,7 +205,7 @@ describe("someone else's vehicle", () => {
     expect((await post(`/vehicles/${id}/archive`, bob, {})).status).toBe(404);
 
     expect(await getVehicle(env.DB, alice, id)).toEqual(before.vehicle);
-    expect(await listItems(env.DB, id)).toEqual(before.items);
+    expect(await itemsOf(id)).toEqual(before.items);
     expect(await getVehicle(env.DB, bob, id)).toBeNull();
   });
 
@@ -214,14 +214,14 @@ describe("someone else's vehicle", () => {
     const bob = await makeUser("bob@example.com");
     const alices = await addVehicle(alice);
     const bobs = await addVehicle(bob);
-    const aliceItems = await listItems(env.DB, alices);
+    const aliceItems = await itemsOf(alices);
     const form = await currentForm(bobs);
     form["item.0.id"] = String(aliceItems[0].id);
     form["item.0.name"] = "Taken over";
 
     expect((await post(`/vehicles/${bobs}`, bob, form)).status).toBe(302);
-    expect(await listItems(env.DB, alices)).toEqual(aliceItems);
-    expect((await listItems(env.DB, bobs)).map((i) => i.name)).toContain("Taken over");
+    expect(await itemsOf(alices)).toEqual(aliceItems);
+    expect((await itemsOf(bobs)).map((i) => i.name)).toContain("Taken over");
   });
 
   it("is 404 for an id that doesn't exist", async () => {
@@ -296,8 +296,8 @@ describe("review follow-ups", () => {
     const user = await makeUser();
     const car = await addVehicle(user, { type: "car" });
     const bike = await addVehicle(user, { type: "motorbike", name: "Y15" });
-    expect(await listItems(env.DB, car)).toHaveLength(8);
-    expect(await listItems(env.DB, bike)).toHaveLength(5);
+    expect(await itemsOf(car)).toHaveLength(8);
+    expect(await itemsOf(bike)).toHaveLength(5);
   });
 
   it("keeps the vehicle type it was created with", async () => {
@@ -319,6 +319,56 @@ describe("review follow-ups", () => {
     const res = await post(`/vehicles/${id}`, user, form);
     expect(res.status).toBe(400);
     expect(await res.text()).toContain("A schedule can have at most 50 items.");
-    expect(await listItems(env.DB, id)).toHaveLength(8);
+    expect(await itemsOf(id)).toHaveLength(8);
+  });
+});
+
+describe("undoing an archive", () => {
+  it("lists archived vehicles and restores one to the dashboard", async () => {
+    const user = await makeUser();
+    const sold = await addVehicle(user, { name: "Sold Saga" });
+    await addVehicle(user, { name: "Daily Myvi" });
+    await post(`/vehicles/${sold}/archive`, user, {});
+
+    const dashboard = await (await app.request("/", { headers: await sessionHeaders(user) }, env)).text();
+    expect(dashboard).toContain('href="/vehicles/archived"');
+    const list = await app.request("/vehicles/archived", { headers: await sessionHeaders(user) }, env);
+    expect(list.status).toBe(200);
+    const html = await list.text();
+    expect(html).toContain("Sold Saga");
+    expect(html).not.toContain("Daily Myvi");
+    expect(html).toContain(`action="/vehicles/${sold}/restore"`);
+
+    const res = await post(`/vehicles/${sold}/restore`, user, {});
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/");
+    expect((await listVehicles(env.DB, user)).map((v) => v.name)).toEqual(["Daily Myvi", "Sold Saga"]);
+  });
+
+  it("offers Restore on an archived vehicle's own page", async () => {
+    const user = await makeUser();
+    const id = await addVehicle(user);
+    await post(`/vehicles/${id}/archive`, user, {});
+    const html = await (await app.request(`/vehicles/${id}/edit`, { headers: await sessionHeaders(user) }, env)).text();
+    expect(html).toContain(`action="/vehicles/${id}/restore"`);
+  });
+
+  it("doesn't link to an empty archive", async () => {
+    const user = await makeUser();
+    await addVehicle(user);
+    const dashboard = await (await app.request("/", { headers: await sessionHeaders(user) }, env)).text();
+    expect(dashboard).not.toContain('href="/vehicles/archived"');
+  });
+
+  it("is 404 for someone else's vehicle, and their archive isn't listed", async () => {
+    const alice = await makeUser("alice@example.com");
+    const bob = await makeUser("bob@example.com");
+    const id = await addVehicle(alice, { name: "Alice's Axia" });
+    await post(`/vehicles/${id}/archive`, alice, {});
+
+    expect((await post(`/vehicles/${id}/restore`, bob, {})).status).toBe(404);
+    expect((await getVehicle(env.DB, alice, id))?.archived).toBe(1);
+    const bobs = await (await app.request("/vehicles/archived", { headers: await sessionHeaders(bob) }, env)).text();
+    expect(bobs).not.toContain("Alice&#39;s Axia");
   });
 });

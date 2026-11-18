@@ -18,4 +18,4 @@
 
 - 2026-11-18 (implementation): Form dates use the native date picker, which submits ISO and displays in the phone's region format (DD/MM/YYYY on a Malaysian-region iPhone). Text shown by the app (dashboard) uses `fmtDate`. Hand-typed DD/MM/YYYY is also accepted.
 - Vehicle type is fixed after creation (the schedule was seeded for it, and ticket 04's due-soon thresholds depend on it).
-- Archiving has no undo or "archived vehicles" list yet; an archived vehicle is still reachable by its URL. Raise a ticket if needed.
+- Archived vehicles are listed at `/vehicles/archived` (linked from the dashboard when there are any) and can be restored there or from the vehicle's edit page.

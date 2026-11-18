@@ -3,13 +3,14 @@ import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
 import {
   addReading,
-  archiveVehicle,
   createVehicle,
   deleteManualReading,
   getVehicle,
+  listArchivedVehicles,
   listItems,
   listReadings,
   listServices,
+  setArchived,
   updateVehicle,
   type Vehicle,
   yearTotals,
@@ -19,6 +20,7 @@ import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
 import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
 import { NotFound } from "./views/NotFound";
+import { ArchivedVehicles } from "./views/ArchivedVehicles";
 import { EditVehicle, NewVehicle } from "./views/VehicleForm";
 import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 
@@ -95,7 +97,7 @@ export function vehicleRoutes() {
     const vehicle = await getVehicle(c.env.DB, c.get("userId"), id);
     if (!vehicle) return notFound(c);
 
-    const values = formValuesOf(vehicle, await listItems(c.env.DB, id));
+    const values = formValuesOf(vehicle, await listItems(c.env.DB, c.get("userId"), id));
     return c.html(
       <EditVehicle id={id} values={values} archived={vehicle.archived === 1} saved={c.req.query("saved") === "1"} />,
     );
@@ -122,9 +124,18 @@ export function vehicleRoutes() {
   });
 
   routes.post("/vehicles/:id{[0-9]+}/archive", async (c) => {
-    if (!(await archiveVehicle(c.env.DB, c.get("userId"), Number(c.req.param("id"))))) return notFound(c);
+    if (!(await setArchived(c.env.DB, c.get("userId"), Number(c.req.param("id")), true))) return notFound(c);
     return c.redirect("/", 302);
   });
+
+  routes.post("/vehicles/:id{[0-9]+}/restore", async (c) => {
+    if (!(await setArchived(c.env.DB, c.get("userId"), Number(c.req.param("id")), false))) return notFound(c);
+    return c.redirect("/", 302);
+  });
+
+  routes.get("/vehicles/archived", async (c) =>
+    c.html(<ArchivedVehicles vehicles={await listArchivedVehicles(c.env.DB, c.get("userId"))} />),
+  );
 
   return routes;
 }

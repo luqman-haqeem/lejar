@@ -3,6 +3,19 @@ import { TEMPLATES, type VehicleType } from "./lib/templates";
 // Vehicle functions take userId and filter by vehicles.user_id. Item functions take a vehicleId the
 // caller has already checked with getVehicle (or check it themselves, like updateVehicle).
 
+/** Filters a table with a vehicle_id column to one vehicle of the user's. Binds (vehicleId, userId). */
+const OWNED_VEHICLE = "vehicle_id IN (SELECT id FROM vehicles WHERE id = ? AND user_id = ?)";
+
+/** Which of the user's vehicles a query covers: one vehicle, or all those on the dashboard. */
+type Scope = { userId: number; vehicleId: number } | { userId: number; active: true };
+
+/** A `vehicle_id IN (...)` condition for the scope, with its bind values. */
+function scoped(column: string, scope: Scope): { sql: string; binds: number[] } {
+  return "vehicleId" in scope
+    ? { sql: `${column} IN (SELECT id FROM vehicles WHERE id = ? AND user_id = ?)`, binds: [scope.vehicleId, scope.userId] }
+    : { sql: `${column} IN (SELECT id FROM vehicles WHERE user_id = ? AND archived = 0)`, binds: [scope.userId] };
+}
+
 export interface Vehicle {
   id: number;
   user_id: number;
@@ -83,13 +96,15 @@ export async function listVehicles(db: D1Database, userId: number): Promise<Vehi
   return results;
 }
 
-/** The vehicle's schedule in display order. Callers check ownership with getVehicle first. */
-export async function listItems(db: D1Database, vehicleId: number): Promise<ServiceItem[]> {
-  const { results } = await db
-    .prepare("SELECT * FROM service_items WHERE vehicle_id = ? ORDER BY sort, id")
-    .bind(vehicleId)
-    .all<ServiceItem>();
+/** The vehicle's schedule in display order. Empty if the vehicle isn't the user's. */
+export async function listItems(db: D1Database, userId: number, vehicleId: number): Promise<ServiceItem[]> {
+  const { results } = await itemsQuery(db, { userId, vehicleId }).all<ServiceItem>();
   return results;
+}
+
+function itemsQuery(db: D1Database, scope: Scope) {
+  const where = scoped("vehicle_id", scope);
+  return db.prepare(`SELECT * FROM service_items WHERE ${where.sql} ORDER BY sort, id`).bind(...where.binds);
 }
 
 /**
@@ -105,7 +120,7 @@ export async function updateVehicle(
   items: ItemInput[],
 ): Promise<boolean> {
   if (!(await getVehicle(db, userId, id))) return false;
-  const existing = new Set((await listItems(db, id)).map((i) => i.id));
+  const existing = new Set((await listItems(db, userId, id)).map((i) => i.id));
   const kept = new Set(items.flatMap((i) => (i.id !== undefined && existing.has(i.id) ? [i.id] : [])));
 
   const statements = [
@@ -136,9 +151,21 @@ export async function updateVehicle(
   return true;
 }
 
-/** Hides the vehicle from the dashboard. Returns false if it isn't the user's. */
-export async function archiveVehicle(db: D1Database, userId: number, id: number): Promise<boolean> {
-  const res = await db.prepare("UPDATE vehicles SET archived = 1 WHERE id = ? AND user_id = ?").bind(id, userId).run();
+/** The user's archived vehicles, by name. */
+export async function listArchivedVehicles(db: D1Database, userId: number): Promise<Vehicle[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM vehicles WHERE user_id = ? AND archived = 1 ORDER BY name COLLATE NOCASE, id")
+    .bind(userId)
+    .all<Vehicle>();
+  return results;
+}
+
+/** Hides the vehicle from the dashboard (archived) or brings it back. Returns false if it isn't the user's. */
+export async function setArchived(db: D1Database, userId: number, id: number, archived: boolean): Promise<boolean> {
+  const res = await db
+    .prepare("UPDATE vehicles SET archived = ? WHERE id = ? AND user_id = ?")
+    .bind(archived ? 1 : 0, id, userId)
+    .run();
   return res.meta.changes > 0;
 }
 
@@ -272,8 +299,6 @@ export async function deleteService(
   return { vehicleId: service.vehicle_id, receiptKey: service.receipt_key };
 }
 
-/** Filters a table with a vehicle_id column to one vehicle of the user's. Binds (vehicleId, userId). */
-const OWNED_VEHICLE = "vehicle_id IN (SELECT id FROM vehicles WHERE id = ? AND user_id = ?)";
 
 /** The vehicle's services, newest first. Empty if the vehicle isn't the user's. */
 export async function listServices(db: D1Database, userId: number, vehicleId: number): Promise<Service[]> {
@@ -300,11 +325,13 @@ export async function yearTotals(db: D1Database, userId: number, vehicleId: numb
 
 /** The vehicle's odometer readings, oldest first. */
 export async function listReadings(db: D1Database, userId: number, vehicleId: number): Promise<Reading[]> {
-  const { results } = await db
-    .prepare(`SELECT * FROM odometer_readings WHERE ${OWNED_VEHICLE} ORDER BY date, km, id`)
-    .bind(vehicleId, userId)
-    .all<Reading>();
+  const { results } = await readingsQuery(db, { userId, vehicleId }).all<Reading>();
   return results;
+}
+
+function readingsQuery(db: D1Database, scope: Scope) {
+  const where = scoped("vehicle_id", scope);
+  return db.prepare(`SELECT * FROM odometer_readings WHERE ${where.sql} ORDER BY date, km, id`).bind(...where.binds);
 }
 
 /** Adds a manual reading. Returns false (writing nothing) if the vehicle isn't the user's. */
@@ -341,9 +368,13 @@ export async function deleteManualReading(db: D1Database, userId: number, id: nu
   return row?.vehicle_id ?? null;
 }
 
+/** Readings on the same day can be in either order, but more than this apart is a typo. */
+export const SAME_DAY_KM = 1000;
+
 /**
- * The nearest-dated reading that contradicts `km` on `date` (an earlier reading with more km, or a
- * later one with fewer), ignoring the reading of `excludeServiceId`. Null when consistent.
+ * The nearest-dated reading that contradicts `km` on `date` (an earlier reading with more km, a
+ * later one with fewer, or one that same day over SAME_DAY_KM away), ignoring the reading of
+ * `excludeServiceId`. Null when consistent.
  */
 export async function findOdometerConflict(
   db: D1Database,
@@ -356,11 +387,12 @@ export async function findOdometerConflict(
   return db
     .prepare(
       `SELECT date, km FROM odometer_readings
-       WHERE ${OWNED_VEHICLE} AND ((date < ? AND km > ?) OR (date > ? AND km < ?))
+       WHERE ${OWNED_VEHICLE}
+         AND ((date < ? AND km > ?) OR (date > ? AND km < ?) OR (date = ? AND abs(km - ?) > ${SAME_DAY_KM}))
          AND (? IS NULL OR service_id IS NULL OR service_id != ?)
        ORDER BY abs(julianday(date) - julianday(?)) LIMIT 1`,
     )
-    .bind(vehicleId, userId, date, km, date, km, excludeServiceId, excludeServiceId, date)
+    .bind(vehicleId, userId, date, km, date, km, date, km, excludeServiceId, excludeServiceId, date)
     .first<Pick<Reading, "date" | "km">>();
 }
 
@@ -369,16 +401,58 @@ export async function lastDoneByItem(
   db: D1Database,
   userId: number,
   vehicleId: number,
-): Promise<Map<number, { date: string; km: number }>> {
-  const { results } = await db
+): Promise<Map<number, LastDone>> {
+  const { results } = await lastDoneQuery(db, { userId, vehicleId }).all<LastDoneRow>();
+  return toLastDone(results);
+}
+
+export type LastDone = { date: string; km: number };
+type LastDoneRow = { vehicle_id: number; item_id: number; date: string; km: number };
+
+function lastDoneQuery(db: D1Database, scope: Scope) {
+  const where = scoped("s.vehicle_id", scope);
+  return db
     .prepare(
-      `SELECT l.service_item_id AS item_id, s.date, s.odometer_km AS km
+      `SELECT s.vehicle_id, l.service_item_id AS item_id, s.date, s.odometer_km AS km
        FROM service_lines l JOIN services s ON s.id = l.service_id
-       WHERE l.service_item_id IS NOT NULL AND s.${OWNED_VEHICLE}
+       WHERE l.service_item_id IS NOT NULL AND ${where.sql}
        ORDER BY s.date, s.odometer_km`,
     )
-    .bind(vehicleId, userId)
-    .all<{ item_id: number; date: string; km: number }>();
-  // Rows come oldest first, so the latest service for each item wins.
-  return new Map(results.map((r) => [r.item_id, { date: r.date, km: r.km }]));
+    .bind(...where.binds);
+}
+
+// Rows come oldest first, so the latest service for each item wins.
+const toLastDone = (rows: LastDoneRow[]) => new Map(rows.map((r) => [r.item_id, { date: r.date, km: r.km }]));
+
+export type DashboardVehicle = {
+  vehicle: Vehicle;
+  items: ServiceItem[];
+  lastDone: Map<number, LastDone>;
+  readings: Reading[];
+};
+
+/** Everything the dashboard needs for the user's active vehicles, in one round trip. */
+export async function dashboardData(
+  db: D1Database,
+  userId: number,
+): Promise<{ vehicles: DashboardVehicle[]; archivedCount: number }> {
+  const active = { userId, active: true } as const;
+  const [vehicles, archived, items, lastDone, readings] = await db.batch<unknown>([
+    db.prepare("SELECT * FROM vehicles WHERE user_id = ? AND archived = 0 ORDER BY name COLLATE NOCASE, id").bind(userId),
+    db.prepare("SELECT count(*) AS n FROM vehicles WHERE user_id = ? AND archived = 1").bind(userId),
+    itemsQuery(db, active),
+    lastDoneQuery(db, active),
+    readingsQuery(db, active),
+  ]);
+  const of = <T extends { vehicle_id: number }>(rows: unknown[], vehicleId: number) =>
+    (rows as T[]).filter((r) => r.vehicle_id === vehicleId);
+  return {
+    archivedCount: (archived.results[0] as { n: number }).n,
+    vehicles: (vehicles.results as Vehicle[]).map((vehicle) => ({
+      vehicle,
+      items: of<ServiceItem>(items.results, vehicle.id),
+      lastDone: toLastDone(of<LastDoneRow>(lastDone.results, vehicle.id)),
+      readings: of<Reading>(readings.results, vehicle.id),
+    })),
+  };
 }

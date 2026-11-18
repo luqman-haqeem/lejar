@@ -128,7 +128,13 @@ export function EditVehicle({
           Save
         </button>
       </form>
-      {!archived && (
+      {archived ? (
+        <form method="post" action={`/vehicles/${id}/restore`} class="archive">
+          <button type="submit" class="secondary">
+            Restore to dashboard
+          </button>
+        </form>
+      ) : (
         <form
           method="post"
           action={`/vehicles/${id}/archive`}

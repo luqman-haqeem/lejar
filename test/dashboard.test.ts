@@ -2,8 +2,8 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/index";
 import { cookieValue } from "./fake-google";
-import { listItems } from "../src/db";
-import { makeUser, postForm, sessionHeaders } from "./helpers";
+
+import { itemsOf, makeUser, postForm, sessionHeaders } from "./helpers";
 
 const app = createApp();
 
@@ -55,7 +55,7 @@ describe("what's due on the dashboard", () => {
   it("flags an item whose date has passed as overdue, and shows the estimated km", async () => {
     const user = await makeUser();
     const car = await addCar(user);
-    const [engineOil] = await listItems(env.DB, car);
+    const [engineOil] = await itemsOf(car);
     await post("/services", user, {
       vehicle_id: String(car),
       date: "2026-04-01",
@@ -74,7 +74,7 @@ describe("what's due on the dashboard", () => {
   it("links an item with no history straight to setting its baseline", async () => {
     const user = await makeUser();
     const car = await addCar(user);
-    const [engineOil] = await listItems(env.DB, car);
+    const [engineOil] = await itemsOf(car);
     const html = await dashboard(user);
     expect(dueRows(html)).toContainEqual(["unknown", "Engine oil"]);
     expect(html).toContain(`href="/vehicles/${car}/edit#item-${engineOil.id}"`);
@@ -86,7 +86,7 @@ describe("what's due on the dashboard", () => {
   it("never leaves an unknown item without a way to fix it", async () => {
     const user = await makeUser();
     const car = await addCar(user);
-    const items = await listItems(env.DB, car);
+    const items = await itemsOf(car);
     // Engine oil goes by km only but has only a date baseline; Oil filter has a km baseline but there
     // are no odometer readings to compare it with.
     const form: Record<string, string> = { type: "car", name: "Myvi" };
@@ -117,7 +117,7 @@ describe("what's due on the dashboard", () => {
       "Oil filter": "2026-04-10", // due 10/10/2026: overdue
       "Air filter": "2025-10-25", // due 25/10/2026: soon
     };
-    (await listItems(env.DB, car)).forEach((i, n) => {
+    (await itemsOf(car)).forEach((i, n) => {
       form[`item.${n}.id`] = String(i.id);
       form[`item.${n}.name`] = i.name;
       form[`item.${n}.months`] = String(i.interval_months);

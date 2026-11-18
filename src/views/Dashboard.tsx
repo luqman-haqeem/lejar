@@ -122,7 +122,16 @@ function VehicleCard({ due }: { due: VehicleDue }) {
   );
 }
 
-export function Dashboard({ vehicles }: { vehicles: VehicleDue[] }) {
+function ArchivedLink({ count }: { count: number }) {
+  if (count === 0) return null;
+  return (
+    <p class="archived-link">
+      <a href="/vehicles/archived">Archived vehicles ({count})</a>
+    </p>
+  );
+}
+
+export function Dashboard({ vehicles, archivedCount }: { vehicles: VehicleDue[]; archivedCount: number }) {
   if (vehicles.length === 0) {
     return (
       <Layout title="Dashboard" signedIn>
@@ -133,6 +142,7 @@ export function Dashboard({ vehicles }: { vehicles: VehicleDue[] }) {
             Add your first vehicle
           </a>
         </section>
+        <ArchivedLink count={archivedCount} />
       </Layout>
     );
   }
@@ -147,6 +157,7 @@ export function Dashboard({ vehicles }: { vehicles: VehicleDue[] }) {
       {vehicles.map((due) => (
         <VehicleCard due={due} />
       ))}
+      <ArchivedLink count={archivedCount} />
     </Layout>
   );
 }

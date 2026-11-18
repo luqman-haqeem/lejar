@@ -1,8 +1,8 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import { getService, lastDoneByItem, listItems, listReadings, listServices } from "../src/db";
+import { getService, lastDoneByItem, listReadings, listServices } from "../src/db";
 import { createApp } from "../src/index";
-import { makeUser, postForm, sessionHeaders } from "./helpers";
+import { itemsOf, makeUser, postForm, sessionHeaders } from "./helpers";
 
 const app = createApp();
 const post = (path: string, userId: number, fields: Record<string, string>) => postForm(app, path, userId, fields);
@@ -27,7 +27,7 @@ describe("logging a service", () => {
   it("saves the visit, its lines and an odometer reading, then opens the vehicle's history", async () => {
     const user = await makeUser();
     const car = await addCar(user);
-    const [engineOil] = await listItems(env.DB, car);
+    const [engineOil] = await itemsOf(car);
 
     const res = await logService(user, car, {
       date: "2026-03-14",
@@ -160,6 +160,17 @@ describe("odometer readings that don't fit", () => {
     expect((await listReadings(env.DB, user, car)).at(-1)).toMatchObject({ date: "2026-07-01", km: 50500, source: "manual" });
   });
 
+  it("refuses a same-day reading that's over 1,000 km away from another that day", async () => {
+    const { user, car } = await carWithReadings();
+    const typo = await post(`/vehicles/${car}/readings`, user, { date: "2026-06-01", km: "490000" });
+    expect(typo.status).toBe(422);
+    expect(await typo.text()).toContain("Odometer 490,000 km conflicts with 01/06/2026 reading of 49,000 km");
+
+    const sameDayTrip = await post(`/vehicles/${car}/readings`, user, { date: "2026-06-01", km: "49900" });
+    expect(sameDayTrip.status).toBe(302);
+    expect((await post(`/vehicles/${car}/readings`, user, { date: "2026-06-01", km: "50001" })).status).toBe(422);
+  });
+
   it("doesn't count a service's own reading against it when editing", async () => {
     const { user, car } = await carWithReadings();
     const [latest] = await listServices(env.DB, user, car);
@@ -225,7 +236,7 @@ describe("a logged service", () => {
   async function serviceWithLines() {
     const user = await makeUser();
     const car = await addCar(user);
-    const items = await listItems(env.DB, car);
+    const items = await itemsOf(car);
     await logged(user, car, {
       date: "2026-03-14",
       odometer_km: "52000",
@@ -332,20 +343,23 @@ describe("someone else's vehicle and services", () => {
     expect(await listReadings(env.DB, alice, car)).toEqual(before.readings);
   });
 
-  it("can't have its schedule items tagged on your own service", async () => {
+  it("is 404 to tag on your own service, and nothing is saved", async () => {
     const alice = await makeUser("alice@example.com");
     const bob = await makeUser("bob@example.com");
-    const alicesItem = (await listItems(env.DB, await addCar(alice)))[0];
+    const alicesItem = (await itemsOf(await addCar(alice)))[0];
     const bobsCar = await addCar(bob);
-    await logged(bob, bobsCar, {
-      date: "2026-03-14",
-      odometer_km: "1000",
-      total: "1",
-      "line.0.description": "Oil",
-      "line.0.item": String(alicesItem.id),
-    });
+    const line = { "line.0.description": "Oil", "line.0.item": String(alicesItem.id) };
+
+    const res = await logService(bob, bobsCar, { date: "2026-03-14", odometer_km: "1000", total: "1", ...line });
+    expect(res.status).toBe(404);
+    expect(await listServices(env.DB, bob, bobsCar)).toEqual([]);
+    expect(await listReadings(env.DB, bob, bobsCar)).toEqual([]);
+
+    await logged(bob, bobsCar, { date: "2026-03-14", odometer_km: "1000", total: "1", "line.0.description": "Oil" });
     const [{ id }] = await listServices(env.DB, bob, bobsCar);
-    expect((await getService(env.DB, bob, id))!.lines[0].service_item_id).toBeNull();
+    const before = await getService(env.DB, bob, id);
+    expect((await post(`/services/${id}`, bob, { date: "2026-03-14", odometer_km: "1000", total: "9", ...line })).status).toBe(404);
+    expect(await getService(env.DB, bob, id)).toEqual(before);
   });
 });
 
@@ -383,7 +397,7 @@ describe("when each schedule item was last done", () => {
   it("is the latest service with a line linked to it, whatever order they were entered in", async () => {
     const user = await makeUser();
     const car = await addCar(user);
-    const [engineOil, oilFilter] = await listItems(env.DB, car);
+    const [engineOil, oilFilter] = await itemsOf(car);
     const oilChange = (date: string, km: string, ...items: number[]) =>
       logged(user, car, {
         date,
