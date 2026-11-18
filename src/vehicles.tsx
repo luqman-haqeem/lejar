@@ -5,8 +5,10 @@ import {
   addReading,
   archiveVehicle,
   createVehicle,
+  deleteManualReading,
   getVehicle,
   listItems,
+  listReadings,
   listServices,
   updateVehicle,
   type Vehicle,
@@ -23,8 +25,23 @@ import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 const notFound = (c: Context<AppEnv>) => c.html(<NotFound />, 404);
 
 async function history(c: Context<AppEnv>, vehicle: Vehicle, reading: ReadingValues, errors: FormErrors = {}) {
-  const [services, totals] = await Promise.all([listServices(c.env.DB, vehicle.id), yearTotals(c.env.DB, vehicle.id)]);
-  return <VehicleHistory vehicle={vehicle} services={services} totals={totals} reading={reading} errors={errors} />;
+  const userId = c.get("userId");
+  const [services, totals, readings] = await Promise.all([
+    listServices(c.env.DB, userId, vehicle.id),
+    yearTotals(c.env.DB, userId, vehicle.id),
+    listReadings(c.env.DB, userId, vehicle.id),
+  ]);
+  const manualReadings = readings.filter((r) => r.source === "manual").reverse();
+  return (
+    <VehicleHistory
+      vehicle={vehicle}
+      services={services}
+      totals={totals}
+      manualReadings={manualReadings}
+      reading={reading}
+      errors={errors}
+    />
+  );
 }
 
 export function vehicleRoutes() {
@@ -60,11 +77,17 @@ export function vehicleRoutes() {
     if (km == null) errors.km = "Enter the odometer reading in whole km.";
     if (Object.keys(errors).length > 0) return c.html(await history(c, vehicle, values, errors), 400);
 
-    const conflict = await checkOdometer(c.env.DB, vehicle.id, date!, km!);
+    const conflict = await checkOdometer(c.env.DB, c.get("userId"), vehicle.id, date!, km!);
     if (conflict) return c.html(await history(c, vehicle, values, { km: conflict }), 422);
 
-    await addReading(c.env.DB, vehicle.id, date!, km!);
+    await addReading(c.env.DB, c.get("userId"), vehicle.id, date!, km!);
     return c.redirect(`/vehicles/${vehicle.id}`, 302);
+  });
+
+  routes.post("/readings/:id{[0-9]+}/delete", async (c) => {
+    const vehicleId = await deleteManualReading(c.env.DB, c.get("userId"), Number(c.req.param("id")));
+    if (vehicleId === null) return notFound(c);
+    return c.redirect(`/vehicles/${vehicleId}`, 302);
   });
 
   routes.get("/vehicles/:id{[0-9]+}/edit", async (c) => {

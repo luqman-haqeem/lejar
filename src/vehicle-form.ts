@@ -23,16 +23,15 @@ export function readItems(body: Body): ItemValues[] {
 }
 
 export function formValuesOf(v: Vehicle, items: ServiceItem[]): FormValues {
-  const s = toField;
   return {
-    details: Object.fromEntries(DETAIL_FIELDS.map((k) => [k, s(v[k])])) as DetailValues,
+    details: Object.fromEntries(DETAIL_FIELDS.map((k) => [k, toField(v[k])])) as DetailValues,
     items: items.map((i) => ({
       id: String(i.id),
       name: i.name,
-      km: s(i.interval_km),
-      months: s(i.interval_months),
-      baseline_date: s(i.baseline_date),
-      baseline_km: s(i.baseline_km),
+      km: toField(i.interval_km),
+      months: toField(i.interval_months),
+      baseline_date: toField(i.baseline_date),
+      baseline_km: toField(i.baseline_km),
       remove: "",
     })),
   };

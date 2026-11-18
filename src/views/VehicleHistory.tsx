@@ -1,4 +1,4 @@
-import type { Service, Vehicle } from "../db";
+import type { Reading, Service, Vehicle, YearTotal } from "../db";
 import type { FormErrors } from "../form";
 import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
@@ -12,12 +12,15 @@ export function VehicleHistory({
   vehicle,
   services,
   totals,
+  manualReadings,
   reading,
   errors = {},
 }: {
   vehicle: Vehicle;
   services: Service[];
-  totals: { year: string; total_sen: number }[];
+  totals: YearTotal[];
+  /** Newest first. */
+  manualReadings: Reading[];
   reading: ReadingValues;
   errors?: FormErrors;
 }) {
@@ -84,7 +87,24 @@ export function VehicleHistory({
             Save reading
           </button>
         </form>
+        {manualReadings.length > 0 && (
+          <ul class="lines readings">
+            {manualReadings.map((r) => (
+              <li>
+                <span>
+                  {fmtDate(r.date)} · {fmtKm(r.km)}
+                </span>
+                <form method="post" action={`/readings/${r.id}/delete`} data-confirm="Delete this reading?">
+                  <button type="submit" class="link danger">
+                    Delete
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
+      <script src="/app.js" defer></script>
     </Layout>
   );
 }

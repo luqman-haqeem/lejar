@@ -8,11 +8,12 @@ import { fmtKm } from "./lib/km";
  */
 export async function checkOdometer(
   db: D1Database,
+  userId: number,
   vehicleId: number,
   date: string,
   km: number,
   excludeServiceId: number | null = null,
 ): Promise<string | null> {
-  const conflict = await findOdometerConflict(db, vehicleId, date, km, excludeServiceId);
+  const conflict = await findOdometerConflict(db, userId, vehicleId, date, km, excludeServiceId);
   return conflict && `Odometer ${fmtKm(km)} conflicts with ${fmtDate(conflict.date)} reading of ${fmtKm(conflict.km)}`;
 }

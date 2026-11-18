@@ -13,3 +13,12 @@
 - [x] Deleting a service also removes its lines and its odometer reading.
 - [x] Another user viewing, editing or deleting a service, logging a service against someone else's vehicle, or adding a reading to someone else's vehicle gets 404, and nothing changes.
 - [x] Tests and the typecheck pass.
+
+## Comments
+
+- 2026-11-18 (implementation): The conflict message formats km with thousands separators: "Odometer 50,000 km conflicts with 01/06/2026 reading of 49,000 km".
+- Readings on the same date never conflict with each other (their order within a day is unknown).
+- Service and reading dates can't be in the future.
+- A line tagged with a schedule item that isn't this vehicle's is saved unlinked rather than refused.
+- Manual readings can be deleted from the vehicle page, so a mistyped one doesn't block later entries. A service's reading changes when the service is edited.
+- `ServiceInput` has no `receipt_key` yet; ticket 05 adds it with the scan flow.

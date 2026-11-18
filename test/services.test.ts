@@ -45,7 +45,7 @@ describe("logging a service", () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe(`/vehicles/${car}`);
-    const [summary] = await listServices(env.DB, car);
+    const [summary] = await listServices(env.DB, user, car);
     const service = await getService(env.DB, user, summary.id);
     expect(service).toMatchObject({
       vehicle_id: car,
@@ -59,7 +59,7 @@ describe("logging a service", () => {
       ["Engine oil 5W-30", 18000, engineOil.id],
       ["Labour", null, null],
     ]);
-    expect((await listReadings(env.DB, car)).map((r) => [r.date, r.km, r.source])).toEqual([
+    expect((await listReadings(env.DB, user, car)).map((r) => [r.date, r.km, r.source])).toEqual([
       ["2026-03-14", 52310, "service"],
     ]);
   });
@@ -75,14 +75,14 @@ describe("logging a service", () => {
       "line.1.description": "Filter",
       "line.1.cost": "RM 25",
     });
-    expect((await listServices(env.DB, car))[0].total_sen).toBe(14550);
+    expect((await listServices(env.DB, user, car))[0].total_sen).toBe(14550);
   });
 
   it("accepts an old paper record from years back", async () => {
     const user = await makeUser();
     const car = await addCar(user);
     await logged(user, car, { date: "01/05/2019", odometer_km: "12000", total: "85" });
-    expect((await listServices(env.DB, car))[0]).toMatchObject({ date: "2019-05-01", total_sen: 8500 });
+    expect((await listServices(env.DB, user, car))[0]).toMatchObject({ date: "2019-05-01", total_sen: 8500 });
   });
 
   it("refuses bad amounts, a future date and a missing odometer, keeping what was typed", async () => {
@@ -104,7 +104,7 @@ describe("logging a service", () => {
     expect(html).toContain("Oil: cost must be an amount like 85 or RM 1,234.50.");
     expect(html).toContain('value="Ah Seng"');
     expect(html).toContain('value="abc"');
-    expect(await listServices(env.DB, car)).toEqual([]);
+    expect(await listServices(env.DB, user, car)).toEqual([]);
   });
 });
 
@@ -137,8 +137,8 @@ describe("odometer readings that don't fit", () => {
     expect(html).toContain('value="Ah Seng"');
     expect(html).toContain('value="95"');
     expect(html).toContain('value="Oil"');
-    expect(await listServices(env.DB, car)).toHaveLength(2);
-    expect(await listReadings(env.DB, car)).toHaveLength(2);
+    expect(await listServices(env.DB, user, car)).toHaveLength(2);
+    expect(await listReadings(env.DB, user, car)).toHaveLength(2);
   });
 
   it("refuses a reading lower than an earlier one", async () => {
@@ -157,15 +157,15 @@ describe("odometer readings that don't fit", () => {
     const good = await post(`/vehicles/${car}/readings`, user, { date: "2026-07-01", km: "50,500" });
     expect(good.status).toBe(302);
     expect(good.headers.get("location")).toBe(`/vehicles/${car}`);
-    expect((await listReadings(env.DB, car)).at(-1)).toMatchObject({ date: "2026-07-01", km: 50500, source: "manual" });
+    expect((await listReadings(env.DB, user, car)).at(-1)).toMatchObject({ date: "2026-07-01", km: 50500, source: "manual" });
   });
 
   it("doesn't count a service's own reading against it when editing", async () => {
     const { user, car } = await carWithReadings();
-    const [latest] = await listServices(env.DB, car);
+    const [latest] = await listServices(env.DB, user, car);
     const res = await post(`/services/${latest.id}`, user, { date: "2026-06-01", odometer_km: "49500", total: "100" });
     expect(res.status).toBe(302);
-    expect((await listReadings(env.DB, car)).map((r) => r.km)).toEqual([40000, 49500]);
+    expect((await listReadings(env.DB, user, car)).map((r) => r.km)).toEqual([40000, 49500]);
   });
 });
 
@@ -190,7 +190,7 @@ describe("entering a backlog", () => {
     expect(form).toContain('value="Bengkel Ah Seng &amp; Sons"');
     expect(form).toContain(`name="vehicle_id" value="${car}"`);
     expect(form).toMatch(/name="date"[^>]*value=""/);
-    expect(await listServices(env.DB, car)).toHaveLength(1);
+    expect(await listServices(env.DB, user, car)).toHaveLength(1);
   });
 });
 
@@ -237,7 +237,7 @@ describe("a logged service", () => {
       "line.1.description": "Labour",
       "line.1.cost": "50",
     });
-    const [{ id }] = await listServices(env.DB, car);
+    const [{ id }] = await listServices(env.DB, user, car);
     return { user, car, id, items };
   }
 
@@ -275,7 +275,7 @@ describe("a logged service", () => {
     expect(service!.lines.map((l) => [l.description, l.cost_sen, l.service_item_id])).toEqual([
       ["Oil filter", 16000, items[1].id],
     ]);
-    expect((await listReadings(env.DB, car)).map((r) => [r.date, r.km])).toEqual([["2026-03-15", 52100]]);
+    expect((await listReadings(env.DB, user, car)).map((r) => [r.date, r.km])).toEqual([["2026-03-15", 52100]]);
   });
 
   it("can be deleted, taking its lines and reading with it", async () => {
@@ -284,7 +284,7 @@ describe("a logged service", () => {
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe(`/vehicles/${car}`);
     expect(await getService(env.DB, user, id)).toBeNull();
-    expect(await listReadings(env.DB, car)).toEqual([]);
+    expect(await listReadings(env.DB, user, car)).toEqual([]);
     const orphanLines = await env.DB.prepare("SELECT count(*) AS n FROM service_lines WHERE service_id = ?")
       .bind(id)
       .first<{ n: number }>();
@@ -314,8 +314,8 @@ describe("someone else's vehicle and services", () => {
     const bob = await makeUser("bob@example.com");
     const car = await addCar(alice);
     await logged(alice, car, { date: "2026-03-14", odometer_km: "52000", total: "200", "line.0.description": "Oil" });
-    const [{ id }] = await listServices(env.DB, car);
-    const before = { service: await getService(env.DB, alice, id), readings: await listReadings(env.DB, car) };
+    const [{ id }] = await listServices(env.DB, alice, car);
+    const before = { service: await getService(env.DB, alice, id), readings: await listReadings(env.DB, alice, car) };
     const edit = { date: "2026-03-14", odometer_km: "1", total: "1" };
 
     expect((await get(`/services/${id}`, bob)).status).toBe(404);
@@ -328,8 +328,8 @@ describe("someone else's vehicle and services", () => {
     expect((await post(`/vehicles/${car}/readings`, bob, { date: "2026-04-01", km: "60000" })).status).toBe(404);
 
     expect(await getService(env.DB, alice, id)).toEqual(before.service);
-    expect(await listServices(env.DB, car)).toHaveLength(1);
-    expect(await listReadings(env.DB, car)).toEqual(before.readings);
+    expect(await listServices(env.DB, alice, car)).toHaveLength(1);
+    expect(await listReadings(env.DB, alice, car)).toEqual(before.readings);
   });
 
   it("can't have its schedule items tagged on your own service", async () => {
@@ -344,7 +344,37 @@ describe("someone else's vehicle and services", () => {
       "line.0.description": "Oil",
       "line.0.item": String(alicesItem.id),
     });
-    const [{ id }] = await listServices(env.DB, bobsCar);
+    const [{ id }] = await listServices(env.DB, bob, bobsCar);
     expect((await getService(env.DB, bob, id))!.lines[0].service_item_id).toBeNull();
+  });
+});
+
+describe("fixing a mistyped reading", () => {
+  it("lets the owner delete a manual reading that blocks later entries", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await post(`/vehicles/${car}/readings`, user, { date: "2026-06-01", km: "490000" });
+    expect((await logService(user, car, { date: "2026-07-01", odometer_km: "50000", total: "1" })).status).toBe(422);
+
+    const [typo] = await listReadings(env.DB, user, car);
+    expect(await (await get(`/vehicles/${car}`, user)).text()).toContain("490,000 km");
+    const res = await post(`/readings/${typo.id}/delete`, user, {});
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe(`/vehicles/${car}`);
+    expect(await listReadings(env.DB, user, car)).toEqual([]);
+    expect((await logService(user, car, { date: "2026-07-01", odometer_km: "50000", total: "1" })).status).toBe(302);
+  });
+
+  it("won't delete a service's reading (edit the service instead) or someone else's", async () => {
+    const alice = await makeUser("alice@example.com");
+    const bob = await makeUser("bob@example.com");
+    const car = await addCar(alice);
+    await logged(alice, car, { date: "2026-03-01", odometer_km: "40000", total: "1" });
+    await post(`/vehicles/${car}/readings`, alice, { date: "2026-04-01", km: "41000" });
+    const [fromService, manual] = await listReadings(env.DB, alice, car);
+
+    expect((await post(`/readings/${fromService.id}/delete`, alice, {})).status).toBe(404);
+    expect((await post(`/readings/${manual.id}/delete`, bob, {})).status).toBe(404);
+    expect(await listReadings(env.DB, alice, car)).toHaveLength(2);
   });
 });

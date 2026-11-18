@@ -19,6 +19,10 @@ export function readServiceForm(body: Body): ServiceFormValues {
   return { service: readFields(body, SERVICE_FIELDS, ["date"]), lines: readRows(body, "line", LINE_FIELDS) };
 }
 
+export function blankServiceForm(workshop = ""): ServiceFormValues {
+  return { service: { date: "", odometer_km: "", workshop, total: "", notes: "" }, lines: [] };
+}
+
 /** Money is shown without the "RM" in inputs, which already say "RM". */
 const amount = (sen: number | null) => (sen === null ? "" : fmtRM(sen).slice(3));
 

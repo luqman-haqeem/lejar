@@ -15,3 +15,7 @@
 - [ ] Items sort by urgency: overdue, then soon, then unknown, then OK.
 - [ ] A user's dashboard never shows another user's vehicles.
 - [ ] Tests and the typecheck pass.
+
+## Comments
+
+- 2026-11-18: Ticket 03 didn't add `lastDoneByItem` (latest linked service line per schedule item); this ticket writes it alongside the due logic.

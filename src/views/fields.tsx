@@ -1,5 +1,5 @@
 import type { Child } from "hono/jsx";
-import type { FormErrors } from "../form";
+import { type FormErrors, isBlankRow } from "../form";
 
 export function ErrorSummary({ errors }: { errors: FormErrors }) {
   const messages = [...new Set(Object.values(errors))];
@@ -58,7 +58,7 @@ export function RepeatableRows<R extends Record<string, string>>({
   render: (row: R, n: number | "__N__") => Child;
 }) {
   const last = rows.at(-1);
-  const all = last && !last.id && Object.values(last).every((v) => v === "") ? rows : [...rows, blank];
+  const all = last && isBlankRow(last) ? rows : [...rows, blank];
   return (
     <>
       <div id={id} data-next={all.length}>

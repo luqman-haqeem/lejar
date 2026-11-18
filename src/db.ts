@@ -267,49 +267,78 @@ export async function deleteService(
 ): Promise<{ vehicleId: number; receiptKey: string | null } | null> {
   const service = await getService(db, userId, id);
   if (!service) return null;
-  await db.batch([
-    db.prepare("DELETE FROM service_lines WHERE service_id = ?").bind(id),
-    db.prepare("DELETE FROM odometer_readings WHERE service_id = ?").bind(id),
-    db.prepare("DELETE FROM services WHERE id = ?").bind(id),
-  ]);
+  // The schema cascades the service's lines and reading.
+  await db.prepare("DELETE FROM services WHERE id = ?").bind(id).run();
   return { vehicleId: service.vehicle_id, receiptKey: service.receipt_key };
 }
 
-/** The vehicle's services, newest first. Callers check ownership with getVehicle first. */
-export async function listServices(db: D1Database, vehicleId: number): Promise<Service[]> {
+/** Filters a table with a vehicle_id column to one vehicle of the user's. Binds (vehicleId, userId). */
+const OWNED_VEHICLE = "vehicle_id IN (SELECT id FROM vehicles WHERE id = ? AND user_id = ?)";
+
+/** The vehicle's services, newest first. Empty if the vehicle isn't the user's. */
+export async function listServices(db: D1Database, userId: number, vehicleId: number): Promise<Service[]> {
   const { results } = await db
-    .prepare("SELECT * FROM services WHERE vehicle_id = ? ORDER BY date DESC, odometer_km DESC, id DESC")
-    .bind(vehicleId)
+    .prepare(`SELECT * FROM services WHERE ${OWNED_VEHICLE} ORDER BY date DESC, odometer_km DESC, id DESC`)
+    .bind(vehicleId, userId)
     .all<Service>();
   return results;
 }
 
+export type YearTotal = { year: string; total_sen: number };
+
 /** Total spent per calendar year, newest year first. */
-export async function yearTotals(db: D1Database, vehicleId: number): Promise<{ year: string; total_sen: number }[]> {
+export async function yearTotals(db: D1Database, userId: number, vehicleId: number): Promise<YearTotal[]> {
   const { results } = await db
     .prepare(
       `SELECT substr(date, 1, 4) AS year, SUM(total_sen) AS total_sen FROM services
-       WHERE vehicle_id = ? GROUP BY year ORDER BY year DESC`,
+       WHERE ${OWNED_VEHICLE} GROUP BY year ORDER BY year DESC`,
     )
-    .bind(vehicleId)
-    .all<{ year: string; total_sen: number }>();
+    .bind(vehicleId, userId)
+    .all<YearTotal>();
   return results;
 }
 
 /** The vehicle's odometer readings, oldest first. */
-export async function listReadings(db: D1Database, vehicleId: number): Promise<Reading[]> {
+export async function listReadings(db: D1Database, userId: number, vehicleId: number): Promise<Reading[]> {
   const { results } = await db
-    .prepare("SELECT * FROM odometer_readings WHERE vehicle_id = ? ORDER BY date, km, id")
-    .bind(vehicleId)
+    .prepare(`SELECT * FROM odometer_readings WHERE ${OWNED_VEHICLE} ORDER BY date, km, id`)
+    .bind(vehicleId, userId)
     .all<Reading>();
   return results;
 }
 
-export async function addReading(db: D1Database, vehicleId: number, date: string, km: number): Promise<void> {
-  await db
-    .prepare("INSERT INTO odometer_readings (vehicle_id, date, km, source) VALUES (?, ?, ?, 'manual')")
-    .bind(vehicleId, date, km)
+/** Adds a manual reading. Returns false (writing nothing) if the vehicle isn't the user's. */
+export async function addReading(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+  date: string,
+  km: number,
+): Promise<boolean> {
+  const res = await db
+    .prepare(
+      `INSERT INTO odometer_readings (vehicle_id, date, km, source)
+       SELECT id, ?, ?, 'manual' FROM vehicles WHERE id = ? AND user_id = ?`,
+    )
+    .bind(date, km, vehicleId, userId)
     .run();
+  return res.meta.changes > 0;
+}
+
+/**
+ * Deletes a manual reading (a service's reading changes with the service). Returns its vehicle id,
+ * or null if it isn't a manual reading of the user's.
+ */
+export async function deleteManualReading(db: D1Database, userId: number, id: number): Promise<number | null> {
+  const row = await db
+    .prepare(
+      `DELETE FROM odometer_readings WHERE id = ? AND source = 'manual'
+         AND vehicle_id IN (SELECT id FROM vehicles WHERE user_id = ?)
+       RETURNING vehicle_id`,
+    )
+    .bind(id, userId)
+    .first<{ vehicle_id: number }>();
+  return row?.vehicle_id ?? null;
 }
 
 /**
@@ -318,6 +347,7 @@ export async function addReading(db: D1Database, vehicleId: number, date: string
  */
 export async function findOdometerConflict(
   db: D1Database,
+  userId: number,
   vehicleId: number,
   date: string,
   km: number,
@@ -326,10 +356,10 @@ export async function findOdometerConflict(
   return db
     .prepare(
       `SELECT date, km FROM odometer_readings
-       WHERE vehicle_id = ? AND ((date < ? AND km > ?) OR (date > ? AND km < ?))
+       WHERE ${OWNED_VEHICLE} AND ((date < ? AND km > ?) OR (date > ? AND km < ?))
          AND (? IS NULL OR service_id IS NULL OR service_id != ?)
        ORDER BY abs(julianday(date) - julianday(?)) LIMIT 1`,
     )
-    .bind(vehicleId, date, km, date, km, excludeServiceId, excludeServiceId, date)
+    .bind(vehicleId, userId, date, km, date, km, excludeServiceId, excludeServiceId, date)
     .first<Pick<Reading, "date" | "km">>();
 }
