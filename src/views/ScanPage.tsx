@@ -1,6 +1,8 @@
 import type { Vehicle } from "../db";
 import { Layout } from "./Layout";
 
+export const SCAN_LIMIT_REACHED = "Daily scan limit reached — you can still log manually";
+
 export function ScanPage({
   vehicles,
   selected,
@@ -21,8 +23,13 @@ export function ScanPage({
         <p class="crumb">
           <a href="/">← Dashboard</a>
         </p>
+        {error && error !== SCAN_LIMIT_REACHED && (
+          <p class="error" role="alert">
+            {error}
+          </p>
+        )}
         <section class="empty">
-          <h1>Daily scan limit reached — you can still log manually</h1>
+          <h1>{SCAN_LIMIT_REACHED}</h1>
           <p>Scans reset at midnight (Malaysia time). Logging by hand is never limited.</p>
           <a class="button" href={manual}>
             Log a service by hand

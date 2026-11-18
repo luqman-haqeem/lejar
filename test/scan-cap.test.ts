@@ -134,6 +134,34 @@ describe("the scan limit in the app", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("gives the scan back, and says so, when the photo can't be stored", async () => {
+    const broken = {
+      ...env,
+      SCAN_CAP_PER_USER: "1",
+      SCAN_CAP_GLOBAL: "300",
+      RECEIPTS: { ...env.RECEIPTS, put: async () => { throw new Error("R2 down"); } } as unknown as R2Bucket,
+    };
+    const app = createApp({ now, aiFetch: (async () => { throw new Error("not called"); }) as typeof fetch });
+    const user = await makeUser();
+    const car = await addCar(app, broken, user);
+    const res = await scan(app, broken, user, car, new File([JPEG], "r.jpg", { type: "image/jpeg" }));
+    expect(res.status).toBe(503);
+    expect(await res.text()).toContain("Couldn&#39;t store the photo just now");
+    expect(await scanPage(app, broken, user)).toContain("1 scan left today");
+  });
+
+  it("still says what was wrong with an upload when no scans are left", async () => {
+    const { app, capped } = setup();
+    const user = await makeUser();
+    const car = await addCar(app, capped, user);
+    const jpeg = () => new File([JPEG], "r.jpg", { type: "image/jpeg" });
+    await scan(app, capped, user, car, jpeg());
+    await scan(app, capped, user, car, jpeg());
+    const pdf = await scan(app, capped, user, car, new File([new Uint8Array([1])], "r.pdf", { type: "application/pdf" }));
+    expect(pdf.status).toBe(415);
+    expect(await pdf.text()).toContain("Unsupported image");
+  });
+
   it("counts a scan even when the AI fails", async () => {
     const capped = { ...env, SCAN_CAP_PER_USER: "2", SCAN_CAP_GLOBAL: "300" };
     const failing = (async () => new Response("down", { status: 502 })) as typeof fetch;

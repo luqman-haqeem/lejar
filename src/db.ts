@@ -525,3 +525,11 @@ export async function scansLeft(
     .first<{ mine: number; everyone: number }>();
   return Math.max(0, Math.min(perUser - row!.mine, global - row!.everyone));
 }
+
+/** Undoes one counted scan, for when the scan couldn't actually run (e.g. the photo couldn't be stored). */
+export async function giveBackScan(db: D1Database, userId: number, today: string): Promise<void> {
+  await db
+    .prepare("UPDATE scan_usage SET count = count - 1 WHERE user_id = ? AND date = ? AND count > 0")
+    .bind(userId, today)
+    .run();
+}

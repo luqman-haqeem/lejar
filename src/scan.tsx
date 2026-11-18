@@ -3,20 +3,24 @@ import type { AppEnv } from "./app-types";
 import { idOf, notFound } from "./http";
 import { inBackground } from "./background";
 import type { Context } from "hono";
-import { getVehicle, listItems, listVehicles, scansLeft, takeScan } from "./db";
+import { getVehicle, giveBackScan, listItems, listVehicles, scansLeft, takeScan } from "./db";
 import { scanReceipt } from "./openrouter";
 import { cleanupOrphans, photoProblem, putReceipt, uploadTooLarge } from "./receipts";
 import { blankServiceForm, scanFormValues } from "./service-form";
 import { PhotoTooLarge } from "./views/PhotoTooLarge";
-import { ScanPage } from "./views/ScanPage";
+import { SCAN_LIMIT_REACHED, ScanPage } from "./views/ScanPage";
 import { ServiceForm } from "./views/ServiceForm";
 
 
-export const SCAN_LIMIT_REACHED = "Daily scan limit reached — you can still log manually";
-
+/** The caps from config (wrangler.jsonc vars). A malformed value is logged and the safe default used. */
 function caps(c: Context<AppEnv>) {
-  const n = (v: string | undefined, fallback: number) => (v !== undefined && /^\d+$/.test(v) ? Number(v) : fallback);
-  return { perUser: n(c.env.SCAN_CAP_PER_USER, 20), global: n(c.env.SCAN_CAP_GLOBAL, 300) };
+  const n = (name: "SCAN_CAP_PER_USER" | "SCAN_CAP_GLOBAL", fallback: number) => {
+    const v = c.env[name];
+    if (v !== undefined && /^\d+$/.test(v)) return Number(v);
+    console.warn(`${name} is not a whole number (${JSON.stringify(v)}); using ${fallback}`);
+    return fallback;
+  };
+  return { perUser: n("SCAN_CAP_PER_USER", 20), global: n("SCAN_CAP_GLOBAL", 300) };
 }
 
 export const SCAN_FAILED = "Couldn't read receipt — fill in manually";
@@ -67,6 +71,7 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
       key = await putReceipt(c.env.RECEIPTS, userId, file);
     } catch (e) {
       console.warn("receipt upload failed", e instanceof Error ? e.message : e);
+      await giveBackScan(c.env.DB, userId, c.get("today")); // the scan never ran
       return page("Couldn't store the photo just now. Please try again.", 503);
     }
     await inBackground(c, cleanupOrphans(c.env.RECEIPTS, c.env.DB));
