@@ -2,7 +2,7 @@ import type { Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
 import { type ExpiryStatus, type ItemDue, type OdometerState, STALE_ODOMETER_DAYS } from "../lib/due";
 import { fmtKm } from "../lib/km";
-import { VEHICLE_TYPE_LABELS } from "../lib/templates";
+import { vehicleSummary } from "../lib/templates";
 import { Layout } from "./Layout";
 
 export type VehicleDue = {
@@ -85,9 +85,7 @@ const ODOMETER_PROMPT: Record<OdometerState, string | null> = {
 
 function VehicleCard({ due }: { due: VehicleDue }) {
   const v = due.vehicle;
-  const subtitle = [VEHICLE_TYPE_LABELS[v.type], [v.make, v.model, v.year].filter(Boolean).join(" ")]
-    .filter(Boolean)
-    .join(" · ");
+  const subtitle = vehicleSummary(v);
   const more = due.items.length - TOP_ITEMS;
   return (
     <article class="card">

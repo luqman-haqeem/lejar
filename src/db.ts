@@ -540,18 +540,21 @@ export async function listServicesWithLines(
   userId: number,
   vehicleId: number,
 ): Promise<ServiceWithLines[]> {
+  const own = scoped("s.vehicle_id", { userId, vehicleId });
   const [services, lines] = await db.batch<unknown>([
-    db
-      .prepare(`SELECT * FROM services WHERE ${OWNED_VEHICLE} ORDER BY date, odometer_km, id`)
-      .bind(vehicleId, userId),
+    db.prepare(`SELECT * FROM services s WHERE ${own.sql} ORDER BY date, odometer_km, id`).bind(...own.binds),
     db
       .prepare(
         `SELECT l.* FROM service_lines l JOIN services s ON s.id = l.service_id
-         WHERE s.${OWNED_VEHICLE} ORDER BY l.service_id, l.sort, l.id`,
+         WHERE ${own.sql} ORDER BY l.service_id, l.sort, l.id`,
       )
-      .bind(vehicleId, userId),
+      .bind(...own.binds),
   ]);
   const byService = new Map<number, ServiceLine[]>();
-  for (const l of lines.results as ServiceLine[]) byService.set(l.service_id, [...(byService.get(l.service_id) ?? []), l]);
+  for (const l of lines.results as ServiceLine[]) {
+    const list = byService.get(l.service_id);
+    if (list) list.push(l);
+    else byService.set(l.service_id, [l]);
+  }
   return (services.results as Service[]).map((s) => ({ ...s, lines: byService.get(s.id) ?? [] }));
 }

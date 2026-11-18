@@ -1,13 +1,14 @@
 import type { ServiceWithLines, Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
-import { fmtRM } from "../lib/money";
-import { VEHICLE_TYPE_LABELS } from "../lib/templates";
+import { fmtOptionalRM, fmtRM } from "../lib/money";
+import { vehicleSummary } from "../lib/templates";
 import { Layout } from "./Layout";
 
 /**
  * A vehicle's full service history for printing or saving as a PDF (e.g. for a buyer). Shows only
- * logged services: schedule baselines are estimates and never appear here.
+ * logged services: schedule baselines are estimates and never appear here, and the owner's private
+ * notes are left out.
  */
 export function PrintHistory({
   vehicle,
@@ -19,7 +20,6 @@ export function PrintHistory({
   today: string;
 }) {
   const grandTotal = services.reduce((sum, s) => sum + s.total_sen, 0);
-  const subtitle = [vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(" ");
   return (
     <Layout title={`${vehicle.name} service history`} stylesheet="/print.css">
       <div class="print-actions no-print">
@@ -29,10 +29,7 @@ export function PrintHistory({
       <header class="print-head">
         <div>
           <h1>{vehicle.name}</h1>
-          <p>
-            {VEHICLE_TYPE_LABELS[vehicle.type]}
-            {subtitle && ` · ${subtitle}`}
-          </p>
+          <p>{vehicleSummary(vehicle)}</p>
         </div>
         <div class="print-meta">
           {vehicle.plate && <span class="plate">{vehicle.plate}</span>}
@@ -58,13 +55,12 @@ export function PrintHistory({
                     {s.lines.map((l) => (
                       <tr>
                         <td>{l.description}</td>
-                        <td class="amount">{l.cost_sen === null ? "" : fmtRM(l.cost_sen)}</td>
+                        <td class="amount">{fmtOptionalRM(l.cost_sen)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
-              {s.notes && <p class="print-notes">{s.notes}</p>}
             </section>
           ))}
           <p class="print-total">

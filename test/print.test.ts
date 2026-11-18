@@ -28,6 +28,7 @@ async function carWithHistory() {
     odometer_km: "30000",
     workshop: "Bengkel Ah Seng",
     total: "200",
+    notes: "Owner mentioned aircond smell",
     "line.0.description": "Minyak hitam 4L",
     "line.0.cost": "150",
     "line.1.description": "Labour",
@@ -89,6 +90,11 @@ describe("the printable history", () => {
     expect(html).not.toContain("01/11/2025");
     expect(html).not.toContain("2025-11-01");
     expect(html).not.toContain("41,234");
+  });
+
+  it("leaves out private notes", async () => {
+    const { user, car } = await carWithHistory();
+    expect(await (await get(`/vehicles/${car}/print`, user)).text()).not.toContain("aircond smell");
   });
 
   it("is linked from the vehicle's page", async () => {

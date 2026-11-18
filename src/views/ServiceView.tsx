@@ -1,7 +1,7 @@
 import type { ServiceItem, ServiceWithLines, Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
-import { fmtRM } from "../lib/money";
+import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { receiptUrl } from "../receipts";
 import { Layout } from "./Layout";
 
@@ -43,7 +43,7 @@ export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; ser
                   <span class="tag">{itemName.get(l.service_item_id)}</span>
                 )}
               </span>
-              <span>{l.cost_sen === null ? "" : fmtRM(l.cost_sen)}</span>
+              <span>{fmtOptionalRM(l.cost_sen)}</span>
             </li>
           ))}
         </ul>

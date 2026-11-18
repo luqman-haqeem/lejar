@@ -10,3 +10,9 @@
 - [x] Baselines never appear on this page.
 - [x] Another user opening this page gets 404.
 - [x] Tests and the typecheck pass.
+
+## Comments
+
+- 2026-11-18 (implementation): Services print oldest first, as a service book reads (the vehicle page is newest first).
+- The owner's private service notes are left off the print page, which is meant for buyers.
+- The app's navigation isn't rendered on this page at all; the print stylesheet hides the Back link and the Print button.

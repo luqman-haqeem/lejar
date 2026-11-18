@@ -30,3 +30,9 @@ export const TEMPLATES: Record<VehicleType, readonly TemplateItem[]> = {
   car: CAR_TEMPLATE,
   motorbike: MOTORBIKE_TEMPLATE,
 };
+
+/** "Car · Perodua Myvi 1.5 AV 2019": the type, then whichever of make, model and year are known. */
+export function vehicleSummary(v: { type: VehicleType; make: string; model: string; year: number | null }): string {
+  const makeModel = [v.make, v.model, v.year].filter(Boolean).join(" ");
+  return makeModel ? `${VEHICLE_TYPE_LABELS[v.type]} · ${makeModel}` : VEHICLE_TYPE_LABELS[v.type];
+}
