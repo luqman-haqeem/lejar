@@ -40,7 +40,8 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
 }
 
 /**
- * Blank line rows are dropped. A line tagged with a schedule item but no description takes the item's
+ * Blank line rows are dropped. Callers 404 on item ids that aren't the vehicle's. A line tagged with a
+ * schedule item but no description takes the item's
  * name. A blank total becomes the sum of the line costs. Any past date is fine; future ones aren't.
  */
 export function parseServiceForm(
