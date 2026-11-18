@@ -1,5 +1,5 @@
 import type { FormErrors } from "../form";
-import { ErrorSummary, Field, type FieldProps, RepeatableRows } from "./fields";
+import { ErrorSummary, Field, FieldError, type FieldProps, fieldId, RepeatableRows } from "./fields";
 import type { DetailValues, FormValues, ItemValues } from "../vehicle-form";
 import { isVehicleType, VEHICLE_TYPE_LABELS } from "../lib/templates";
 import { Layout } from "./Layout";
@@ -16,9 +16,17 @@ function Details({ d, errors, typeFixed = false }: { d: DetailValues; errors: Fo
         <div class={"type" in errors ? "type-choice invalid" : "type-choice"}>
           {Object.entries(VEHICLE_TYPE_LABELS).map(([value, label], i) => (
             <label>
-              <input type="radio" name="type" value={value} checked={d.type ? d.type === value : i === 0} /> {label}
+              <input
+                type="radio"
+                name="type"
+                value={value}
+                id={i === 0 ? fieldId("type") : undefined}
+                checked={d.type ? d.type === value : i === 0}
+              />{" "}
+              {label}
             </label>
           ))}
+          <FieldError name="type" errors={errors} />
         </div>
       )}
       <Field label="Name" name="name" value={d.name} errors={errors} placeholder="e.g. Myvi" required />
@@ -65,12 +73,13 @@ function ItemRow({ item, n, errors }: { item: ItemValues; n: number | "__N__"; e
 
 function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }) {
   return (
-    <fieldset class="schedule">
+    <fieldset class="schedule" id={fieldId("items")} tabindex={-1}>
       <legend>Service schedule</legend>
       <p class="hint">
         Whichever comes first, km or months, makes an item due. If you know roughly when an item was last done, fill
         in "last done" so the app can work out when it's next due.
       </p>
+      <FieldError name="items" errors={errors} />
       <RepeatableRows
         id="items"
         rows={items}

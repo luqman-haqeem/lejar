@@ -1,19 +1,36 @@
 import type { Child } from "hono/jsx";
 import { type FormErrors, isBlankRow } from "../form";
 
+/** The id of a form control, which error summary links point to. */
+export const fieldId = (name: string) => `f-${name}`;
+export const errorId = (name: string) => `${fieldId(name)}-error`;
+
+/** Failed-submit summary: one link per distinct message, to its field. public/app.js focuses it on load. */
 export function ErrorSummary({ errors }: { errors: FormErrors }) {
-  const messages = [...new Set(Object.values(errors))];
-  if (messages.length === 0) return null;
+  const byMessage = new Map<string, string>();
+  for (const [key, message] of Object.entries(errors)) if (!byMessage.has(message)) byMessage.set(message, key);
+  if (byMessage.size === 0) return null;
   return (
-    <div class="error-summary" role="alert">
-      <p>Please fix the following:</p>
+    <div class="error-summary" role="alert" tabindex={-1} aria-labelledby="error-summary-title">
+      <p id="error-summary-title">Please fix the following:</p>
       <ul>
-        {messages.map((m) => (
-          <li>{m}</li>
+        {[...byMessage].map(([message, key]) => (
+          <li>
+            <a href={`#${fieldId(key)}`}>{message}</a>
+          </li>
         ))}
       </ul>
     </div>
   );
+}
+
+/** A field's own error message, shown under it. */
+export function FieldError({ name, errors }: { name: string; errors: FormErrors }) {
+  return name in errors ? (
+    <span class="field-error" id={errorId(name)}>
+      {errors[name]}
+    </span>
+  ) : null;
 }
 
 export type FieldProps = {
@@ -37,7 +54,16 @@ export function Field({ label, name, value, errors, errorKey = name, type = "tex
   return (
     <label class={invalid ? "field invalid" : highlight ? "field unread" : "field"}>
       <span>{label}</span>
-      <input name={name} type={type} value={value} aria-invalid={invalid ? "true" : undefined} {...rest} />
+      <input
+        name={name}
+        id={fieldId(errorKey)}
+        type={type}
+        value={value}
+        aria-invalid={invalid ? "true" : undefined}
+        aria-describedby={invalid ? errorId(errorKey) : undefined}
+        {...rest}
+      />
+      <FieldError name={errorKey} errors={errors} />
     </label>
   );
 }

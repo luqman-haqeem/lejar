@@ -88,6 +88,15 @@ describe("refusing a bad vehicle", () => {
     expect(html).toContain('value="ABC 1"');
     expect(await listVehicles(env.DB, user)).toEqual([]);
   });
+
+  it("shows each error under its field and links to it from the summary", async () => {
+    const user = await makeUser();
+    const html = await (await post("/vehicles", user, { type: "car", name: "" })).text();
+
+    expect(html).toContain('<a href="#f-name">Give the vehicle a name.</a>');
+    expect(html).toMatch(/<input name="name" id="f-name"[^>]*aria-describedby="f-name-error"/);
+    expect(html).toContain('<span class="field-error" id="f-name-error">Give the vehicle a name.</span>');
+  });
 });
 
 /** The edit form's fields for the vehicle as it is now, the way the browser would post them back. */

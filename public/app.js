@@ -15,6 +15,10 @@ for (const button of document.querySelectorAll("button[data-add-row]")) {
   });
 }
 
+// After a failed submit, move focus to the error summary so screen readers announce it and its
+// links (to each invalid field) are next in tab order.
+document.querySelector(".error-summary")?.focus();
+
 // Forms with data-confirm ask first (e.g. archiving a vehicle, deleting a service).
 for (const form of document.querySelectorAll("form[data-confirm]")) {
   form.addEventListener("submit", (e) => {

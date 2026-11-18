@@ -1,7 +1,7 @@
 import type { ServiceItem, Vehicle } from "../db";
 import type { FormErrors } from "../form";
 import type { LineValues, ServiceFormValues } from "../service-form";
-import { ErrorSummary, Field, RepeatableRows } from "./fields";
+import { ErrorSummary, Field, errorId, FieldError, fieldId, RepeatableRows } from "./fields";
 import { receiptUrl } from "../receipts";
 import { Layout } from "./Layout";
 
@@ -64,7 +64,16 @@ function ReceiptPhoto({ receiptKey, errors }: { receiptKey: string | null; error
       )}
       <label class={"photo" in errors ? "field invalid" : "field"}>
         <span>{receiptKey ? "Replace photo" : "Attach a photo"}</span>
-        <input type="file" name="photo" accept="image/*" data-compress />
+        <input
+          type="file"
+          name="photo"
+          id={fieldId("photo")}
+          accept="image/*"
+          data-compress
+          aria-invalid={"photo" in errors ? "true" : undefined}
+          aria-describedby={"photo" in errors ? errorId("photo") : undefined}
+        />
+        <FieldError name="photo" errors={errors} />
       </label>
     </fieldset>
   );
@@ -155,9 +164,10 @@ export function ServiceForm({
             </textarea>
           </label>
         </fieldset>
-        <fieldset>
+        <fieldset id={fieldId("lines")} tabindex={-1}>
           <legend>Lines</legend>
           <p class="hint">Tag a line with a schedule item to reset when that item is next due.</p>
+          <FieldError name="lines" errors={errors} />
           <RepeatableRows
             id="lines"
             rows={values.lines}
