@@ -9,7 +9,7 @@
 - [ ] The owner has created a Google OAuth web client with redirect URIs for localhost:8787 and the workers.dev callback.
 - [ ] The owner has run `wrangler login` and added a payment card to the Cloudflare account so R2 is enabled.
 - [ ] The production D1 database and the `kereta-receipts` R2 bucket are created, migrations are applied remotely, and the database id is committed.
-- [ ] The secrets are set: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENROUTER_API_KEY`. `CONTACT_EMAIL` is set as a var.
+- [ ] The secrets are set: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENROUTER_API_KEY`, `CONTACT_EMAIL`.
 - [ ] The app is deployed. `/healthz` returns `ok`, and `/` redirects to sign-in when signed out.
 - [ ] The Google consent screen has its homepage and privacy URL set and is published.
 - [ ] On the iPhone: sign in, add the app to the Home Screen, add a vehicle, scan a real receipt, check the dashboard, and save a PDF.
@@ -17,3 +17,4 @@
 ## Comments
 
 - 2026-11-18: Also set `CONTACT_EMAIL` as a secret (ticket 09). Check whether Google accepts `*.workers.dev` homepage/privacy URLs for publishing the consent screen, or whether a verified custom domain is needed.
+- 2026-11-18: `scripts/go-live.sh` walks through every box here in order (run it from a terminal: `./scripts/go-live.sh`). A signed-in smoke test against `wrangler dev` passed beforehand (vehicle, service with photo, photo route, history, print, scan page, dashboard chips).
