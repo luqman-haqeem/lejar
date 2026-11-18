@@ -10,6 +10,9 @@ export function Login({ error }: { error?: string }) {
         <a class="button" href="/auth/google">
           Sign in with Google
         </a>
+        <p class="footer-links">
+          <a href="/privacy">Privacy</a>
+        </p>
       </section>
     </Layout>
   );

@@ -122,3 +122,9 @@ button:disabled { opacity: 0.6; }
   box-shadow: 0 6px 18px rgba(15, 107, 92, 0.35); z-index: 10;
 }
 main:has(.scan-fab) { padding-bottom: 6rem; }
+.footer-links { margin-top: 2rem; font-size: 0.9rem; }
+.footer-links a { color: var(--muted); }
+.prose { line-height: 1.55; }
+.prose ul { padding-left: 1.2rem; color: var(--muted); }
+.prose li { margin-bottom: 0.4rem; }
+.prose strong { color: var(--ink); }

@@ -11,6 +11,7 @@ import { scanRoutes } from "./scan";
 import { serviceRoutes } from "./services";
 import { vehicleRoutes } from "./vehicles";
 import { Login } from "./views/Login";
+import { Privacy } from "./views/Privacy";
 
 /** Injectable for tests: the fetch used for Google, the one used for OpenRouter, and the clock that decides "today". */
 export type AppDeps = { fetchFn?: typeof fetch; aiFetch?: typeof fetch; now?: () => Date };
@@ -20,6 +21,7 @@ export function createApp(deps: AppDeps = {}) {
 
   app.get("/healthz", (c) => c.text("ok"));
   app.get("/login", (c) => c.html(<Login />));
+  app.get("/privacy", (c) => c.html(<Privacy contactEmail={c.env.CONTACT_EMAIL} />));
   app.route("/", authRoutes(deps.fetchFn));
 
   app.use("*", async (c, next) => {

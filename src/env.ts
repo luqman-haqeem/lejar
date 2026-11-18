@@ -13,4 +13,6 @@ export type Env = {
   SCAN_CAP_PER_USER: string;
   /** AI scans allowed per Malaysia day across all users: a backstop on the OpenRouter bill. */
   SCAN_CAP_GLOBAL: string;
+  /** Shown on /privacy for questions and deletion requests. */
+  CONTACT_EMAIL: string;
 };
