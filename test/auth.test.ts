@@ -140,3 +140,30 @@ describe("refusing to sign in", () => {
     expect(cookieValue(res, "kereta_session")).toBeUndefined();
   });
 });
+
+describe("edge cases on the way back from Google", () => {
+  it("says sign-in was cancelled when the user declines on Google's screen", async () => {
+    const res = await app.request("https://kereta.test/auth/google/callback?error=access_denied&state=x", {}, env);
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("Sign-in was cancelled");
+  });
+
+  it("keeps the session cookie Secure over https but not on plain-http local dev", async () => {
+    const user = { sub: "sub-local", email: "l@example.com", email_verified: true };
+    const https = await signInThroughGoogle(createApp({ fetchFn: fakeGoogle(user) }));
+    const httpApp = createApp({ fetchFn: fakeGoogle(user) });
+    const start = await httpApp.request("http://localhost:8787/auth/google", {}, env);
+    const state = new URL(start.headers.get("location")!).searchParams.get("state")!;
+    const local = await httpApp.request(
+      `http://localhost:8787/auth/google/callback?code=good-code&state=${state}`,
+      { headers: { cookie: start.headers.get("set-cookie")!.split(";")[0] } },
+      env,
+    );
+
+    const secureOf = (res: Response) =>
+      res.headers.getSetCookie().find((c) => c.startsWith("kereta_session="))!.includes("Secure");
+    expect(local.status).toBe(302);
+    expect(secureOf(https)).toBe(true);
+    expect(secureOf(local)).toBe(false);
+  });
+});

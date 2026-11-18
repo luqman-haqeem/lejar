@@ -9,7 +9,7 @@ export function fakeGoogle(user: GoogleUser): typeof fetch {
     const req = new Request(input, init);
     const url = new URL(req.url);
     if (url.href === "https://oauth2.googleapis.com/token" && req.method === "POST") {
-      const form = new URLSearchParams(await req.text());
+      const form = await req.formData();
       if (form.get("code") !== "good-code" || !form.get("code_verifier")) {
         return Response.json({ error: "invalid_grant" }, { status: 400 });
       }

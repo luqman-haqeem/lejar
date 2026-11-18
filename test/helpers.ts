@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { SESSION_COOKIE } from "../src/auth";
 import { signSession } from "../src/session";
 import { upsertUser } from "../src/users";
 
@@ -9,5 +10,5 @@ export async function makeUser(email = "someone@example.com"): Promise<number> {
 
 /** Request headers carrying a valid session for the given user. */
 export async function sessionHeaders(userId: number): Promise<Record<string, string>> {
-  return { cookie: `kereta_session=${await signSession(userId, env.SESSION_SECRET)}` };
+  return { cookie: `${SESSION_COOKIE}=${await signSession(userId, env.SESSION_SECRET)}` };
 }

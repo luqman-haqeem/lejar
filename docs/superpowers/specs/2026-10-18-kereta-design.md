@@ -34,7 +34,7 @@ What the user decided:
 - **Free plan:** everything is built to fit the Workers Free plan's limit of about 10 ms CPU per request. Images are compressed on the client, and OpenRouter and Google calls are network waits, which don't count as CPU time.
 - **Secrets** (set with `wrangler secret`): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, `OPENROUTER_API_KEY`.
 - **Variables:** `SCAN_MODEL` (default `google/gemini-2.5-flash`), `SCAN_CAP_PER_USER` (20), and `SCAN_CAP_GLOBAL` (300 per day across all users; Claude's call, a backstop in case of many throwaway accounts).
-- **Tests:** vitest with `@cloudflare/vitest-pool-workers`.
+- **Tests:** vitest with `@cloudflare/vitest-plugin` (the renamed successor of `@cloudflare/vitest-pool-workers`).
 - **Locale:** UI in English, money in RM, dates shown as DD/MM/YYYY, timezone Asia/Kuala_Lumpur.
 
 ## Auth: Google sign-in
@@ -53,7 +53,7 @@ This is a plain OAuth 2.0 authorization-code flow with PKCE, written by hand or 
   2. Add the redirect URIs `https://kereta.<subdomain>.workers.dev/auth/google/callback` and `http://localhost:8787/auth/google/callback`.
   3. While building, keep the consent screen in "Testing" mode with the user as a test user. To open to the public, **publish** the consent screen. With only the `openid email` scopes this needs no security review, but Google requires a homepage and a privacy policy URL, so the app serves `/privacy`.
 
-## Data model (D1, `migrations/0001_init.sql`)
+## Data model (D1, `migrations/`: one numbered migration per ticket that adds tables)
 - **`users`**: id, google_sub (unique), email, created_at.
 - **`scan_usage`**: user_id, date (Malaysia date), count. Primary key (user_id, date).
 - **Ownership:** `vehicles` carries `user_id`. Everything else belongs to a user through its vehicle. Every query and route checks ownership, and another user's id returns 404.

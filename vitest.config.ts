@@ -13,7 +13,6 @@ export default defineConfig(async () => {
             GOOGLE_CLIENT_ID: "test-client-id",
             GOOGLE_CLIENT_SECRET: "test-client-secret",
             SESSION_SECRET: "test-session-secret",
-            OPENROUTER_API_KEY: "test-openrouter-key",
           },
         },
       }),

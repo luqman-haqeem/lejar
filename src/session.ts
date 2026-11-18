@@ -1,23 +1,10 @@
+import { b64url, fromB64url } from "./encoding";
+
 // Session cookie value: base64url("<userId>|<expiresMs>") + "." + base64url(HMAC-SHA256).
 
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const enc = new TextEncoder();
-
-export function b64url(bytes: ArrayBuffer | Uint8Array | string): string {
-  const data = typeof bytes === "string" ? enc.encode(bytes) : new Uint8Array(bytes);
-  let bin = "";
-  for (const b of data) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromB64url(s: string): string | null {
-  try {
-    return atob(s.replace(/-/g, "+").replace(/_/g, "/"));
-  } catch {
-    return null;
-  }
-}
 
 async function hmac(secret: string, payload: string): Promise<ArrayBuffer> {
   const key = await crypto.subtle.importKey(

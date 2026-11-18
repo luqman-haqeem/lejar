@@ -1,7 +1,9 @@
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import type { AppEnv } from "./app-types";
-import { b64url, SESSION_TTL_MS, signSession } from "./session";
+import { b64url, randomToken } from "./encoding";
+import { SESSION_TTL_MS, signSession } from "./session";
 import { upsertUser } from "./users";
 import { Login } from "./views/Login";
 
@@ -12,14 +14,13 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 
+export type GoogleClient = { clientId: string; clientSecret: string; redirectUri: string };
 export type GoogleIdentity = { sub: string; email: string; verified: boolean };
 
 export async function fetchGoogleIdentity(
+  client: GoogleClient,
   code: string,
   verifier: string,
-  redirectUri: string,
-  clientId: string,
-  clientSecret: string,
   fetchFn: typeof fetch,
 ): Promise<GoogleIdentity> {
   const tokenRes = await fetchFn(GOOGLE_TOKEN_URL, {
@@ -28,9 +29,9 @@ export async function fetchGoogleIdentity(
     body: new URLSearchParams({
       code,
       code_verifier: verifier,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
+      client_id: client.clientId,
+      client_secret: client.clientSecret,
+      redirect_uri: client.redirectUri,
       grant_type: "authorization_code",
     }),
   });
@@ -45,40 +46,51 @@ export async function fetchGoogleIdentity(
   return { sub: info.sub, email: info.email, verified: info.email_verified === true };
 }
 
-function randomToken(bytes = 32): string {
-  return b64url(crypto.getRandomValues(new Uint8Array(bytes)));
+// The sign-in cookie carries the state we issued and the PKCE verifier, as "<state>.<verifier>".
+type PendingSignIn = { state: string; verifier: string };
+
+function encodePending(p: PendingSignIn): string {
+  return `${p.state}.${p.verifier}`;
+}
+
+function decodePending(raw: string | undefined): PendingSignIn | null {
+  const [state, verifier, ...rest] = (raw ?? "").split(".");
+  return state && verifier && rest.length === 0 ? { state, verifier } : null;
 }
 
 async function pkceChallenge(verifier: string): Promise<string> {
   return b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
 }
 
-function callbackUrl(requestUrl: string): string {
-  return `${new URL(requestUrl).origin}/auth/google/callback`;
+function googleClient(c: Context<AppEnv>): GoogleClient {
+  return {
+    clientId: c.env.GOOGLE_CLIENT_ID,
+    clientSecret: c.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: `${new URL(c.req.url).origin}/auth/google/callback`,
+  };
+}
+
+// Secure everywhere except plain-http local dev, where Safari would drop a Secure cookie.
+function cookieOptions(c: Context<AppEnv>, path: string) {
+  return { httpOnly: true, secure: new URL(c.req.url).protocol === "https:", sameSite: "Lax", path } as const;
 }
 
 export function authRoutes(fetchFn: typeof fetch = fetch) {
   const routes = new Hono<AppEnv>();
 
   routes.get("/auth/google", async (c) => {
-    const state = randomToken();
-    const verifier = randomToken();
-    setCookie(c, OAUTH_COOKIE, `${state}.${verifier}`, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Lax",
-      path: "/auth",
-      maxAge: 600,
-    });
+    const pending = { state: randomToken(), verifier: randomToken() };
+    setCookie(c, OAUTH_COOKIE, encodePending(pending), { ...cookieOptions(c, "/auth"), maxAge: 600 });
 
+    const client = googleClient(c);
     const url = new URL(GOOGLE_AUTH_URL);
     url.search = new URLSearchParams({
-      client_id: c.env.GOOGLE_CLIENT_ID,
-      redirect_uri: callbackUrl(c.req.url),
+      client_id: client.clientId,
+      redirect_uri: client.redirectUri,
       response_type: "code",
       scope: "openid email",
-      state,
-      code_challenge: await pkceChallenge(verifier),
+      state: pending.state,
+      code_challenge: await pkceChallenge(pending.verifier),
       code_challenge_method: "S256",
       prompt: "select_account",
     }).toString();
@@ -86,24 +98,20 @@ export function authRoutes(fetchFn: typeof fetch = fetch) {
   });
 
   routes.get("/auth/google/callback", async (c) => {
-    const [expectedState, verifier] = (getCookie(c, OAUTH_COOKIE) ?? "").split(".");
-    deleteCookie(c, OAUTH_COOKIE, { path: "/auth", secure: true });
-    const state = c.req.query("state");
+    const pending = decodePending(getCookie(c, OAUTH_COOKIE));
+    deleteCookie(c, OAUTH_COOKIE, cookieOptions(c, "/auth"));
+
+    if (c.req.query("error")) {
+      return c.html(<Login error="Sign-in was cancelled." />, 400);
+    }
     const code = c.req.query("code");
-    if (!expectedState || !verifier || state !== expectedState || !code) {
+    if (!pending || c.req.query("state") !== pending.state || !code) {
       return c.html(<Login error="Sign-in expired or was interrupted. Please try again." />, 400);
     }
 
     let identity: GoogleIdentity;
     try {
-      identity = await fetchGoogleIdentity(
-        code,
-        verifier,
-        callbackUrl(c.req.url),
-        c.env.GOOGLE_CLIENT_ID,
-        c.env.GOOGLE_CLIENT_SECRET,
-        fetchFn,
-      );
+      identity = await fetchGoogleIdentity(googleClient(c), code, pending.verifier, fetchFn);
     } catch {
       return c.html(<Login error="Google sign-in didn't complete. Please try again." />, 400);
     }
@@ -113,17 +121,14 @@ export function authRoutes(fetchFn: typeof fetch = fetch) {
 
     const userId = await upsertUser(c.env.DB, identity.sub, identity.email);
     setCookie(c, SESSION_COOKIE, await signSession(userId, c.env.SESSION_SECRET), {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Lax",
-      path: "/",
+      ...cookieOptions(c, "/"),
       maxAge: SESSION_TTL_MS / 1000,
     });
     return c.redirect("/", 302);
   });
 
   routes.post("/logout", (c) => {
-    deleteCookie(c, SESSION_COOKIE, { path: "/", secure: true });
+    deleteCookie(c, SESSION_COOKIE, cookieOptions(c, "/"));
     return c.redirect("/login", 302);
   });
 
