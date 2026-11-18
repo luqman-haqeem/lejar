@@ -27,6 +27,11 @@ export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; ser
         </div>
       </dl>
       {service.notes && <p class="notes">{service.notes}</p>}
+      {service.receipt_key && (
+        <a href={`/${service.receipt_key}`}>
+          <img class="receipt-img" src={`/${service.receipt_key}`} alt="Receipt photo" />
+        </a>
+      )}
       {service.lines.length > 0 && (
         <ul class="lines">
           {service.lines.map((l) => (

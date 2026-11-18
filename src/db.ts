@@ -194,7 +194,7 @@ export interface ServiceLine {
 export type ServiceWithLines = Service & { lines: ServiceLine[] };
 
 export type LineInput = Pick<ServiceLine, "description" | "cost_sen" | "service_item_id">;
-export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes"> & {
+export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes" | "receipt_key"> & {
   lines: LineInput[];
 };
 
@@ -236,10 +236,10 @@ export async function createService(
   const [inserted] = await db.batch<{ id: number }>([
     db
       .prepare(
-        `INSERT INTO services (vehicle_id, date, odometer_km, workshop, total_sen, notes, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+        `INSERT INTO services (vehicle_id, date, odometer_km, workshop, total_sen, notes, receipt_key, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       )
-      .bind(vehicleId, s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, new Date().toISOString()),
+      .bind(vehicleId, s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, s.receipt_key, new Date().toISOString()),
     ...insertLines(db, null, vehicleId, s.lines),
     db
       .prepare(
@@ -274,8 +274,10 @@ export async function updateService(db: D1Database, userId: number, id: number, 
   if (!current) return false;
   await db.batch([
     db
-      .prepare("UPDATE services SET date = ?, odometer_km = ?, workshop = ?, total_sen = ?, notes = ? WHERE id = ?")
-      .bind(s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, id),
+      .prepare(
+        "UPDATE services SET date = ?, odometer_km = ?, workshop = ?, total_sen = ?, notes = ?, receipt_key = ? WHERE id = ?",
+      )
+      .bind(s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, s.receipt_key, id),
     db.prepare("DELETE FROM service_lines WHERE service_id = ?").bind(id),
     ...insertLines(db, id, current.vehicle_id, s.lines),
     db.prepare("UPDATE odometer_readings SET date = ?, km = ? WHERE service_id = ?").bind(s.date, s.odometer_km, id),
@@ -455,4 +457,16 @@ export async function dashboardData(
       readings: of<Reading>(readings.results, vehicle.id),
     })),
   };
+}
+
+/** Receipt keys referenced by any of the user's services (archived vehicles included). */
+export async function receiptKeysInUse(db: D1Database, userId: number): Promise<Set<string>> {
+  const { results } = await db
+    .prepare(
+      `SELECT s.receipt_key FROM services s JOIN vehicles v ON v.id = s.vehicle_id
+       WHERE v.user_id = ? AND s.receipt_key IS NOT NULL`,
+    )
+    .bind(userId)
+    .all<{ receipt_key: string }>();
+  return new Set(results.map((r) => r.receipt_key));
 }

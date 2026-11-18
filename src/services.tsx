@@ -7,12 +7,14 @@ import {
   getService,
   getVehicle,
   listItems,
+  receiptKeysInUse,
   type ServiceInput,
   updateService,
   type Vehicle,
 } from "./db";
 import type { Body } from "./form";
 import { checkOdometer } from "./odometer";
+import { cleanupOrphans, deleteReceipt, isOwnKey, photoProblem, putReceipt, receiptExists } from "./receipts";
 import { blankServiceForm, parseServiceForm, readServiceForm, serviceFormValuesOf } from "./service-form";
 import { NotFound } from "./views/NotFound";
 import { ServiceForm, type ServiceFormMode } from "./views/ServiceForm";
@@ -29,16 +31,64 @@ async function ownedService(c: Context<AppEnv>) {
   return service && vehicle ? { service, vehicle } : null;
 }
 
+/** Runs work after the response when the runtime allows it (Workers), otherwise inline (tests). */
+async function inBackground(c: Context<AppEnv>, work: Promise<unknown>): Promise<void> {
+  try {
+    c.executionCtx.waitUntil(work.catch(() => {}));
+  } catch {
+    await work.catch(() => {});
+  }
+}
+
+type PhotoOutcome =
+  | { ok: true; key: string | null }
+  | { ok: false; notFound: true }
+  | { ok: false; error: { message: string; status: 400 | 413 | 415 }; key: string | null };
+
 /**
- * Validates a posted service form and checks its odometer against the vehicle's other readings.
- * A line tagged with another vehicle's schedule item is a 404.
- * Re-renders the form (400 invalid, 422 odometer conflict) keeping what was typed, or calls `save`.
+ * Works out which receipt photo the submitted form ends up with. The hidden `receipt_key` field is
+ * the photo already attached (an earlier upload, or the service's current photo when editing);
+ * `remove_photo` drops it; a new `photo` file replaces it and is stored straight away, so it
+ * survives a re-render if the rest of the form has errors.
+ */
+async function resolvePhoto(c: Context<AppEnv>, body: Body, currentKey: string | null): Promise<PhotoOutcome> {
+  const userId = c.get("userId");
+  const posted = typeof body.receipt_key === "string" ? body.receipt_key.trim() : "";
+  let key: string | null = posted === "" ? null : posted;
+
+  if (key !== null && key !== currentKey) {
+    // A key that isn't this form's photo must be the user's own unsaved upload, not anyone else's
+    // photo and not one another service already uses.
+    if (!isOwnKey(key, userId) || (await receiptKeysInUse(c.env.DB, userId)).has(key)) {
+      return { ok: false, notFound: true };
+    }
+  }
+  if (body.remove_photo === "1") key = null;
+
+  const file = body.photo instanceof File && body.photo.size > 0 ? body.photo : null;
+  if (file) {
+    const problem = photoProblem(file);
+    if (problem) return { ok: false, error: problem, key };
+    key = await putReceipt(c.env.RECEIPTS, userId, file);
+    await inBackground(c, cleanupOrphans(c.env.RECEIPTS, c.env.DB, userId));
+  } else if (key !== null && !(await receiptExists(c.env.RECEIPTS, key))) {
+    return { ok: false, error: { message: "The attached photo has expired. Please attach it again.", status: 400 }, key: null };
+  }
+  return { ok: true, key };
+}
+
+/**
+ * Validates a posted service form, stores any new photo, and checks the odometer against the
+ * vehicle's other readings. A line tagged with another vehicle's schedule item, or a photo key that
+ * isn't the user's, is a 404. Otherwise it re-renders the form keeping what was typed (and the photo)
+ * with 400 invalid, 413/415 bad photo, or 422 odometer conflict, or calls `save`.
  */
 async function submitService(
   c: Context<AppEnv>,
   body: Body,
   vehicle: Vehicle,
   mode: ServiceFormMode,
+  currentKey: string | null,
   save: (s: ServiceInput) => Promise<Response>,
 ): Promise<Response> {
   const items = await listItems(c.env.DB, c.get("userId"), vehicle.id);
@@ -47,8 +97,16 @@ async function submitService(
   // isn't the user's: 404, nothing saved.
   const itemIds = new Set(items.map((i) => String(i.id)));
   if (values.lines.some((l) => l.item !== "" && !itemIds.has(l.item))) return notFound(c);
-  const render = (errors: Record<string, string>, status: 400 | 422) =>
-    c.html(<ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} />, status);
+
+  const photo = await resolvePhoto(c, body, currentKey);
+  if ("notFound" in photo) return notFound(c);
+  const receiptKey = photo.key;
+  const render = (errors: Record<string, string>, status: 400 | 413 | 415 | 422) =>
+    c.html(
+      <ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} receiptKey={receiptKey} />,
+      status,
+    );
+  if (!photo.ok) return render({ photo: photo.error.message }, photo.error.status);
 
   const parsed = parseServiceForm(values, items, c.get("today"));
   if (!parsed.ok) return render(parsed.errors, 400);
@@ -56,7 +114,7 @@ async function submitService(
   const editing = mode.kind === "edit" ? mode.serviceId : null;
   const conflict = await checkOdometer(c.env.DB, c.get("userId"), vehicle.id, date, odometer_km, editing);
   if (conflict) return render({ odometer_km: conflict }, 422);
-  return save(parsed.value);
+  return save({ ...parsed.value, receipt_key: receiptKey });
 }
 
 export function serviceRoutes() {
@@ -84,7 +142,7 @@ export function serviceRoutes() {
     const vehicle = vehicleId === null ? null : await getVehicle(c.env.DB, userId, vehicleId);
     if (!vehicle) return notFound(c);
 
-    return submitService(c, body, vehicle, { kind: "new" }, async (s) => {
+    return submitService(c, body, vehicle, { kind: "new" }, null, async (s) => {
       if ((await createService(c.env.DB, userId, vehicle.id, s)) === null) return notFound(c);
       if (body.action !== "save_add") return c.redirect(`/vehicles/${vehicle.id}`, 302);
       const next = new URLSearchParams({ vehicle: String(vehicle.id), workshop: s.workshop, saved: "1" });
@@ -108,6 +166,7 @@ export function serviceRoutes() {
         items={await listItems(c.env.DB, c.get("userId"), owned.vehicle.id)}
         values={serviceFormValuesOf(owned.service)}
         mode={{ kind: "edit", serviceId: owned.service.id }}
+        receiptKey={owned.service.receipt_key}
       />,
     );
   });
@@ -115,9 +174,11 @@ export function serviceRoutes() {
   routes.post("/services/:id{[0-9]+}", async (c) => {
     const owned = await ownedService(c);
     if (!owned) return notFound(c);
-    const id = owned.service.id;
-    return submitService(c, await c.req.parseBody(), owned.vehicle, { kind: "edit", serviceId: id }, async (s) => {
+    const { id, receipt_key: oldKey } = owned.service;
+    const mode = { kind: "edit", serviceId: id } as const;
+    return submitService(c, await c.req.parseBody(), owned.vehicle, mode, oldKey, async (s) => {
       if (!(await updateService(c.env.DB, c.get("userId"), id, s))) return notFound(c);
+      if (oldKey !== s.receipt_key) await deleteReceipt(c.env.RECEIPTS, oldKey);
       return c.redirect(`/services/${id}`, 302);
     });
   });
@@ -125,7 +186,7 @@ export function serviceRoutes() {
   routes.post("/services/:id{[0-9]+}/delete", async (c) => {
     const deleted = await deleteService(c.env.DB, c.get("userId"), Number(c.req.param("id")));
     if (!deleted) return notFound(c);
-    // Ticket 05 removes deleted.receiptKey from R2 here.
+    await deleteReceipt(c.env.RECEIPTS, deleted.receiptKey);
     return c.redirect(`/vehicles/${deleted.vehicleId}`, 302);
   });
 

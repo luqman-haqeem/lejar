@@ -5,6 +5,7 @@ import { authRoutes, SESSION_COOKIE } from "./auth";
 import { dashboardRoutes } from "./dashboard";
 import { todayKL } from "./lib/dates";
 import { verifySession } from "./session";
+import { receiptRoutes } from "./receipts";
 import { serviceRoutes } from "./services";
 import { vehicleRoutes } from "./vehicles";
 import { Login } from "./views/Login";
@@ -30,6 +31,7 @@ export function createApp(deps: AppDeps = {}) {
   app.route("/", dashboardRoutes());
   app.route("/", vehicleRoutes());
   app.route("/", serviceRoutes());
+  app.route("/", receiptRoutes());
 
   return app;
 }

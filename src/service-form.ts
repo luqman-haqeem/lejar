@@ -48,7 +48,7 @@ export function parseServiceForm(
   { service: v, lines: rows }: ServiceFormValues,
   items: ServiceItem[],
   today: string,
-): Parsed<ServiceInput> {
+): Parsed<Omit<ServiceInput, "receipt_key">> {
   const errors: FormErrors = {};
 
   const date = v.date === "" ? null : parseDateInput(v.date);

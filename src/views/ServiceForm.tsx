@@ -29,6 +29,27 @@ function LineRow({ line, n, items, errors }: { line: LineValues; n: number | "__
   );
 }
 
+function ReceiptPhoto({ receiptKey, errors }: { receiptKey: string | null; errors: FormErrors }) {
+  return (
+    <fieldset class="receipt">
+      <legend>Receipt photo</legend>
+      <input type="hidden" name="receipt_key" value={receiptKey ?? ""} />
+      {receiptKey && (
+        <>
+          <img class="receipt-img" src={`/${receiptKey}`} alt="Receipt photo" />
+          <label class="remove">
+            <input type="checkbox" name="remove_photo" value="1" /> Remove this photo
+          </label>
+        </>
+      )}
+      <label class={"photo" in errors ? "field invalid" : "field"}>
+        <span>{receiptKey ? "Replace photo" : "Attach a photo"}</span>
+        <input type="file" name="photo" accept="image/*" data-compress />
+      </label>
+    </fieldset>
+  );
+}
+
 export type ServiceFormMode = { kind: "new" } | { kind: "edit"; serviceId: number };
 
 export function ServiceForm({
@@ -38,6 +59,7 @@ export function ServiceForm({
   mode,
   errors = {},
   saved = false,
+  receiptKey = null,
 }: {
   vehicle: Vehicle;
   items: ServiceItem[];
@@ -45,6 +67,8 @@ export function ServiceForm({
   mode: ServiceFormMode;
   errors?: FormErrors;
   saved?: boolean;
+  /** The photo already attached to this form, if any. */
+  receiptKey?: string | null;
 }) {
   const v = values.service;
   const isNew = mode.kind === "new";
@@ -60,8 +84,14 @@ export function ServiceForm({
         </p>
       )}
       <ErrorSummary errors={errors} />
-      <form method="post" action={isNew ? "/services" : `/services/${mode.serviceId}`} class="vehicle-form">
+      <form
+        method="post"
+        action={isNew ? "/services" : `/services/${mode.serviceId}`}
+        enctype="multipart/form-data"
+        class="vehicle-form"
+      >
         {isNew && <input type="hidden" name="vehicle_id" value={String(vehicle.id)} />}
+        <ReceiptPhoto receiptKey={receiptKey} errors={errors} />
         <fieldset>
           <legend>Visit</legend>
           <div class="pair">
