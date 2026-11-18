@@ -4,6 +4,7 @@ import type { AppEnv } from "./app-types";
 import { authRoutes, SESSION_COOKIE } from "./auth";
 import { listVehicles } from "./db";
 import { verifySession } from "./session";
+import { serviceRoutes } from "./services";
 import { vehicleRoutes } from "./vehicles";
 import { Dashboard } from "./views/Dashboard";
 import { Login } from "./views/Login";
@@ -26,6 +27,7 @@ export function createApp(deps: AppDeps = {}) {
 
   app.get("/", async (c) => c.html(<Dashboard vehicles={await listVehicles(c.env.DB, c.get("userId"))} />));
   app.route("/", vehicleRoutes());
+  app.route("/", serviceRoutes());
 
   return app;
 }

@@ -12,3 +12,17 @@ export async function makeUser(email = "someone@example.com"): Promise<number> {
 export async function sessionHeaders(userId: number): Promise<Record<string, string>> {
   return { cookie: `${SESSION_COOKIE}=${await signSession(userId, env.SESSION_SECRET)}` };
 }
+
+/** POSTs urlencoded form fields as the given user. */
+export async function postForm(
+  app: { request: (path: string, init: RequestInit, env: Cloudflare.Env) => Response | Promise<Response> },
+  path: string,
+  userId: number,
+  fields: Record<string, string>,
+): Promise<Response> {
+  return app.request(
+    path,
+    { method: "POST", headers: await sessionHeaders(userId), body: new URLSearchParams(fields) },
+    env,
+  );
+}

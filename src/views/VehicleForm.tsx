@@ -1,46 +1,10 @@
-import type { DetailValues, FormErrors, FormValues, ItemValues } from "../vehicle-form";
+import type { FormErrors } from "../form";
+import { ErrorSummary, Field, type FieldProps, RepeatableRows } from "./fields";
+import type { DetailValues, FormValues, ItemValues } from "../vehicle-form";
 import { isVehicleType, VEHICLE_TYPE_LABELS } from "../lib/templates";
 import { Layout } from "./Layout";
 
 const blankItem: ItemValues = { id: "", name: "", km: "", months: "", baseline_date: "", baseline_km: "", remove: "" };
-
-function ErrorSummary({ errors }: { errors: FormErrors }) {
-  const messages = [...new Set(Object.values(errors))];
-  if (messages.length === 0) return null;
-  return (
-    <div class="error-summary" role="alert">
-      <p>Please fix the following:</p>
-      <ul>
-        {messages.map((m) => (
-          <li>{m}</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-type FieldProps = {
-  label: string;
-  name: string;
-  value: string;
-  errors: FormErrors;
-  errorKey?: string;
-  type?: string;
-  inputmode?: "numeric" | "text";
-  placeholder?: string;
-  required?: boolean;
-  autocapitalize?: "characters";
-};
-
-function Field({ label, name, value, errors, errorKey = name, type = "text", ...rest }: FieldProps) {
-  const invalid = errorKey in errors;
-  return (
-    <label class={invalid ? "field invalid" : "field"}>
-      <span>{label}</span>
-      <input name={name} type={type} value={value} aria-invalid={invalid ? "true" : undefined} {...rest} />
-    </label>
-  );
-}
 
 function Details({ d, errors, typeFixed = false }: { d: DetailValues; errors: FormErrors; typeFixed?: boolean }) {
   return (
@@ -100,10 +64,6 @@ function ItemRow({ item, n, errors }: { item: ItemValues; n: number | "__N__"; e
 }
 
 function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }) {
-  // Without JS there is always one blank row to add an item; "Add item" clones the template for more.
-  const last = items.at(-1);
-  const endsBlank = last !== undefined && !last.id && Object.values(last).every((v) => v === "");
-  const rows = endsBlank ? items : [...items, blankItem];
   return (
     <fieldset class="schedule">
       <legend>Service schedule</legend>
@@ -111,17 +71,13 @@ function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }
         Whichever comes first, km or months, makes an item due. If you know roughly when an item was last done, fill
         in "last done" so the app can work out when it's next due.
       </p>
-      <div id="items" data-next={rows.length}>
-        {rows.map((item, n) => (
-          <ItemRow item={item} n={n} errors={errors} />
-        ))}
-      </div>
-      <template id="item-template">
-        <ItemRow item={blankItem} n="__N__" errors={{}} />
-      </template>
-      <button type="button" class="secondary" data-add-item hidden>
-        Add item
-      </button>
+      <RepeatableRows
+        id="items"
+        rows={items}
+        blank={blankItem}
+        addLabel="Add item"
+        render={(item, n) => <ItemRow item={item} n={n} errors={errors} />}
+      />
     </fieldset>
   );
 }

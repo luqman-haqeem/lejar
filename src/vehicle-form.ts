@@ -1,5 +1,6 @@
 import { DETAIL_COLUMNS, type ItemInput, type ServiceItem, type Vehicle, type VehicleDetails } from "./db";
-import { parseDateInput, todayKL } from "./lib/dates";
+import { type Body, type FormErrors, isBlankRow, optionalDate, type Parsed, parseCount, readFields, readRows, toField } from "./form";
+import { todayKL } from "./lib/dates";
 import { isVehicleType, type VehicleType } from "./lib/templates";
 
 // The vehicle form posts flat fields: the details by name, and schedule rows as
@@ -12,42 +13,17 @@ export type DetailValues = Record<(typeof DETAIL_FIELDS)[number], string>;
 export type ItemValues = Record<(typeof ITEM_FIELDS)[number], string>;
 /** What the form shows: either a saved vehicle, or exactly what the user typed. */
 export type FormValues = { details: DetailValues; items: ItemValues[] };
-/** Field key ("name", "item.3.km") to message. */
-export type FormErrors = Record<string, string>;
-
-export type Parsed<T> = { ok: true; value: T } | { ok: false; errors: FormErrors };
-
-type Body = Record<string, string | File>;
-const str = (body: Body, key: string) => {
-  const v = body[key];
-  return typeof v === "string" ? v.trim() : "";
-};
-
-const DATE_FIELDS = new Set(["roadtax_expiry", "insurance_expiry", "baseline_date"]);
-/** Reads a field as typed, except valid dates come back as ISO so a date picker can show them again. */
-const read = (body: Body, key: string, field: string) => {
-  const v = str(body, key);
-  return DATE_FIELDS.has(field) ? (parseDateInput(v) ?? v) : v;
-};
 
 export function readDetails(body: Body): DetailValues {
-  return Object.fromEntries(DETAIL_FIELDS.map((k) => [k, read(body, k, k)])) as DetailValues;
+  return readFields(body, DETAIL_FIELDS, ["roadtax_expiry", "insurance_expiry"]);
 }
 
-/** Schedule rows in the order the form numbered them. */
 export function readItems(body: Body): ItemValues[] {
-  const indexes = new Set<number>();
-  for (const key of Object.keys(body)) {
-    const m = key.match(/^item\.(\d+)\./);
-    if (m) indexes.add(Number(m[1]));
-  }
-  return [...indexes]
-    .sort((a, b) => a - b)
-    .map((n) => Object.fromEntries(ITEM_FIELDS.map((f) => [f, read(body, `item.${n}.${f}`, f)])) as ItemValues);
+  return readRows(body, "item", ITEM_FIELDS, ["baseline_date"]);
 }
 
 export function formValuesOf(v: Vehicle, items: ServiceItem[]): FormValues {
-  const s = (x: string | number | null) => (x === null ? "" : String(x));
+  const s = toField;
   return {
     details: Object.fromEntries(DETAIL_FIELDS.map((k) => [k, s(v[k])])) as DetailValues,
     items: items.map((i) => ({
@@ -60,19 +36,6 @@ export function formValuesOf(v: Vehicle, items: ServiceItem[]): FormValues {
       remove: "",
     })),
   };
-}
-
-/** A whole number, allowing "50,000" or "50 000". Blank gives null; anything else gives undefined. */
-function parseCount(input: string, min: number, max: number): number | null | undefined {
-  if (input === "") return null;
-  const digits = input.replace(/[,\s]/g, "");
-  if (!/^\d+$/.test(digits)) return undefined;
-  const n = Number(digits);
-  return n >= min && n <= max ? n : undefined;
-}
-
-function optionalDate(input: string): string | null | undefined {
-  return input === "" ? null : (parseDateInput(input) ?? undefined);
 }
 
 export const MAX_ITEMS = 50;
@@ -119,7 +82,7 @@ export function parseItems(rows: ItemValues[], now = new Date()): Parsed<ItemInp
   rows.forEach((r, n) => {
     if (r.remove) return;
     const isNew = r.id === "";
-    if (isNew && Object.entries(r).every(([, v]) => v === "")) return;
+    if (isNew && isBlankRow(r)) return;
 
     const key = (f: string) => `item.${n}.${f}`;
     const label = r.name || "New item";

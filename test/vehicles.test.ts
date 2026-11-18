@@ -2,17 +2,11 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { getVehicle, listItems, listVehicles } from "../src/db";
 import { createApp } from "../src/index";
-import { makeUser, sessionHeaders } from "./helpers";
+import { makeUser, postForm, sessionHeaders } from "./helpers";
 
 const app = createApp();
 
-async function post(path: string, userId: number, fields: Record<string, string>) {
-  return app.request(
-    path,
-    { method: "POST", headers: await sessionHeaders(userId), body: new URLSearchParams(fields) },
-    env,
-  );
-}
+const post = (path: string, userId: number, fields: Record<string, string>) => postForm(app, path, userId, fields);
 
 async function addVehicle(userId: number, fields: Record<string, string> = {}): Promise<number> {
   const res = await post("/vehicles", userId, { type: "car", name: "Myvi", plate: "wxy 1234", ...fields });
@@ -265,7 +259,7 @@ describe("the dashboard", () => {
     expect(html).toContain("01/04/2027");
     expect(html).toContain("Etiqa");
     expect(html).toContain("Y15");
-    expect(html).toContain(`href="/vehicles/${id}/edit"`);
+    expect(html).toContain(`href="/vehicles/${id}"`);
     expect(html).toContain('href="/vehicles/new"');
     expect(html).not.toContain("Add your first vehicle");
   });

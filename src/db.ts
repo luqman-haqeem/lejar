@@ -141,3 +141,195 @@ export async function archiveVehicle(db: D1Database, userId: number, id: number)
   const res = await db.prepare("UPDATE vehicles SET archived = 1 WHERE id = ? AND user_id = ?").bind(id, userId).run();
   return res.meta.changes > 0;
 }
+
+// ---- Services, their lines, and odometer readings ----
+
+export interface Service {
+  id: number;
+  vehicle_id: number;
+  date: string;
+  odometer_km: number;
+  workshop: string;
+  total_sen: number;
+  notes: string;
+  receipt_key: string | null;
+}
+
+export interface ServiceLine {
+  id: number;
+  service_id: number;
+  description: string;
+  cost_sen: number | null;
+  service_item_id: number | null;
+  sort: number;
+}
+
+export type ServiceWithLines = Service & { lines: ServiceLine[] };
+
+export type LineInput = Pick<ServiceLine, "description" | "cost_sen" | "service_item_id">;
+export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes"> & {
+  lines: LineInput[];
+};
+
+export interface Reading {
+  id: number;
+  vehicle_id: number;
+  date: string;
+  km: number;
+  source: "service" | "manual";
+  service_id: number | null;
+}
+
+// Inside a batch, the vehicle's highest service id is the service just inserted.
+const NEW_SERVICE_ID = "(SELECT max(id) FROM services WHERE vehicle_id = ?)";
+
+/** Line inserts for a service. A schedule item that isn't this vehicle's is stored as no link. */
+function insertLines(db: D1Database, serviceId: number | null, vehicleId: number, lines: LineInput[]) {
+  const serviceRef = serviceId === null ? NEW_SERVICE_ID : "?";
+  const stmt = db.prepare(
+    `INSERT INTO service_lines (service_id, description, cost_sen, service_item_id, sort)
+     VALUES (${serviceRef}, ?, ?, (SELECT id FROM service_items WHERE id = ? AND vehicle_id = ?), ?)`,
+  );
+  return lines.map((l, sort) =>
+    stmt.bind(serviceId ?? vehicleId, l.description, l.cost_sen, l.service_item_id, vehicleId, sort),
+  );
+}
+
+/**
+ * Writes the service, its lines and its odometer reading in one batch. Returns the new id, or null
+ * (writing nothing) if the vehicle isn't the user's.
+ */
+export async function createService(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+  s: ServiceInput,
+): Promise<number | null> {
+  if (!(await getVehicle(db, userId, vehicleId))) return null;
+  const [inserted] = await db.batch<{ id: number }>([
+    db
+      .prepare(
+        `INSERT INTO services (vehicle_id, date, odometer_km, workshop, total_sen, notes, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+      )
+      .bind(vehicleId, s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, new Date().toISOString()),
+    ...insertLines(db, null, vehicleId, s.lines),
+    db
+      .prepare(
+        `INSERT INTO odometer_readings (vehicle_id, date, km, source, service_id)
+         VALUES (?, ?, ?, 'service', ${NEW_SERVICE_ID})`,
+      )
+      .bind(vehicleId, s.date, s.odometer_km, vehicleId),
+  ]);
+  return inserted.results[0].id;
+}
+
+/** The service with its lines, or null if it doesn't exist or isn't the user's. */
+export async function getService(db: D1Database, userId: number, id: number): Promise<ServiceWithLines | null> {
+  const service = await db
+    .prepare(
+      `SELECT s.* FROM services s JOIN vehicles v ON v.id = s.vehicle_id
+       WHERE s.id = ? AND v.user_id = ?`,
+    )
+    .bind(id, userId)
+    .first<Service>();
+  if (!service) return null;
+  const { results } = await db
+    .prepare("SELECT * FROM service_lines WHERE service_id = ? ORDER BY sort, id")
+    .bind(id)
+    .all<ServiceLine>();
+  return { ...service, lines: results };
+}
+
+/** Replaces the service's fields and lines and moves its reading. Returns false if it isn't the user's. */
+export async function updateService(db: D1Database, userId: number, id: number, s: ServiceInput): Promise<boolean> {
+  const current = await getService(db, userId, id);
+  if (!current) return false;
+  await db.batch([
+    db
+      .prepare("UPDATE services SET date = ?, odometer_km = ?, workshop = ?, total_sen = ?, notes = ? WHERE id = ?")
+      .bind(s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, id),
+    db.prepare("DELETE FROM service_lines WHERE service_id = ?").bind(id),
+    ...insertLines(db, id, current.vehicle_id, s.lines),
+    db.prepare("UPDATE odometer_readings SET date = ?, km = ? WHERE service_id = ?").bind(s.date, s.odometer_km, id),
+  ]);
+  return true;
+}
+
+/**
+ * Deletes the service with its lines and odometer reading. Returns its vehicle and receipt key (for
+ * the caller to remove from storage), or null if it isn't the user's.
+ */
+export async function deleteService(
+  db: D1Database,
+  userId: number,
+  id: number,
+): Promise<{ vehicleId: number; receiptKey: string | null } | null> {
+  const service = await getService(db, userId, id);
+  if (!service) return null;
+  await db.batch([
+    db.prepare("DELETE FROM service_lines WHERE service_id = ?").bind(id),
+    db.prepare("DELETE FROM odometer_readings WHERE service_id = ?").bind(id),
+    db.prepare("DELETE FROM services WHERE id = ?").bind(id),
+  ]);
+  return { vehicleId: service.vehicle_id, receiptKey: service.receipt_key };
+}
+
+/** The vehicle's services, newest first. Callers check ownership with getVehicle first. */
+export async function listServices(db: D1Database, vehicleId: number): Promise<Service[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM services WHERE vehicle_id = ? ORDER BY date DESC, odometer_km DESC, id DESC")
+    .bind(vehicleId)
+    .all<Service>();
+  return results;
+}
+
+/** Total spent per calendar year, newest year first. */
+export async function yearTotals(db: D1Database, vehicleId: number): Promise<{ year: string; total_sen: number }[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT substr(date, 1, 4) AS year, SUM(total_sen) AS total_sen FROM services
+       WHERE vehicle_id = ? GROUP BY year ORDER BY year DESC`,
+    )
+    .bind(vehicleId)
+    .all<{ year: string; total_sen: number }>();
+  return results;
+}
+
+/** The vehicle's odometer readings, oldest first. */
+export async function listReadings(db: D1Database, vehicleId: number): Promise<Reading[]> {
+  const { results } = await db
+    .prepare("SELECT * FROM odometer_readings WHERE vehicle_id = ? ORDER BY date, km, id")
+    .bind(vehicleId)
+    .all<Reading>();
+  return results;
+}
+
+export async function addReading(db: D1Database, vehicleId: number, date: string, km: number): Promise<void> {
+  await db
+    .prepare("INSERT INTO odometer_readings (vehicle_id, date, km, source) VALUES (?, ?, ?, 'manual')")
+    .bind(vehicleId, date, km)
+    .run();
+}
+
+/**
+ * The nearest-dated reading that contradicts `km` on `date` (an earlier reading with more km, or a
+ * later one with fewer), ignoring the reading of `excludeServiceId`. Null when consistent.
+ */
+export async function findOdometerConflict(
+  db: D1Database,
+  vehicleId: number,
+  date: string,
+  km: number,
+  excludeServiceId: number | null = null,
+): Promise<Pick<Reading, "date" | "km"> | null> {
+  return db
+    .prepare(
+      `SELECT date, km FROM odometer_readings
+       WHERE vehicle_id = ? AND ((date < ? AND km > ?) OR (date > ? AND km < ?))
+         AND (? IS NULL OR service_id IS NULL OR service_id != ?)
+       ORDER BY abs(julianday(date) - julianday(?)) LIMIT 1`,
+    )
+    .bind(vehicleId, date, km, date, km, excludeServiceId, excludeServiceId, date)
+    .first<Pick<Reading, "date" | "km">>();
+}

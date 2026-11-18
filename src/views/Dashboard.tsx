@@ -19,7 +19,7 @@ function VehicleCard({ v }: { v: Vehicle }) {
   const subtitle = [v.make, v.model, v.year].filter(Boolean).join(" ");
   return (
     <article class="card">
-      <a class="card-head" href={`/vehicles/${v.id}/edit`}>
+      <a class="card-head" href={`/vehicles/${v.id}`}>
         <h2>{v.name}</h2>
         {v.plate && <span class="plate">{v.plate}</span>}
       </a>

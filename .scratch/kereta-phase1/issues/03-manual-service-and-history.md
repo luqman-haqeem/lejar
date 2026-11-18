@@ -4,12 +4,12 @@
 
 **Blocked by:** 02
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Money is stored as integer sen and shown as `RM 1,234.50`. Inputs like "RM 1,234.5" and "85" are accepted. Negative or garbage amounts are rejected.
-- [ ] If the total is left blank, it defaults to the sum of the line costs.
-- [ ] An odometer value is checked against the vehicle's earlier and later readings. If a reading dated earlier has a higher km, or one dated later has a lower km, the form shows "Odometer X km conflicts with DD/MM/YYYY reading of Y km", keeps everything the user typed, and saves nothing.
-- [ ] "Save & add another" returns to a new form with the vehicle and workshop already filled in.
-- [ ] Deleting a service also removes its lines and its odometer reading.
-- [ ] Another user viewing, editing or deleting a service, logging a service against someone else's vehicle, or adding a reading to someone else's vehicle gets 404, and nothing changes.
-- [ ] Tests and the typecheck pass.
+- [x] Money is stored as integer sen and shown as `RM 1,234.50`. Inputs like "RM 1,234.5" and "85" are accepted. Negative or garbage amounts are rejected.
+- [x] If the total is left blank, it defaults to the sum of the line costs.
+- [x] An odometer value is checked against the vehicle's earlier and later readings. If a reading dated earlier has a higher km, or one dated later has a lower km, the form shows "Odometer X km conflicts with DD/MM/YYYY reading of Y km", keeps everything the user typed, and saves nothing.
+- [x] "Save & add another" returns to a new form with the vehicle and workshop already filled in.
+- [x] Deleting a service also removes its lines and its odometer reading.
+- [x] Another user viewing, editing or deleting a service, logging a service against someone else's vehicle, or adding a reading to someone else's vehicle gets 404, and nothing changes.
+- [x] Tests and the typecheck pass.
