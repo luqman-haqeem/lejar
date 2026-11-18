@@ -22,6 +22,10 @@ export const MOTORBIKE_TEMPLATE: readonly TemplateItem[] = [
   { name: "Brake fluid", interval_km: null, interval_months: 24 },
 ];
 
+export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = { car: "Car", motorbike: "Motorbike" };
+
+export const isVehicleType = (s: string): s is VehicleType => Object.hasOwn(VEHICLE_TYPE_LABELS, s);
+
 export const TEMPLATES: Record<VehicleType, readonly TemplateItem[]> = {
   car: CAR_TEMPLATE,
   motorbike: MOTORBIKE_TEMPLATE,

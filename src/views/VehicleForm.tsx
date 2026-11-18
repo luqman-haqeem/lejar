@@ -1,4 +1,5 @@
 import type { DetailValues, FormErrors, FormValues, ItemValues } from "../vehicle-form";
+import { isVehicleType, VEHICLE_TYPE_LABELS } from "../lib/templates";
 import { Layout } from "./Layout";
 
 const blankItem: ItemValues = { id: "", name: "", km: "", months: "", baseline_date: "", baseline_km: "", remove: "" };
@@ -41,18 +42,21 @@ function Field({ label, name, value, errors, errorKey = name, type = "text", ...
   );
 }
 
-function Details({ d, errors }: { d: DetailValues; errors: FormErrors }) {
+function Details({ d, errors, typeFixed = false }: { d: DetailValues; errors: FormErrors; typeFixed?: boolean }) {
   return (
     <fieldset class="details">
       <legend>Vehicle</legend>
-      <div class={"type" in errors ? "type-choice invalid" : "type-choice"}>
-        <label>
-          <input type="radio" name="type" value="car" checked={d.type !== "motorbike"} /> Car
-        </label>
-        <label>
-          <input type="radio" name="type" value="motorbike" checked={d.type === "motorbike"} /> Motorbike
-        </label>
-      </div>
+      {typeFixed && isVehicleType(d.type) ? (
+        <p class="muted">{VEHICLE_TYPE_LABELS[d.type]}</p>
+      ) : (
+        <div class={"type" in errors ? "type-choice invalid" : "type-choice"}>
+          {Object.entries(VEHICLE_TYPE_LABELS).map(([value, label], i) => (
+            <label>
+              <input type="radio" name="type" value={value} checked={d.type ? d.type === value : i === 0} /> {label}
+            </label>
+          ))}
+        </div>
+      )}
       <Field label="Name" name="name" value={d.name} errors={errors} placeholder="e.g. Myvi" required />
       <Field label="Plate" name="plate" value={d.plate} errors={errors} autocapitalize="characters" />
       <div class="pair">
@@ -97,7 +101,9 @@ function ItemRow({ item, n, errors }: { item: ItemValues; n: number | "__N__"; e
 
 function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }) {
   // Without JS there is always one blank row to add an item; "Add item" clones the template for more.
-  const rows = [...items, blankItem];
+  const last = items.at(-1);
+  const endsBlank = last !== undefined && !last.id && Object.values(last).every((v) => v === "");
+  const rows = endsBlank ? items : [...items, blankItem];
   return (
     <fieldset class="schedule">
       <legend>Service schedule</legend>
@@ -160,7 +166,7 @@ export function EditVehicle({
       )}
       <ErrorSummary errors={errors} />
       <form method="post" action={`/vehicles/${id}`} class="vehicle-form">
-        <Details d={values.details} errors={errors} />
+        <Details d={values.details} errors={errors} typeFixed />
         <Schedule items={values.items} errors={errors} />
         <button type="submit" class="button">
           Save

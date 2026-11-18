@@ -1,5 +1,6 @@
 import type { Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
+import { VEHICLE_TYPE_LABELS } from "../lib/templates";
 import { Layout } from "./Layout";
 
 function Renewal({ label, date, extra }: { label: string; date: string | null; extra?: string }) {
@@ -23,7 +24,7 @@ function VehicleCard({ v }: { v: Vehicle }) {
         {v.plate && <span class="plate">{v.plate}</span>}
       </a>
       <p class="muted">
-        {v.type === "car" ? "Car" : "Motorbike"}
+        {VEHICLE_TYPE_LABELS[v.type]}
         {subtitle && ` · ${subtitle}`}
       </p>
       <dl class="renewals">

@@ -1,20 +1,11 @@
-import type { ItemInput, ServiceItem, Vehicle, VehicleDetails } from "./db";
+import { DETAIL_COLUMNS, type ItemInput, type ServiceItem, type Vehicle, type VehicleDetails } from "./db";
 import { parseDateInput, todayKL } from "./lib/dates";
+import { isVehicleType, type VehicleType } from "./lib/templates";
 
 // The vehicle form posts flat fields: the details by name, and schedule rows as
 // "item.<n>.<field>" (id, name, km, months, baseline_date, baseline_km, remove).
 
-export const DETAIL_FIELDS = [
-  "type",
-  "name",
-  "plate",
-  "make",
-  "model",
-  "year",
-  "roadtax_expiry",
-  "insurance_expiry",
-  "insurer",
-] as const;
+export const DETAIL_FIELDS = DETAIL_COLUMNS;
 export const ITEM_FIELDS = ["id", "name", "km", "months", "baseline_date", "baseline_km", "remove"] as const;
 
 export type DetailValues = Record<(typeof DETAIL_FIELDS)[number], string>;
@@ -32,12 +23,19 @@ const str = (body: Body, key: string) => {
   return typeof v === "string" ? v.trim() : "";
 };
 
-export function detailValues(body: Body): DetailValues {
-  return Object.fromEntries(DETAIL_FIELDS.map((k) => [k, str(body, k)])) as DetailValues;
+const DATE_FIELDS = new Set(["roadtax_expiry", "insurance_expiry", "baseline_date"]);
+/** Reads a field as typed, except valid dates come back as ISO so a date picker can show them again. */
+const read = (body: Body, key: string, field: string) => {
+  const v = str(body, key);
+  return DATE_FIELDS.has(field) ? (parseDateInput(v) ?? v) : v;
+};
+
+export function readDetails(body: Body): DetailValues {
+  return Object.fromEntries(DETAIL_FIELDS.map((k) => [k, read(body, k, k)])) as DetailValues;
 }
 
 /** Schedule rows in the order the form numbered them. */
-export function itemValues(body: Body): ItemValues[] {
+export function readItems(body: Body): ItemValues[] {
   const indexes = new Set<number>();
   for (const key of Object.keys(body)) {
     const m = key.match(/^item\.(\d+)\./);
@@ -45,7 +43,7 @@ export function itemValues(body: Body): ItemValues[] {
   }
   return [...indexes]
     .sort((a, b) => a - b)
-    .map((n) => Object.fromEntries(ITEM_FIELDS.map((f) => [f, str(body, `item.${n}.${f}`)])) as ItemValues);
+    .map((n) => Object.fromEntries(ITEM_FIELDS.map((f) => [f, read(body, `item.${n}.${f}`, f)])) as ItemValues);
 }
 
 export function formValuesOf(v: Vehicle, items: ServiceItem[]): FormValues {
@@ -77,11 +75,13 @@ function optionalDate(input: string): string | null | undefined {
   return input === "" ? null : (parseDateInput(input) ?? undefined);
 }
 
+export const MAX_ITEMS = 50;
+
 export function parseDetails(d: DetailValues, now = new Date()): Parsed<VehicleDetails> {
   const errors: FormErrors = {};
   const thisYear = Number(todayKL(now).slice(0, 4));
 
-  if (d.type !== "car" && d.type !== "motorbike") errors.type = "Choose car or motorbike.";
+  if (!isVehicleType(d.type)) errors.type = "Choose car or motorbike.";
   if (!d.name) errors.name = "Give the vehicle a name.";
   const year = parseCount(d.year, 1900, thisYear + 1);
   if (year === undefined) errors.year = `Year must be between 1900 and ${thisYear + 1}.`;
@@ -94,7 +94,7 @@ export function parseDetails(d: DetailValues, now = new Date()): Parsed<VehicleD
   return {
     ok: true,
     value: {
-      type: d.type as VehicleDetails["type"],
+      type: d.type as VehicleType,
       name: d.name,
       plate: d.plate.toUpperCase().replace(/\s+/g, " "),
       make: d.make,
@@ -149,5 +149,6 @@ export function parseItems(rows: ItemValues[], now = new Date()): Parsed<ItemInp
     });
   });
 
+  if (items.length > MAX_ITEMS) errors.items = `A schedule can have at most ${MAX_ITEMS} items.`;
   return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, value: items };
 }

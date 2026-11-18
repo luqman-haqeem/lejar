@@ -295,3 +295,35 @@ describe("the dashboard", () => {
     expect(await listVehicles(env.DB, bob)).toEqual([]);
   });
 });
+
+describe("review follow-ups", () => {
+  it("gives each of one user's vehicles its own schedule", async () => {
+    const user = await makeUser();
+    const car = await addVehicle(user, { type: "car" });
+    const bike = await addVehicle(user, { type: "motorbike", name: "Y15" });
+    expect(await listItems(env.DB, car)).toHaveLength(8);
+    expect(await listItems(env.DB, bike)).toHaveLength(5);
+  });
+
+  it("keeps the vehicle type it was created with", async () => {
+    const user = await makeUser();
+    const id = await addVehicle(user, { type: "car" });
+    const res = await post(`/vehicles/${id}`, user, { ...(await currentForm(id)), type: "motorbike" });
+    expect(res.status).toBe(302);
+    expect((await getVehicle(env.DB, user, id))?.type).toBe("car");
+  });
+
+  it("refuses a schedule with more than 50 items", async () => {
+    const user = await makeUser();
+    const id = await addVehicle(user);
+    const form = await currentForm(id);
+    for (let n = 8; n < 60; n++) {
+      form[`item.${n}.name`] = `Extra ${n}`;
+      form[`item.${n}.months`] = "12";
+    }
+    const res = await post(`/vehicles/${id}`, user, form);
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain("A schedule can have at most 50 items.");
+    expect(await listItems(env.DB, id)).toHaveLength(8);
+  });
+});

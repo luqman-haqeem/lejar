@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
 import { archiveVehicle, createVehicle, getVehicle, listItems, updateVehicle } from "./db";
-import { detailValues, formValuesOf, itemValues, parseDetails, parseItems } from "./vehicle-form";
+import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
 import { NotFound } from "./views/NotFound";
 import { EditVehicle, NewVehicle } from "./views/VehicleForm";
 
@@ -11,10 +11,10 @@ const notFound = (c: Context<AppEnv>) => c.html(<NotFound />, 404);
 export function vehicleRoutes() {
   const routes = new Hono<AppEnv>();
 
-  routes.get("/vehicles/new", (c) => c.html(<NewVehicle values={detailValues({})} />));
+  routes.get("/vehicles/new", (c) => c.html(<NewVehicle values={readDetails({})} />));
 
   routes.post("/vehicles", async (c) => {
-    const values = detailValues(await c.req.parseBody());
+    const values = readDetails(await c.req.parseBody());
     const details = parseDetails(values);
     if (!details.ok) return c.html(<NewVehicle values={values} errors={details.errors} />, 400);
 
@@ -40,7 +40,8 @@ export function vehicleRoutes() {
     if (!vehicle) return notFound(c);
 
     const body = await c.req.parseBody();
-    const values = { details: detailValues(body), items: itemValues(body) };
+    // The type is fixed at creation: the schedule was seeded for it, and due-soon thresholds depend on it.
+    const values = { details: { ...readDetails(body), type: vehicle.type }, items: readItems(body) };
     const details = parseDetails(values.details);
     const items = parseItems(values.items);
     if (!details.ok || !items.ok) {

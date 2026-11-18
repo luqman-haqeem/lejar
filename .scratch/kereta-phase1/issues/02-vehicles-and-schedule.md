@@ -13,3 +13,9 @@
 - [x] Another user opening, editing or archiving the vehicle by URL gets 404, and nothing changes.
 - [x] Dates are stored as ISO and shown as DD/MM/YYYY. "Today" is taken in Asia/Kuala_Lumpur.
 - [x] Tests and the typecheck pass.
+
+## Comments
+
+- 2026-11-18 (implementation): Form dates use the native date picker, which submits ISO and displays in the phone's region format (DD/MM/YYYY on a Malaysian-region iPhone). Text shown by the app (dashboard) uses `fmtDate`. Hand-typed DD/MM/YYYY is also accepted.
+- Vehicle type is fixed after creation (the schedule was seeded for it, and ticket 04's due-soon thresholds depend on it).
+- Archiving has no undo or "archived vehicles" list yet; an archived vehicle is still reachable by its URL. Raise a ticket if needed.

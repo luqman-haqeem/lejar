@@ -1,6 +1,7 @@
 import { TEMPLATES, type VehicleType } from "./lib/templates";
 
-// Every function that touches user data takes userId and filters through vehicles.user_id.
+// Vehicle functions take userId and filter by vehicles.user_id. Item functions take a vehicleId the
+// caller has already checked with getVehicle (or check it themselves, like updateVehicle).
 
 export interface Vehicle {
   id: number;
@@ -33,7 +34,8 @@ export interface ServiceItem {
 /** A schedule row as edited: rows with an id update that item, rows without one are new. */
 export type ItemInput = Omit<ServiceItem, "id" | "vehicle_id" | "sort"> & { id?: number };
 
-const DETAIL_COLUMNS = [
+/** The vehicle columns a user edits, in one place for the SQL and the form. */
+export const DETAIL_COLUMNS = [
   "type",
   "name",
   "plate",
@@ -45,7 +47,7 @@ const DETAIL_COLUMNS = [
   "insurer",
 ] as const satisfies readonly (keyof VehicleDetails)[];
 
-const detailValues = (v: VehicleDetails) => DETAIL_COLUMNS.map((k) => v[k]);
+const bindDetails = (v: VehicleDetails) => DETAIL_COLUMNS.map((k) => v[k]);
 
 /** Inserts the vehicle and seeds its schedule from the template for its type. */
 export async function createVehicle(db: D1Database, userId: number, v: VehicleDetails): Promise<number> {
@@ -61,7 +63,7 @@ export async function createVehicle(db: D1Database, userId: number, v: VehicleDe
         `INSERT INTO vehicles (user_id, ${DETAIL_COLUMNS.join(", ")}, created_at)
          VALUES (?, ${DETAIL_COLUMNS.map(() => "?").join(", ")}, ?) RETURNING id`,
       )
-      .bind(userId, ...detailValues(v), new Date().toISOString()),
+      .bind(userId, ...bindDetails(v), new Date().toISOString()),
     ...TEMPLATES[v.type].map((t, i) => insertItem.bind(userId, t.name, t.interval_km, t.interval_months, i)),
   ]);
   return inserted.results[0].id;
@@ -109,7 +111,7 @@ export async function updateVehicle(
   const statements = [
     db
       .prepare(`UPDATE vehicles SET ${DETAIL_COLUMNS.map((k) => `${k} = ?`).join(", ")} WHERE id = ? AND user_id = ?`)
-      .bind(...detailValues(v), id, userId),
+      .bind(...bindDetails(v), id, userId),
     ...[...existing]
       .filter((itemId) => !kept.has(itemId))
       .map((itemId) => db.prepare("DELETE FROM service_items WHERE id = ? AND vehicle_id = ?").bind(itemId, id)),
