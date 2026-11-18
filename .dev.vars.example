@@ -3,3 +3,4 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 SESSION_SECRET=   # any long random string, e.g. `openssl rand -base64 32`
 OPENROUTER_API_KEY=
+CONTACT_EMAIL=     # shown on /privacy; in production: npx wrangler secret put CONTACT_EMAIL

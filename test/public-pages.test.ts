@@ -13,6 +13,8 @@ describe("the privacy page", () => {
     for (const text of ["Google email", "vehicles", "services", "Receipt photos", "OpenRouter", "never sold or shared"]) {
       expect(html).toContain(text);
     }
+    expect(html).toContain("deleted within about a day");
+    expect(html).not.toContain("Nothing is saved until");
     expect(env.CONTACT_EMAIL).toMatch(/@/);
     expect(html).toContain(`href="mailto:${env.CONTACT_EMAIL}`);
   });

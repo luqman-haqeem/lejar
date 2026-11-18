@@ -1,4 +1,7 @@
+import { SESSION_TTL_MS } from "../session";
 import { Layout } from "./Layout";
+
+const SESSION_DAYS = SESSION_TTL_MS / (24 * 60 * 60 * 1000);
 
 /** Plain-English privacy policy. Public: Google requires it to open sign-in to everyone. */
 export function Privacy({ contactEmail }: { contactEmail: string }) {
@@ -18,29 +21,35 @@ export function Privacy({ contactEmail }: { contactEmail: string }) {
             else: not your name, contacts or files.
           </li>
           <li>
-            The <strong>vehicles</strong> you add: name, plate, make, model, year, road tax and insurance dates, and
-            your service schedule.
+            The <strong>vehicles</strong> you add: name, plate, make, model, year, road tax and insurance dates,
+            insurer, and your service schedule.
           </li>
           <li>
-            The <strong>services</strong> you log: dates, odometer readings, workshops, costs, line items and notes.
+            The <strong>services</strong> you log (dates, odometer readings, workshops, costs, line items and notes)
+            and any odometer readings you add.
           </li>
           <li>
             <strong>Receipt photos</strong> you attach or scan, stored privately. Only you can see them.
           </li>
-          <li>A sign-in cookie that keeps you signed in for 30 days, and a count of your receipt scans per day.</li>
+          <li>
+            A sign-in cookie that keeps you signed in for {SESSION_DAYS} days (plus a short-lived one while you sign in
+            with Google), and a count of your receipt scans per day.
+          </li>
         </ul>
 
         <h2>Receipt scanning</h2>
         <p>
-          When you use <strong>Scan receipt</strong>, the photo is sent to <strong>OpenRouter</strong>, which passes it
-          to an AI model to read the date, odometer, workshop and amounts. Nothing is saved until you check the details
-          and press Save. Photos you attach without scanning are not sent anywhere.
+          When you use <strong>Scan receipt</strong>, the photo is stored and sent to <strong>OpenRouter</strong>, which
+          passes it to an AI model to read the date, odometer, workshop and amounts. You check the details before the
+          service is saved; if you don't save it, the photo is deleted within about a day. Photos you attach without
+          scanning are not sent anywhere.
         </p>
 
         <h2>Who sees your data</h2>
         <p>
-          Only you. Your data is <strong>never sold or shared</strong>, there are no ads and no tracking. It's stored
-          on Cloudflare, which hosts the app.
+          Only you. Your data is <strong>never sold or shared</strong>, apart from the receipt photos you choose to scan
+          being sent to OpenRouter to be read. There are no ads and no tracking. Everything is stored on Cloudflare,
+          which hosts the app.
         </p>
 
         <h2>Deleting your data</h2>

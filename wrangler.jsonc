@@ -8,8 +8,7 @@
   "vars": {
     "SCAN_MODEL": "google/gemini-2.5-flash",
     "SCAN_CAP_PER_USER": "20",
-    "SCAN_CAP_GLOBAL": "300",
-    "CONTACT_EMAIL": "you@example.com"
+    "SCAN_CAP_GLOBAL": "300"
   },
   "r2_buckets": [{ "binding": "RECEIPTS", "bucket_name": "kereta-receipts" }],
   "d1_databases": [

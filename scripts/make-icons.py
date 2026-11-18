@@ -1,4 +1,5 @@
-"""Generates the Home Screen icons in public/. Run: python3 scripts/make-icons.py"""
+"""Generates the Home Screen icons in public/. Needs Pillow and the DejaVu fonts (Debian/Ubuntu: fonts-dejavu).
+Run: python3 scripts/make-icons.py"""
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -12,10 +13,11 @@ def icon(size: int, rounded: bool) -> Image.Image:
     # Drawn at 4x and scaled down for smooth edges. Full-bleed (no transparency) so iOS and
     # maskable crops never show black corners; `rounded` is only for the 192 px browser icon.
     s = size * 4
-    img = Image.new("RGB", (s, s), ACCENT)
     if rounded:
         img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
         ImageDraw.Draw(img).rounded_rectangle((0, 0, s - 1, s - 1), radius=s // 5, fill=ACCENT)
+    else:
+        img = Image.new("RGB", (s, s), ACCENT)
     draw = ImageDraw.Draw(img)
     # A "K" inside the maskable safe zone (central 80%), with a road line under it.
     font = ImageFont.truetype(FONT, int(s * 0.5))

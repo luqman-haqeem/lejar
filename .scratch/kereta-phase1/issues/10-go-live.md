@@ -13,3 +13,7 @@
 - [ ] The app is deployed. `/healthz` returns `ok`, and `/` redirects to sign-in when signed out.
 - [ ] The Google consent screen has its homepage and privacy URL set and is published.
 - [ ] On the iPhone: sign in, add the app to the Home Screen, add a vehicle, scan a real receipt, check the dashboard, and save a PDF.
+
+## Comments
+
+- 2026-11-18: Also set `CONTACT_EMAIL` as a secret (ticket 09). Check whether Google accepts `*.workers.dev` homepage/privacy URLs for publishing the consent screen, or whether a verified custom domain is needed.

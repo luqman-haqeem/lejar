@@ -46,7 +46,7 @@ This is a plain OAuth 2.0 authorization-code flow with PKCE, written by hand or 
   - Any verified Google email is accepted. An unverified one gets "Not authorised".
   - The user is upserted into `users`, keyed by Google `sub`, and the session stores the user id.
   - On success, it sets an HMAC-signed, HttpOnly, Secure session cookie that lasts 30 days.
-- **Protection:** a middleware guards every route except `/login` and `/auth/*`.
+- **Protection:** a middleware guards every route except `/login`, `/auth/*`, `/privacy` and `/healthz`.
 - **Sign-out:** `POST /logout` clears the cookie.
 - **One-time setup (the user does this):**
   1. Create an OAuth client of type "Web application" in Google Cloud Console. The existing Google Cloud project used for the Hermes Gmail OAuth can be reused, or a new one created.
