@@ -2,7 +2,9 @@ import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { AppEnv } from "./app-types";
 import { authRoutes, SESSION_COOKIE } from "./auth";
+import { listVehicles } from "./db";
 import { verifySession } from "./session";
+import { vehicleRoutes } from "./vehicles";
 import { Dashboard } from "./views/Dashboard";
 import { Login } from "./views/Login";
 
@@ -22,7 +24,8 @@ export function createApp(deps: AppDeps = {}) {
     await next();
   });
 
-  app.get("/", (c) => c.html(<Dashboard />));
+  app.get("/", async (c) => c.html(<Dashboard vehicles={await listVehicles(c.env.DB, c.get("userId"))} />));
+  app.route("/", vehicleRoutes());
 
   return app;
 }

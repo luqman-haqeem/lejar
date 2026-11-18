@@ -1,0 +1,153 @@
+import type { ItemInput, ServiceItem, Vehicle, VehicleDetails } from "./db";
+import { parseDateInput, todayKL } from "./lib/dates";
+
+// The vehicle form posts flat fields: the details by name, and schedule rows as
+// "item.<n>.<field>" (id, name, km, months, baseline_date, baseline_km, remove).
+
+export const DETAIL_FIELDS = [
+  "type",
+  "name",
+  "plate",
+  "make",
+  "model",
+  "year",
+  "roadtax_expiry",
+  "insurance_expiry",
+  "insurer",
+] as const;
+export const ITEM_FIELDS = ["id", "name", "km", "months", "baseline_date", "baseline_km", "remove"] as const;
+
+export type DetailValues = Record<(typeof DETAIL_FIELDS)[number], string>;
+export type ItemValues = Record<(typeof ITEM_FIELDS)[number], string>;
+/** What the form shows: either a saved vehicle, or exactly what the user typed. */
+export type FormValues = { details: DetailValues; items: ItemValues[] };
+/** Field key ("name", "item.3.km") to message. */
+export type FormErrors = Record<string, string>;
+
+export type Parsed<T> = { ok: true; value: T } | { ok: false; errors: FormErrors };
+
+type Body = Record<string, string | File>;
+const str = (body: Body, key: string) => {
+  const v = body[key];
+  return typeof v === "string" ? v.trim() : "";
+};
+
+export function detailValues(body: Body): DetailValues {
+  return Object.fromEntries(DETAIL_FIELDS.map((k) => [k, str(body, k)])) as DetailValues;
+}
+
+/** Schedule rows in the order the form numbered them. */
+export function itemValues(body: Body): ItemValues[] {
+  const indexes = new Set<number>();
+  for (const key of Object.keys(body)) {
+    const m = key.match(/^item\.(\d+)\./);
+    if (m) indexes.add(Number(m[1]));
+  }
+  return [...indexes]
+    .sort((a, b) => a - b)
+    .map((n) => Object.fromEntries(ITEM_FIELDS.map((f) => [f, str(body, `item.${n}.${f}`)])) as ItemValues);
+}
+
+export function formValuesOf(v: Vehicle, items: ServiceItem[]): FormValues {
+  const s = (x: string | number | null) => (x === null ? "" : String(x));
+  return {
+    details: Object.fromEntries(DETAIL_FIELDS.map((k) => [k, s(v[k])])) as DetailValues,
+    items: items.map((i) => ({
+      id: String(i.id),
+      name: i.name,
+      km: s(i.interval_km),
+      months: s(i.interval_months),
+      baseline_date: s(i.baseline_date),
+      baseline_km: s(i.baseline_km),
+      remove: "",
+    })),
+  };
+}
+
+/** A whole number, allowing "50,000" or "50 000". Blank gives null; anything else gives undefined. */
+function parseCount(input: string, min: number, max: number): number | null | undefined {
+  if (input === "") return null;
+  const digits = input.replace(/[,\s]/g, "");
+  if (!/^\d+$/.test(digits)) return undefined;
+  const n = Number(digits);
+  return n >= min && n <= max ? n : undefined;
+}
+
+function optionalDate(input: string): string | null | undefined {
+  return input === "" ? null : (parseDateInput(input) ?? undefined);
+}
+
+export function parseDetails(d: DetailValues, now = new Date()): Parsed<VehicleDetails> {
+  const errors: FormErrors = {};
+  const thisYear = Number(todayKL(now).slice(0, 4));
+
+  if (d.type !== "car" && d.type !== "motorbike") errors.type = "Choose car or motorbike.";
+  if (!d.name) errors.name = "Give the vehicle a name.";
+  const year = parseCount(d.year, 1900, thisYear + 1);
+  if (year === undefined) errors.year = `Year must be between 1900 and ${thisYear + 1}.`;
+  const roadtax = optionalDate(d.roadtax_expiry);
+  if (roadtax === undefined) errors.roadtax_expiry = "Road tax expiry isn't a valid date.";
+  const insurance = optionalDate(d.insurance_expiry);
+  if (insurance === undefined) errors.insurance_expiry = "Insurance expiry isn't a valid date.";
+
+  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      type: d.type as VehicleDetails["type"],
+      name: d.name,
+      plate: d.plate.toUpperCase().replace(/\s+/g, " "),
+      make: d.make,
+      model: d.model,
+      year: year ?? null,
+      roadtax_expiry: roadtax ?? null,
+      insurance_expiry: insurance ?? null,
+      insurer: d.insurer,
+    },
+  };
+}
+
+/**
+ * Rows ticked "remove" and blank new rows are dropped. Every kept row needs a name and at least one
+ * interval. A baseline ("last done roughly here") can't be in the future.
+ */
+export function parseItems(rows: ItemValues[], now = new Date()): Parsed<ItemInput[]> {
+  const errors: FormErrors = {};
+  const today = todayKL(now);
+  const items: ItemInput[] = [];
+
+  rows.forEach((r, n) => {
+    if (r.remove) return;
+    const isNew = r.id === "";
+    if (isNew && Object.entries(r).every(([, v]) => v === "")) return;
+
+    const key = (f: string) => `item.${n}.${f}`;
+    const label = r.name || "New item";
+    if (!r.name) errors[key("name")] = "Each schedule item needs a name.";
+
+    const km = parseCount(r.km, 1, 1_000_000);
+    if (km === undefined) errors[key("km")] = `${label}: km interval must be a whole number of km.`;
+    const months = parseCount(r.months, 1, 240);
+    if (months === undefined) errors[key("months")] = `${label}: month interval must be between 1 and 240.`;
+    if (km === null && months === null) errors[key("km")] = `${label}: set a km or a month interval.`;
+
+    const baselineDate = optionalDate(r.baseline_date);
+    if (baselineDate === undefined) errors[key("baseline_date")] = `${label}: last done date isn't a valid date.`;
+    else if (baselineDate !== null && baselineDate > today)
+      errors[key("baseline_date")] = `${label}: last done date can't be in the future.`;
+    const baselineKm = parseCount(r.baseline_km, 0, 10_000_000);
+    if (baselineKm === undefined) errors[key("baseline_km")] = `${label}: last done km must be a whole number.`;
+
+    const id = isNew ? undefined : Number(r.id);
+    items.push({
+      ...(id !== undefined && Number.isSafeInteger(id) ? { id } : {}),
+      name: r.name,
+      interval_km: km ?? null,
+      interval_months: months ?? null,
+      baseline_date: baselineDate ?? null,
+      baseline_km: baselineKm ?? null,
+    });
+  });
+
+  return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, value: items };
+}
