@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
 import { lastDoneByItem, listItems, listReadings, listVehicles, type Vehicle } from "./db";
-import { estimateKm, expiryStatus, itemDue, odometerStale, sortByUrgency } from "./lib/due";
+import { estimateKm, expiryStatus, itemDue, odometerState, sortByUrgency } from "./lib/due";
 import { Dashboard, type VehicleDue } from "./views/Dashboard";
 
 async function vehicleDue(db: D1Database, userId: number, vehicle: Vehicle, today: string): Promise<VehicleDue> {
@@ -14,8 +14,7 @@ async function vehicleDue(db: D1Database, userId: number, vehicle: Vehicle, toda
   return {
     vehicle,
     estKm,
-    hasReadings: readings.length > 0,
-    stale: odometerStale(readings, today),
+    odometer: odometerState(readings, today),
     items: sortByUrgency(items.map((i) => itemDue(i, lastDone.get(i.id) ?? null, estKm, vehicle.type, today))),
     roadtax: expiryStatus(vehicle.roadtax_expiry, today),
     insurance: expiryStatus(vehicle.insurance_expiry, today),

@@ -83,6 +83,31 @@ describe("what's due on the dashboard", () => {
     expect(edit).toContain(`id="item-${engineOil.id}"`);
   });
 
+  it("never leaves an unknown item without a way to fix it", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const items = await listItems(env.DB, car);
+    // Engine oil goes by km only but has only a date baseline; Oil filter has a km baseline but there
+    // are no odometer readings to compare it with.
+    const form: Record<string, string> = { type: "car", name: "Myvi" };
+    items.forEach((i, n) => {
+      form[`item.${n}.id`] = String(i.id);
+      form[`item.${n}.name`] = i.name;
+      form[`item.${n}.km`] = String(i.interval_km ?? "");
+      form[`item.${n}.months`] = i.name === "Engine oil" ? "" : String(i.interval_months);
+    });
+    form["item.0.baseline_date"] = "2026-06-01";
+    form["item.1.baseline_km"] = "50000";
+    expect((await post(`/vehicles/${car}`, user, form)).status).toBe(302);
+
+    const html = await dashboard(user);
+    const row = (name: string) => html.match(new RegExp(`<li class="due s-\\w+"><span class="due-name">${name}</span>(.*?)</li>`))?.[1];
+    expect(row("Engine oil")).toContain(`href="/vehicles/${car}/edit#item-${items[0].id}"`);
+    expect(row("Engine oil")).toContain("Set last done km");
+    expect(row("Oil filter")).toContain(`href="/vehicles/${car}#odometer"`);
+    expect(row("Oil filter")).toContain("at 60,000 km");
+  });
+
   it("puts overdue items above due-soon, unknown and OK ones", async () => {
     const user = await makeUser();
     const car = await addCar(user);

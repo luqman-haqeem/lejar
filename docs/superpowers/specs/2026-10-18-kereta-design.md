@@ -69,7 +69,7 @@ This is a plain OAuth 2.0 authorization-code flow with PKCE, written by hand or 
 - **Phase 2 tables** (not created in Phase 1): `push_subscriptions` and `notifications_sent`.
 
 ## Due-date logic (`src/lib/due.ts`, pure functions, fully unit-tested)
-- **Estimated current km:** the latest reading plus (average km/day × days since that reading). The average uses readings from the last 12 months. With fewer than 2 readings, there is no estimate and only date-based due dates apply.
+- **Estimated current km:** the latest reading plus (average km/day × days since that reading). The average uses readings from the last 12 months, plus the latest reading before them as an anchor. With fewer than 2 readings, the estimate is the latest reading; with none, there is no estimate and only date-based due dates apply.
 - **For each service item:**
   - The last time it was done is the most recent linked `service_line`. If there isn't one, the baseline is used.
   - Due km = last km + interval km. Due date = last date + interval months. Whichever comes first wins.

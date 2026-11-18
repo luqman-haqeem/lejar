@@ -26,6 +26,11 @@ export type ItemDue = {
   daysLeft: number | null;
   lastDate: string | null;
   lastKm: number | null;
+  /**
+   * For an unknown item, what would make it known: a "last done" point matching its interval, or an
+   * odometer reading to compare a km due point against. Null otherwise.
+   */
+  needs: "last_done" | "reading" | null;
 };
 
 /** How close (in km) an item gets before it shows as due soon. */
@@ -80,17 +85,26 @@ export function itemDue(
     status = "soon";
   else status = "ok";
 
-  return { itemId: item.id, name: item.name, status, dueDate, dueKm, kmLeft, daysLeft, lastDate, lastKm };
+  const needs = status !== "unknown" ? null : dueKm !== null ? "reading" : "last_done";
+  return { itemId: item.id, name: item.name, status, dueDate, dueKm, kmLeft, daysLeft, lastDate, lastKm, needs };
 }
 
-export type ExpiryStatus = { status: "overdue" | "soon" | "ok" | "unset"; daysLeft: number | null };
+export type ExpiryStatus =
+  | { status: "unset"; date: null; daysLeft: null }
+  | { status: "overdue" | "soon" | "ok"; date: string; daysLeft: number };
 
 /** Road tax or insurance: overdue on and after the expiry date, due soon within 30 days. */
 export function expiryStatus(expiry: string | null, today: string): ExpiryStatus {
-  if (expiry === null) return { status: "unset", daysLeft: null };
+  if (expiry === null) return { status: "unset", date: null, daysLeft: null };
   const daysLeft = daysBetween(today, expiry);
   const status = daysLeft <= 0 ? "overdue" : daysLeft <= EXPIRY_SOON_DAYS ? "soon" : "ok";
-  return { status, daysLeft };
+  return { status, date: expiry, daysLeft };
+}
+
+export type OdometerState = "none" | "stale" | "fresh";
+
+export function odometerState(readings: KmReading[], today: string): OdometerState {
+  return readings.length === 0 ? "none" : odometerStale(readings, today) ? "stale" : "fresh";
 }
 
 /** True when the latest reading is more than 30 days old. No readings isn't stale: there's nothing to update. */

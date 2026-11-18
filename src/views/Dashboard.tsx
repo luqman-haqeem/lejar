@@ -1,6 +1,6 @@
 import type { Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
-import type { ExpiryStatus, ItemDue } from "../lib/due";
+import { type ExpiryStatus, type ItemDue, type OdometerState, STALE_ODOMETER_DAYS } from "../lib/due";
 import { fmtKm } from "../lib/km";
 import { VEHICLE_TYPE_LABELS } from "../lib/templates";
 import { Layout } from "./Layout";
@@ -8,8 +8,7 @@ import { Layout } from "./Layout";
 export type VehicleDue = {
   vehicle: Vehicle;
   estKm: number | null;
-  hasReadings: boolean;
-  stale: boolean;
+  odometer: OdometerState;
   /** Most urgent first. */
   items: ItemDue[];
   roadtax: ExpiryStatus;
@@ -32,35 +31,57 @@ function dueText(i: ItemDue): string {
   return parts.join(" · ");
 }
 
+/** What an unknown item is missing, as a link to where the user can add it. */
+function FixLink({ vehicleId, item }: { vehicleId: number; item: ItemDue }) {
+  if (item.needs === "reading") {
+    return (
+      <a class="due-when" href={`/vehicles/${vehicleId}#odometer`}>
+        {dueText(item)} · add odometer
+      </a>
+    );
+  }
+  const missing = item.lastDate === null && item.lastKm === null ? "" : item.lastKm === null ? " km" : " date";
+  return (
+    <a class="due-when" href={`/vehicles/${vehicleId}/edit#item-${item.itemId}`}>
+      Set last done{missing}
+    </a>
+  );
+}
+
 function DueRow({ vehicleId, item }: { vehicleId: number; item: ItemDue }) {
-  const neverDone = item.lastDate === null && item.lastKm === null;
   return (
     <li class={`due s-${item.status}`}>
       <span class="due-name">{item.name}</span>
-      {neverDone ? (
-        <a class="due-when" href={`/vehicles/${vehicleId}/edit#item-${item.itemId}`}>
-          Set last done
-        </a>
-      ) : (
-        <span class="due-when">{dueText(item)}</span>
-      )}
+      {item.needs ? <FixLink vehicleId={vehicleId} item={item} /> : <span class="due-when">{dueText(item)}</span>}
     </li>
   );
 }
 
-function ExpiryChip({ label, date, expiry, extra }: { label: string; date: string | null; expiry: ExpiryStatus; extra?: string }) {
-  const { status, daysLeft } = expiry;
-  const text =
-    status === "unset" || date === null || daysLeft === null
-      ? `${label} not set`
-      : status === "overdue"
-        ? `${label} expired ${fmtDate(date)}`
-        : status === "soon"
-          ? `${label} in ${days(daysLeft)}`
-          : `${label} ${fmtDate(date)}`;
-  const cls = status === "unset" ? "unknown" : status;
-  return <span class={`chip s-${cls}`}>{extra && status !== "unset" ? `${text} · ${extra}` : text}</span>;
+const EXPIRY_CLASS: Record<ExpiryStatus["status"], string> = { overdue: "overdue", soon: "soon", ok: "ok", unset: "unknown" };
+
+function expiryText(label: string, e: ExpiryStatus): string {
+  switch (e.status) {
+    case "unset":
+      return `${label} not set`;
+    case "overdue":
+      return `${label} expired ${fmtDate(e.date)}`;
+    case "soon":
+      return `${label} in ${days(e.daysLeft)}`;
+    case "ok":
+      return `${label} ${fmtDate(e.date)}`;
+  }
 }
+
+function ExpiryChip({ label, expiry, extra }: { label: string; expiry: ExpiryStatus; extra?: string }) {
+  const text = expiryText(label, expiry);
+  return <span class={`chip s-${EXPIRY_CLASS[expiry.status]}`}>{extra && expiry.date ? `${text} · ${extra}` : text}</span>;
+}
+
+const ODOMETER_PROMPT: Record<OdometerState, string | null> = {
+  none: "Add an odometer reading to track km",
+  stale: `Update odometer: last reading over ${STALE_ODOMETER_DAYS} days ago`,
+  fresh: null,
+};
 
 function VehicleCard({ due }: { due: VehicleDue }) {
   const v = due.vehicle;
@@ -78,16 +99,10 @@ function VehicleCard({ due }: { due: VehicleDue }) {
         {subtitle}
         {due.estKm !== null && <span class="est-km"> · ~{fmtKm(due.estKm)}</span>}
       </p>
-      {!due.hasReadings ? (
+      {ODOMETER_PROMPT[due.odometer] && (
         <a class="prompt" href={`/vehicles/${v.id}#odometer`}>
-          Add an odometer reading to track km
+          {ODOMETER_PROMPT[due.odometer]}
         </a>
-      ) : (
-        due.stale && (
-          <a class="prompt" href={`/vehicles/${v.id}#odometer`}>
-            Update odometer: last reading over 30 days ago
-          </a>
-        )
       )}
       <ul class="due-list">
         {due.items.slice(0, TOP_ITEMS).map((item) => (
@@ -100,8 +115,8 @@ function VehicleCard({ due }: { due: VehicleDue }) {
         </a>
       )}
       <div class="chips">
-        <ExpiryChip label="Road tax" date={v.roadtax_expiry} expiry={due.roadtax} />
-        <ExpiryChip label="Insurance" date={v.insurance_expiry} expiry={due.insurance} extra={v.insurer || undefined} />
+        <ExpiryChip label="Road tax" expiry={due.roadtax} />
+        <ExpiryChip label="Insurance" expiry={due.insurance} extra={v.insurer || undefined} />
       </div>
     </article>
   );

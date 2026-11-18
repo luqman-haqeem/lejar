@@ -71,12 +71,28 @@ describe("where 'last done' comes from", () => {
   });
 
   it("is unknown with neither a logged service nor a baseline", () => {
-    expect(itemDue(oil, null, 50000, "car", TODAY)).toMatchObject({ status: "unknown", dueDate: null, dueKm: null });
+    expect(itemDue(oil, null, 50000, "car", TODAY)).toMatchObject({
+      status: "unknown",
+      dueDate: null,
+      dueKm: null,
+      needs: "last_done",
+    });
   });
 
   it("is unknown when only km is known but there's no current km estimate", () => {
     const item = { ...oil, interval_months: null, baseline_km: 50000 };
-    expect(itemDue(item, null, null, "car", TODAY)).toMatchObject({ dueKm: 60000, kmLeft: null, status: "unknown" });
+    expect(itemDue(item, null, null, "car", TODAY)).toMatchObject({
+      dueKm: 60000,
+      kmLeft: null,
+      status: "unknown",
+      needs: "reading",
+    });
+  });
+
+  it("is unknown when the baseline doesn't match the interval", () => {
+    const kmOnly = { ...oil, interval_months: null, baseline_date: "2026-06-01" };
+    expect(itemDue(kmOnly, null, 55000, "car", TODAY)).toMatchObject({ status: "unknown", needs: "last_done" });
+    expect(itemDue(oil, { date: "2026-09-01", km: 55000 }, 56000, "car", TODAY).needs).toBeNull();
   });
 });
 
@@ -117,15 +133,15 @@ describe("estimating today's km", () => {
 
 describe("road tax and insurance", () => {
   it("is overdue on and after the expiry date, due soon within 30 days, otherwise OK", () => {
-    expect(expiryStatus("2026-10-17", TODAY)).toEqual({ status: "overdue", daysLeft: -1 });
-    expect(expiryStatus("2026-10-18", TODAY)).toEqual({ status: "overdue", daysLeft: 0 });
-    expect(expiryStatus("2026-10-19", TODAY)).toEqual({ status: "soon", daysLeft: 1 });
-    expect(expiryStatus("2026-11-17", TODAY)).toEqual({ status: "soon", daysLeft: 30 });
-    expect(expiryStatus("2026-11-18", TODAY)).toEqual({ status: "ok", daysLeft: 31 });
+    expect(expiryStatus("2026-10-17", TODAY)).toMatchObject({ status: "overdue", daysLeft: -1 });
+    expect(expiryStatus("2026-10-18", TODAY)).toMatchObject({ status: "overdue", daysLeft: 0 });
+    expect(expiryStatus("2026-10-19", TODAY)).toMatchObject({ status: "soon", daysLeft: 1 });
+    expect(expiryStatus("2026-11-17", TODAY)).toMatchObject({ status: "soon", daysLeft: 30 });
+    expect(expiryStatus("2026-11-18", TODAY)).toMatchObject({ status: "ok", daysLeft: 31, date: "2026-11-18" });
   });
 
   it("is 'not set' without a date", () => {
-    expect(expiryStatus(null, TODAY)).toEqual({ status: "unset", daysLeft: null });
+    expect(expiryStatus(null, TODAY)).toEqual({ status: "unset", date: null, daysLeft: null });
   });
 });
 
@@ -152,6 +168,7 @@ describe("sorting by urgency", () => {
     dueKm: null,
     lastDate: null,
     lastKm: null,
+    needs: null,
   });
 
   it("puts overdue first, then soon, then unknown, then OK, soonest first within each", () => {

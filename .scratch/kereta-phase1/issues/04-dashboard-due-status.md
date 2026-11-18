@@ -19,3 +19,7 @@
 ## Comments
 
 - 2026-11-18: Ticket 03 didn't add `lastDoneByItem` (latest linked service line per schedule item); this ticket writes it alongside the due logic.
+- 2026-11-18 (implementation): The "Scan receipt" button is left for ticket 06, which builds `/scan`.
+- An unknown item always links to what would make it known: setting "last done" (or the missing km/date half of it), or adding an odometer reading when only a km due point is known.
+- A vehicle with no readings shows "Add an odometer reading to track km"; the stale prompt is for readings more than 30 days old.
+- "Today" comes from request middleware (`c.get("today")`, Asia/Kuala_Lumpur), and tests inject the clock via `createApp({ now })`.
