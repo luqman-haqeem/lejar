@@ -28,12 +28,14 @@ export type FieldProps = {
   required?: boolean;
   autocapitalize?: "characters";
   max?: string;
+  /** Marks a field the receipt scan couldn't read, for the user to fill in. */
+  highlight?: boolean;
 };
 
-export function Field({ label, name, value, errors, errorKey = name, type = "text", ...rest }: FieldProps) {
+export function Field({ label, name, value, errors, errorKey = name, type = "text", highlight, ...rest }: FieldProps) {
   const invalid = errorKey in errors;
   return (
-    <label class={invalid ? "field invalid" : "field"}>
+    <label class={invalid ? "field invalid" : highlight ? "field unread" : "field"}>
       <span>{label}</span>
       <input name={name} type={type} value={value} aria-invalid={invalid ? "true" : undefined} {...rest} />
     </label>

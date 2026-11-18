@@ -6,12 +6,13 @@ import { dashboardRoutes } from "./dashboard";
 import { todayKL } from "./lib/dates";
 import { verifySession } from "./session";
 import { receiptRoutes } from "./receipts";
+import { scanRoutes } from "./scan";
 import { serviceRoutes } from "./services";
 import { vehicleRoutes } from "./vehicles";
 import { Login } from "./views/Login";
 
-/** Injectable for tests: the fetch used for Google, and the clock that decides "today". */
-export type AppDeps = { fetchFn?: typeof fetch; now?: () => Date };
+/** Injectable for tests: the fetch used for Google, the one used for OpenRouter, and the clock that decides "today". */
+export type AppDeps = { fetchFn?: typeof fetch; aiFetch?: typeof fetch; now?: () => Date };
 
 export function createApp(deps: AppDeps = {}) {
   const app = new Hono<AppEnv>();
@@ -32,6 +33,7 @@ export function createApp(deps: AppDeps = {}) {
   app.route("/", vehicleRoutes());
   app.route("/", serviceRoutes());
   app.route("/", receiptRoutes());
+  app.route("/", scanRoutes(deps.aiFetch));
 
   return app;
 }

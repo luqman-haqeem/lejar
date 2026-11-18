@@ -158,6 +158,9 @@ export function Dashboard({ vehicles, archivedCount }: { vehicles: VehicleDue[];
         <VehicleCard due={due} />
       ))}
       <ArchivedLink count={archivedCount} />
+      <a class="button scan-fab" href="/scan">
+        Scan receipt
+      </a>
     </Layout>
   );
 }

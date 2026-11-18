@@ -1,7 +1,9 @@
 import type { LineInput, ServiceItem, ServiceInput, ServiceWithLines } from "./db";
 import { type Body, type FormErrors, isBlankRow, type Parsed, parseCount, readFields, readRows, toField } from "./form";
 import { parseDateInput } from "./lib/dates";
+import { suggestItem } from "./lib/matchItems";
 import { fmtRM, parseRM } from "./lib/money";
+import type { ScanResult } from "./openrouter";
 
 // The service form posts the visit's fields by name, and its lines as "line.<n>.<field>".
 
@@ -21,6 +23,31 @@ export function readServiceForm(body: Body): ServiceFormValues {
 
 export function blankServiceForm(workshop = ""): ServiceFormValues {
   return { service: { date: "", odometer_km: "", workshop, total: "", notes: "" }, lines: [] };
+}
+
+/**
+ * The service form prefilled from a receipt scan: each line tagged with its suggested schedule item.
+ * `unread` lists the fields the scan couldn't read, to highlight.
+ */
+export function scanFormValues(scan: ScanResult, items: ServiceItem[]): { values: ServiceFormValues; unread: string[] } {
+  const unread: string[] = [];
+  const field = <T,>(name: string, v: T | null, show: (v: T) => string) => {
+    if (v === null) unread.push(name);
+    return v === null ? "" : show(v);
+  };
+  const service = {
+    date: field("date", scan.date, String),
+    odometer_km: field("odometer_km", scan.odometer_km, String),
+    workshop: field("workshop", scan.workshop, String),
+    total: field("total", scan.total_sen, amount),
+    notes: "",
+  };
+  const lines = scan.lines.map((l, n) => ({
+    description: l.description,
+    cost: field(`line.${n}.cost`, l.cost_sen, amount),
+    item: toField(suggestItem(l.description, items)),
+  }));
+  return { values: { service, lines }, unread };
 }
 
 /** Money is shown without the "RM" in inputs, which already say "RM". */

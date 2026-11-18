@@ -34,6 +34,9 @@ export function VehicleHistory({
         <a class="button" href={`/services/new?vehicle=${vehicle.id}`}>
           Log a service
         </a>
+        <a class="secondary" href={`/scan?vehicle=${vehicle.id}`}>
+          Scan receipt
+        </a>
         <a class="secondary" href={`/vehicles/${vehicle.id}/edit`}>
           Details &amp; schedule
         </a>

@@ -5,6 +5,7 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": { "directory": "public", "binding": "ASSETS" },
+  "vars": { "SCAN_MODEL": "google/gemini-2.5-flash" },
   "r2_buckets": [{ "binding": "RECEIPTS", "bucket_name": "kereta-receipts" }],
   "d1_databases": [
     { "binding": "DB", "database_name": "kereta", "database_id": "local-placeholder", "migrations_dir": "migrations" }

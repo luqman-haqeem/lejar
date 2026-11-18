@@ -91,3 +91,14 @@ for (const input of document.querySelectorAll("input[type=file][data-compress]")
     }
   });
 }
+
+// Forms with data-busy show that message on their submit button while the server works (e.g. the
+// AI reading a receipt), and can't be sent twice.
+for (const form of document.querySelectorAll("form[data-busy]")) {
+  form.addEventListener("submit", () => {
+    for (const button of form.querySelectorAll("button[type=submit]")) {
+      button.disabled = true;
+      button.textContent = form.dataset.busy;
+    }
+  });
+}

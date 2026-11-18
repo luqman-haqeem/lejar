@@ -7,13 +7,32 @@ import { Layout } from "./Layout";
 
 const blankLine: LineValues = { description: "", cost: "", item: "" };
 
-function LineRow({ line, n, items, errors }: { line: LineValues; n: number | "__N__"; items: ServiceItem[]; errors: FormErrors }) {
+function LineRow({
+  line,
+  n,
+  items,
+  errors,
+  unread,
+}: {
+  line: LineValues;
+  n: number | "__N__";
+  items: ServiceItem[];
+  errors: FormErrors;
+  unread: Set<string>;
+}) {
   const name = (f: string) => `line.${n}.${f}`;
   return (
     <div class="item">
       <Field label="Work or part" name={name("description")} value={line.description} errors={errors} />
       <div class="pair">
-        <Field label="Cost (RM)" name={name("cost")} value={line.cost} errors={errors} inputmode="decimal" />
+        <Field
+          label="Cost (RM)"
+          name={name("cost")}
+          value={line.cost}
+          errors={errors}
+          inputmode="decimal"
+          highlight={unread.has(name("cost"))}
+        />
         <label class="field">
           <span>Schedule item</span>
           <select name={name("item")}>
@@ -61,6 +80,8 @@ export function ServiceForm({
   errors = {},
   saved = false,
   receiptKey = null,
+  unread = [],
+  notice,
 }: {
   vehicle: Vehicle;
   items: ServiceItem[];
@@ -70,8 +91,13 @@ export function ServiceForm({
   saved?: boolean;
   /** The photo already attached to this form, if any. */
   receiptKey?: string | null;
+  /** Field names a receipt scan couldn't read. */
+  unread?: string[];
+  /** A banner above the form, e.g. after a scan. */
+  notice?: string;
 }) {
   const v = values.service;
+  const blank = new Set(unread);
   const isNew = mode.kind === "new";
   return (
     <Layout title={isNew ? "Log a service" : "Edit service"} signedIn>
@@ -82,6 +108,11 @@ export function ServiceForm({
       {saved && (
         <p class="notice" role="status">
           Saved. Add the next one.
+        </p>
+      )}
+      {notice && (
+        <p class="notice scan-notice" role="status">
+          {notice}
         </p>
       )}
       <ErrorSummary errors={errors} />
@@ -96,10 +127,18 @@ export function ServiceForm({
         <fieldset>
           <legend>Visit</legend>
           <div class="pair">
-            <Field label="Date" name="date" type="date" value={v.date} errors={errors} required />
-            <Field label="Odometer (km)" name="odometer_km" value={v.odometer_km} errors={errors} inputmode="numeric" required />
+            <Field label="Date" name="date" type="date" value={v.date} errors={errors} required highlight={blank.has("date")} />
+            <Field
+              label="Odometer (km)"
+              name="odometer_km"
+              value={v.odometer_km}
+              errors={errors}
+              inputmode="numeric"
+              required
+              highlight={blank.has("odometer_km")}
+            />
           </div>
-          <Field label="Workshop" name="workshop" value={v.workshop} errors={errors} />
+          <Field label="Workshop" name="workshop" value={v.workshop} errors={errors} highlight={blank.has("workshop")} />
           <Field
             label="Total (RM)"
             name="total"
@@ -107,6 +146,7 @@ export function ServiceForm({
             errors={errors}
             inputmode="decimal"
             placeholder="Blank = sum of the lines"
+            highlight={blank.has("total")}
           />
           <label class="field">
             <span>Notes</span>
@@ -123,7 +163,7 @@ export function ServiceForm({
             rows={values.lines}
             blank={blankLine}
             addLabel="Add line"
-            render={(line, n) => <LineRow line={line} n={n} items={items} errors={errors} />}
+            render={(line, n) => <LineRow line={line} n={n} items={items} errors={errors} unread={blank} />}
           />
         </fieldset>
         <div class="actions">

@@ -6,4 +6,7 @@ export type Env = {
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
   SESSION_SECRET: string;
+  OPENROUTER_API_KEY: string;
+  /** OpenRouter vision model for receipt scans. */
+  SCAN_MODEL: string;
 };
