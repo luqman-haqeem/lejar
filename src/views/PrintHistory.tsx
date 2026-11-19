@@ -4,6 +4,7 @@ import { fmtKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { vehicleSummary } from "../lib/templates";
 import { Layout } from "./Layout";
+import { hasPartDetails, partSummary } from "../lib/parts";
 
 /**
  * A vehicle's full service history for printing or saving as a PDF (e.g. for a buyer). Shows only
@@ -54,7 +55,10 @@ export function PrintHistory({
                   <tbody>
                     {s.lines.map((l) => (
                       <tr>
-                        <td>{l.description}</td>
+                        <td>
+                          {l.description}
+                          {hasPartDetails(l) && <span class="part-details">{partSummary(l, today)}</span>}
+                        </td>
                         <td class="amount">{fmtOptionalRM(l.cost_sen)}</td>
                       </tr>
                     ))}

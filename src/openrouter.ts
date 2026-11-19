@@ -4,14 +4,20 @@ import { Buffer } from "node:buffer";
 import { parseCount } from "./form";
 import { parseDateInput } from "./lib/dates";
 import { parseRM } from "./lib/money";
+import { addMonths } from "./lib/dates";
+import { formatPartSpec, positionsFor } from "./lib/parts";
 
 export type ScanResult = {
   date: string | null;
   odometer_km: number | null;
   workshop: string | null;
   total_sen: number | null;
-  lines: { description: string; cost_sen: number | null }[];
+  lines: ScannedLine[];
 };
+
+/** Part details read off a line; set only when at least one was read. */
+export type ScannedPart = { brand: string | null; spec: string | null; position: string | null; warranty_until: string | null };
+export type ScannedLine = { description: string; cost_sen: number | null; part?: ScannedPart };
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const text = (v: unknown) => (typeof v === "string" && v.trim() !== "" ? v.trim() : null);
@@ -33,6 +39,20 @@ function km(v: unknown): number | null {
   return parseCount(s, 0, MAX_KM) ?? null;
 }
 
+/** Brand, spec, position and warranty on a line, or undefined when none was read. */
+function scannedPart(l: Record<string, unknown>, receiptDate: string | null): ScannedPart | undefined {
+  const brand = text(l.brand);
+  const spec = text(l.spec);
+  const said = text(l.position)?.toLowerCase();
+  const position = positionsFor("car").find((p) => p.toLowerCase() === said) ?? null;
+  const months = parseCount(typeof l.warranty_months === "string" ? l.warranty_months.trim() : String(l.warranty_months ?? ""), 1, 120);
+  const warranty_until =
+    (typeof l.warranty_until === "string" ? parseDateInput(l.warranty_until) : null) ??
+    (months && receiptDate ? addMonths(receiptDate, months) : null);
+  if (!brand && !spec && !position && !warranty_until) return undefined;
+  return { brand, spec: spec && formatPartSpec(spec), position, warranty_until };
+}
+
 /**
  * The model's JSON reply as a ScanResult. Tolerates a markdown code fence, numbers sent as strings,
  * and RM prefixes. A field it can't use becomes null; a date that's invalid or after `today` too.
@@ -48,17 +68,20 @@ export function parseScanResponse(raw: string, today: string): ScanResult | null
   }
   if (!isRecord(data)) return null;
 
-  const date = typeof data.date === "string" ? parseDateInput(data.date) : null;
+  const parsedDate = typeof data.date === "string" ? parseDateInput(data.date) : null;
+  const date = parsedDate !== null && parsedDate <= today ? parsedDate : null;
   const lines = Array.isArray(data.lines) ? data.lines : [];
   return {
-    date: date !== null && date <= today ? date : null,
+    date,
     odometer_km: km(data.odometer_km),
     workshop: text(data.workshop),
     total_sen: sen(data.total),
     lines: lines.flatMap((l) => {
       if (!isRecord(l)) return [];
       const description = text(l.description);
-      return description ? [{ description, cost_sen: sen(l.cost) }] : [];
+      if (!description) return [];
+      const part = scannedPart(l, date);
+      return [part ? { description, cost_sen: sen(l.cost), part } : { description, cost_sen: sen(l.cost) }];
     }),
   };
 }
@@ -87,10 +110,17 @@ const RECEIPT_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["description", "cost"],
+        required: ["description", "cost", "brand", "spec", "position", "warranty_until", "warranty_months"],
         properties: {
           description: str("The part or work as written on the receipt"),
           cost: str("Line amount in RM as a number like 180.00, or \"\""),
+          brand: str("Brand of the part fitted (e.g. Michelin, Amaron), or \"\""),
+          spec: str("Size or spec of the part as written (e.g. 205/55 R16 91V, NS60, 5W-30), or \"\""),
+          position: str(
+            "Where it was fitted, only if the receipt says so: All, Front, Rear, Front left, Front right, Rear left or Rear right; All for a set of 4 tyres; otherwise \"\"",
+          ),
+          warranty_until: str("Warranty end date as YYYY-MM-DD if a date is written, or \"\""),
+          warranty_months: str("Warranty length in months as digits if written as a period (e.g. 1 year = 12), or \"\""),
         },
       },
     },
@@ -99,7 +129,8 @@ const RECEIPT_SCHEMA = {
 
 const PROMPT = `This is a photo of a vehicle workshop receipt or invoice from Malaysia, possibly in English or Malay.
 Read it and return the receipt's date, the odometer (mileage) reading in km if written, the workshop name,
-the grand total in RM, and each line item with its amount in RM. Dates on Malaysian receipts are usually
+the grand total in RM, and each line item with its amount in RM. For a part, also give its brand, size or spec,
+position and warranty when written. Dates on Malaysian receipts are usually
 day/month/year; return them as YYYY-MM-DD. Use "" for anything you can't read with confidence: don't guess.`;
 
 export type ScanConfig = { apiKey: string; model: string };

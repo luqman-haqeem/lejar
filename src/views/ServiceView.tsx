@@ -5,8 +5,19 @@ import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { receiptUrl } from "../receipts";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
+import { hasPartDetails, partSummary } from "../lib/parts";
 
-export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; service: ServiceWithLines; items: ServiceItem[] }) {
+export function ServiceView({
+  vehicle,
+  service,
+  items,
+  today,
+}: {
+  vehicle: Vehicle;
+  service: ServiceWithLines;
+  items: ServiceItem[];
+  today: string;
+}) {
   const itemName = new Map(items.map((i) => [i.id, i.name]));
   return (
     <Layout title={`Service ${fmtDate(service.date)}`} signedIn>
@@ -46,6 +57,7 @@ export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; ser
                 {l.service_item_id !== null && itemName.has(l.service_item_id) && (
                   <span class="tag">{itemName.get(l.service_item_id)}</span>
                 )}
+                {hasPartDetails(l) && <span class="part-details">{partSummary(l, today)}</span>}
               </span>
               <span>{fmtOptionalRM(l.cost_sen)}</span>
             </li>

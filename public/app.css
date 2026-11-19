@@ -346,6 +346,33 @@ input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin:
 .field-hint { margin: -0.55rem 0 0.85rem; font-size: 0.88rem; color: var(--muted); }
 .renewals > .hint { margin: 0 0 0.85rem; }
 
+/* Part details under a service line: a one-line summary (or "+ Part details") that opens to the fields. */
+.part-details-edit { margin: 0 -0.85rem; border-top: 1px dashed var(--rule); }
+.part-details-edit > summary, .part-position > summary {
+  list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+  min-height: 2.75rem; cursor: pointer;
+}
+.part-details-edit > summary { padding: 0 0.85rem; }
+.part-details-edit > summary::-webkit-details-marker, .part-position > summary::-webkit-details-marker { display: none; }
+.part-summary { padding: 0.5rem 0; font-size: 0.9rem; line-height: 1.35; color: var(--ink); }
+.part-add, .part-toggle, .part-position > summary { font-weight: 600; font-size: 0.92rem; color: var(--violet-text); }
+.part-toggle { flex: none; }
+.part-details-edit[open] > summary .part-toggle { font-size: 0; }
+.part-details-edit[open] > summary .part-toggle::before { content: "Close"; font-size: 0.92rem; }
+.part-fields { padding: 0.75rem 0.85rem 0.1rem; background: var(--paper); border-top: 1px solid var(--rule); }
+.part-position { margin-bottom: 0.65rem; }
+.part-position[open] > summary { display: none; }
+.warranty .field { margin-bottom: 0.4rem; }
+.warranty-picks { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.warranty-picks[hidden] { display: none; }
+.chip {
+  min-height: 2.75rem; padding: 0 0.8rem; font: inherit; font-size: 0.88rem; font-weight: 600; color: var(--ink);
+  background: var(--page); border: 1.5px solid var(--field-line); border-radius: 999px; cursor: pointer;
+}
+.chip:hover { background: var(--violet-tint); }
+/* On the service view and the print view: a muted line under the part. */
+.part-details { display: block; margin-top: 0.15rem; font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+
 /* Common models: one tap fills make, model and name. */
 .picks { margin: 0.25rem 0 1.1rem; }
 .picks-label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; }

@@ -102,11 +102,19 @@ async function submitService(
   if (photo.kind === "not-found") return notFound(c);
   const render = (errors: Record<string, string>, status: 400 | 413 | 415 | 422) =>
     c.html(
-      <ServiceForm vehicle={vehicle} items={items} values={values} mode={mode} errors={errors} receiptKey={photo.key} />,
+      <ServiceForm
+        vehicle={vehicle}
+        items={items}
+        values={values}
+        mode={mode}
+        errors={errors}
+        receiptKey={photo.key}
+        today={c.get("today")}
+      />,
       status,
     );
 
-  const parsed = parseServiceForm(values, items, c.get("today"));
+  const parsed = parseServiceForm(values, items, c.get("today"), vehicle.type);
   if (photo.kind === "problem") {
     return render({ photo: photo.problem.message, ...(parsed.ok ? {} : parsed.errors) }, photo.problem.status);
   }
@@ -130,6 +138,7 @@ export function serviceRoutes() {
     if (!vehicle) return notFound(c);
     return c.html(
       <ServiceForm
+        today={c.get("today")}
         vehicle={vehicle}
         items={await listItems(c.env.DB, c.get("userId"), vehicle.id)}
         values={blankServiceForm(c.req.query("workshop") ?? "")}
@@ -169,7 +178,7 @@ export function serviceRoutes() {
     const owned = await ownedService(c);
     if (!owned) return notFound(c);
     const items = await listItems(c.env.DB, c.get("userId"), owned.vehicle.id);
-    return c.html(<ServiceView vehicle={owned.vehicle} service={owned.service} items={items} />);
+    return c.html(<ServiceView vehicle={owned.vehicle} service={owned.service} items={items} today={c.get("today")} />);
   });
 
   routes.get("/services/:id{[0-9]+}/edit", async (c) => {
@@ -177,6 +186,7 @@ export function serviceRoutes() {
     if (!owned) return notFound(c);
     return c.html(
       <ServiceForm
+        today={c.get("today")}
         vehicle={owned.vehicle}
         items={await listItems(c.env.DB, c.get("userId"), owned.vehicle.id)}
         values={serviceFormValuesOf(owned.service)}

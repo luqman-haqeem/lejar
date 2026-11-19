@@ -240,3 +240,29 @@ for (const details of document.querySelectorAll("fieldset[data-examples]")) {
   applyType();
   markPicks();
 }
+
+// Part details: a spec that looks like a tyre size is written the standard way as the field is left
+// ("2055516" → "205/55 R16"; the server does the same), and the warranty quick picks set "until"
+// to that many months after the service date (or today, before a date is entered).
+const TYRE_SIZE = /^(\d{3})\s*[/ ]?\s*(\d{2})\s*[/ ]?\s*R?\s*(\d{2})(?:\s*(\d{2,3}[A-Z]))?$/;
+document.addEventListener("focusout", (e) => {
+  const input = e.target;
+  if (!(input instanceof HTMLInputElement) || !/^line\.\d+\.spec$/.test(input.name)) return;
+  const m = input.value.trim().toUpperCase().match(TYRE_SIZE);
+  if (m) input.value = `${m[1]}/${m[2]} R${m[3]}${m[4] ? ` ${m[4]}` : ""}`;
+});
+const showWarrantyPicks = (root) => {
+  for (const picks of root.querySelectorAll("[data-warranty-picks]")) picks.hidden = false;
+};
+showWarrantyPicks(document);
+new MutationObserver(() => showWarrantyPicks(document)).observe(document.getElementById("lines") ?? document.createElement("div"), { childList: true });
+document.addEventListener("click", (e) => {
+  const pick = e.target instanceof Element && e.target.closest("[data-months]");
+  if (!pick) return;
+  const until = pick.closest(".warranty")?.querySelector("input[type=date]");
+  const serviceDate = pick.form?.elements.namedItem("date")?.value;
+  if (!until) return;
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(serviceDate ?? "") ? new Date(`${serviceDate}T00:00:00Z`) : new Date();
+  const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + Number(pick.dataset.months), from.getUTCDate()));
+  until.value = d.toISOString().slice(0, 10);
+});

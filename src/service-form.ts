@@ -1,6 +1,8 @@
 import type { LineInput, ServiceItem, ServiceInput, ServiceWithLines } from "./db";
 import { type Body, type FormErrors, isBlankRow, type Parsed, parseCount, readFields, readRows, toField } from "./form";
 import { parseDateInput } from "./lib/dates";
+import { formatPartSpec, positionsFor } from "./lib/parts";
+import type { VehicleType } from "./lib/templates";
 import { suggestItem } from "./lib/matchItems";
 import { fmtRM, parseRM } from "./lib/money";
 import type { ScanResult } from "./openrouter";
@@ -8,7 +10,7 @@ import type { ScanResult } from "./openrouter";
 // The service form posts the visit's fields by name, and its lines as "line.<n>.<field>".
 
 export const SERVICE_FIELDS = ["date", "odometer_km", "workshop", "total", "notes"] as const;
-export const LINE_FIELDS = ["description", "cost", "item"] as const;
+export const LINE_FIELDS = ["description", "cost", "item", "brand", "spec", "position", "warranty_until"] as const;
 export const MAX_LINES = 50;
 
 export type ServiceValues = Record<(typeof SERVICE_FIELDS)[number], string>;
@@ -18,7 +20,7 @@ export type ServiceFormValues = { service: ServiceValues; lines: LineValues[] };
 const AMOUNT_HINT = "must be an amount like 85 or RM 1,234.50.";
 
 export function readServiceForm(body: Body): ServiceFormValues {
-  return { service: readFields(body, SERVICE_FIELDS, ["date"]), lines: readRows(body, "line", LINE_FIELDS) };
+  return { service: readFields(body, SERVICE_FIELDS, ["date"]), lines: readRows(body, "line", LINE_FIELDS, ["warranty_until"]) };
 }
 
 export function blankServiceForm(workshop = ""): ServiceFormValues {
@@ -29,7 +31,11 @@ export function blankServiceForm(workshop = ""): ServiceFormValues {
  * The service form prefilled from a receipt scan: each line tagged with its suggested schedule item.
  * `unread` lists the fields the scan couldn't read, to highlight.
  */
-export function scanFormValues(scan: ScanResult, items: ServiceItem[]): { values: ServiceFormValues; unread: string[] } {
+export function scanFormValues(
+  scan: ScanResult,
+  items: ServiceItem[],
+  vehicleType: VehicleType,
+): { values: ServiceFormValues; unread: string[] } {
   const unread: string[] = [];
   const field = <T,>(name: string, v: T | null, show: (v: T) => string) => {
     if (v === null) unread.push(name);
@@ -46,6 +52,11 @@ export function scanFormValues(scan: ScanResult, items: ServiceItem[]): { values
     description: l.description,
     cost: field(`line.${n}.cost`, l.cost_sen, amount),
     item: toField(suggestItem(l.description, items)),
+    // Part details aren't highlighted when unread: most lines have none.
+    brand: l.part?.brand ?? "",
+    spec: l.part?.spec ?? "",
+    position: l.part?.position && positionsFor(vehicleType).includes(l.part.position) ? l.part.position : "",
+    warranty_until: l.part?.warranty_until ?? "",
   }));
   return { values: { service, lines }, unread };
 }
@@ -62,7 +73,15 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
       total: amount(s.total_sen),
       notes: s.notes,
     },
-    lines: s.lines.map((l) => ({ description: l.description, cost: amount(l.cost_sen), item: toField(l.service_item_id) })),
+    lines: s.lines.map((l) => ({
+      description: l.description,
+      cost: amount(l.cost_sen),
+      item: toField(l.service_item_id),
+      brand: l.part_brand ?? "",
+      spec: l.part_spec ?? "",
+      position: l.part_position ?? "",
+      warranty_until: l.warranty_until ?? "",
+    })),
   };
 }
 
@@ -75,6 +94,7 @@ export function parseServiceForm(
   { service: v, lines: rows }: ServiceFormValues,
   items: ServiceItem[],
   today: string,
+  vehicleType: VehicleType,
 ): Parsed<Omit<ServiceInput, "receipt_key">> {
   const errors: FormErrors = {};
 
@@ -98,7 +118,20 @@ export function parseServiceForm(
     if (!description) errors[key("description")] = `${label}: describe the work or part.`;
     const cost = r.cost === "" ? null : parseRM(r.cost);
     if (r.cost !== "" && cost === null) errors[key("cost")] = `${label}: cost ${AMOUNT_HINT}`;
-    lines.push({ description, cost_sen: cost, service_item_id: item ? item.id : null });
+    const warranty = r.warranty_until === "" ? null : parseDateInput(r.warranty_until);
+    if (r.warranty_until !== "" && warranty === null) errors[key("warranty_until")] = `${label}: warranty until isn't a valid date.`;
+    if (r.position !== "" && !positionsFor(vehicleType).includes(r.position)) {
+      errors[key("position")] = `${label}: choose a position from the list.`;
+    }
+    lines.push({
+      description,
+      cost_sen: cost,
+      service_item_id: item ? item.id : null,
+      part_brand: r.brand || null,
+      part_spec: formatPartSpec(r.spec) || null,
+      part_position: r.position || null,
+      warranty_until: warranty,
+    });
   });
   if (lines.length > MAX_LINES) errors.lines = `A service can have at most ${MAX_LINES} lines.`;
 

@@ -195,11 +195,18 @@ export interface ServiceLine {
   cost_sen: number | null;
   service_item_id: number | null;
   sort: number;
+  part_brand: string | null;
+  part_spec: string | null;
+  part_position: string | null;
+  warranty_until: string | null;
 }
 
 export type ServiceWithLines = Service & { lines: ServiceLine[] };
 
-export type LineInput = Pick<ServiceLine, "description" | "cost_sen" | "service_item_id">;
+export type LineInput = Pick<
+  ServiceLine,
+  "description" | "cost_sen" | "service_item_id" | "part_brand" | "part_spec" | "part_position" | "warranty_until"
+>;
 export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes" | "receipt_key"> & {
   lines: LineInput[];
 };
@@ -220,11 +227,23 @@ const NEW_SERVICE_ID = "(SELECT max(id) FROM services WHERE vehicle_id = ?)";
 function insertLines(db: D1Database, serviceId: number | null, vehicleId: number, lines: LineInput[]) {
   const serviceRef = serviceId === null ? NEW_SERVICE_ID : "?";
   const stmt = db.prepare(
-    `INSERT INTO service_lines (service_id, description, cost_sen, service_item_id, sort)
-     VALUES (${serviceRef}, ?, ?, (SELECT id FROM service_items WHERE id = ? AND vehicle_id = ?), ?)`,
+    `INSERT INTO service_lines
+       (service_id, description, cost_sen, service_item_id, sort, part_brand, part_spec, part_position, warranty_until)
+     VALUES (${serviceRef}, ?, ?, (SELECT id FROM service_items WHERE id = ? AND vehicle_id = ?), ?, ?, ?, ?, ?)`,
   );
   return lines.map((l, sort) =>
-    stmt.bind(serviceId ?? vehicleId, l.description, l.cost_sen, l.service_item_id, vehicleId, sort),
+    stmt.bind(
+      serviceId ?? vehicleId,
+      l.description,
+      l.cost_sen,
+      l.service_item_id,
+      vehicleId,
+      sort,
+      l.part_brand,
+      l.part_spec,
+      l.part_position,
+      l.warranty_until,
+    ),
   );
 }
 

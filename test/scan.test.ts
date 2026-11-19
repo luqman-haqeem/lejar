@@ -118,6 +118,41 @@ describe("scanning a receipt", () => {
     expect(await listServices(env.DB, user, car)).toEqual([]);
   });
 
+  it("prefills part details it read, leaving out a position the vehicle doesn't have", async () => {
+    const reply = JSON.stringify({
+      date: "2026-09-02",
+      odometer_km: "52310",
+      workshop: "Tayar Jaya",
+      total: "640",
+      lines: [
+        { description: "Tyre x2", cost: "640", brand: "Michelin", spec: "205/55R16", position: "Front", warranty_until: "", warranty_months: "12" },
+        { description: "Labour", cost: "", brand: "", spec: "", position: "", warranty_until: "", warranty_months: "" },
+      ],
+    });
+    const { app } = appReplying(reply);
+    const user = await makeUser();
+    const car = await addCar(app, user);
+    const html = await (await scan(app, user, { vehicle: String(car), photo: photo() })).text();
+    expect(inputValue(html, "line.0.brand")).toBe("Michelin");
+    expect(inputValue(html, "line.0.spec")).toBe("205/55 R16");
+    expect(inputValue(html, "line.0.warranty_until")).toBe("2027-09-02");
+    expect(html).toMatch(/name="line\.0\.position"[^]*?<option value="Front" selected=""/);
+    expect(html).toContain("Michelin · 205/55 R16 · Front · Warranty until 02/09/2027");
+    expect(inputValue(html, "line.1.brand")).toBe("");
+    expect(html).not.toMatch(/class="field unread"><span>(Brand|Spec|Warranty until)/);
+
+    const bikeRes = await app.request(
+      "/vehicles",
+      { method: "POST", headers: await sessionHeaders(user), body: new URLSearchParams({ type: "motorbike", name: "EX5" }) },
+      env,
+    );
+    const bike = Number(bikeRes.headers.get("location")!.match(/^\/vehicles\/(\d+)/)![1]);
+    const leftRight = reply.replace('"Front"', '"Front left"');
+    const { app: app2 } = appReplying(leftRight);
+    const bikeHtml = await (await scan(app2, user, { vehicle: String(bike), photo: photo() })).text();
+    expect(bikeHtml).not.toMatch(/<option value="[^"]*" selected="">(Front left|Front)</);
+  });
+
   it("highlights what the AI couldn't read", async () => {
     const { app } = appReplying(READ);
     const user = await makeUser();

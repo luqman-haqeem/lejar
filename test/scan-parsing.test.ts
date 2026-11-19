@@ -119,6 +119,28 @@ describe("reading the model's reply", () => {
     expect(parseScanResponse(JSON.stringify({ ...reply, odometer_km: 52310.4 }), TODAY)?.odometer_km).toBeNull();
   });
 
+  it("reads part details on a line, keeping only what makes sense", () => {
+    const parts = {
+      ...reply,
+      date: "2026-09-02",
+      lines: [
+        { description: "Michelin Primacy 4 x4", cost: "1280", brand: "Michelin", spec: "2055516 91v", position: "all", warranty_until: "02/03/2028", warranty_months: "" },
+        { description: "Bateri", cost: "280", brand: " Amaron ", spec: "NS60", position: "", warranty_until: "", warranty_months: "24" },
+        { description: "Wiper", cost: "40", brand: "", spec: "", position: "Middle", warranty_until: "soon", warranty_months: "lots" },
+      ],
+    };
+    expect(parseScanResponse(JSON.stringify(parts), TODAY)?.lines).toEqual([
+      {
+        description: "Michelin Primacy 4 x4",
+        cost_sen: 128000,
+        part: { brand: "Michelin", spec: "205/55 R16 91V", position: "All", warranty_until: "2028-03-02" },
+      },
+      // "24 months" counts from the receipt's date.
+      { description: "Bateri", cost_sen: 28000, part: { brand: "Amaron", spec: "NS60", position: null, warranty_until: "2028-09-02" } },
+      { description: "Wiper", cost_sen: 4000 },
+    ]);
+  });
+
   it("gives up on a reply that isn't a JSON object", () => {
     expect(parseScanResponse("not json", TODAY)).toBeNull();
     expect(parseScanResponse("[1, 2]", TODAY)).toBeNull();

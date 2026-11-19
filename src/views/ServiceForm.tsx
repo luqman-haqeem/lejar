@@ -6,8 +6,91 @@ import { ErrorSummary, Field, FieldError, fieldId, RepeatableRows } from "./fiel
 import { receiptUrl } from "../receipts";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
+import { parseDateInput } from "../lib/dates";
+import { partSummary, positionsFor } from "../lib/parts";
 
-const blankLine: LineValues = { description: "", cost: "", item: "" };
+const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "" };
+
+const WARRANTY_MONTHS = [12, 18, 24];
+
+/** Brand, spec, position and warranty under a line: a one-line summary that opens to the fields. */
+function PartDetailsFields({
+  line,
+  name,
+  positions,
+  errors,
+  today,
+}: {
+  line: LineValues;
+  name: (f: string) => string;
+  positions: readonly string[];
+  errors: FormErrors;
+  today: string;
+}) {
+  const invalid = name("position") in errors || name("warranty_until") in errors;
+  const warranty = parseDateInput(line.warranty_until);
+  const summary = partSummary(
+    {
+      part_brand: line.brand || null,
+      part_spec: line.spec || null,
+      part_position: line.position || null,
+      warranty_until: warranty,
+    },
+    today,
+  );
+  return (
+    <details class="part-details-edit" open={invalid}>
+      <summary>
+        {summary ? (
+          <>
+            <span class="part-summary">{summary}</span>
+            <span class="part-toggle">Edit</span>
+          </>
+        ) : (
+          <span class="part-add">+ Part details</span>
+        )}
+      </summary>
+      <div class="part-fields">
+        <div class="pair">
+          <Field label="Brand" name={name("brand")} value={line.brand} errors={errors} placeholder="e.g. Michelin" />
+          <Field
+            label="Spec"
+            name={name("spec")}
+            value={line.spec}
+            errors={errors}
+            placeholder="205/55 R16, NS60"
+            autocapitalize="characters"
+          />
+        </div>
+        <details class="part-position" open={line.position !== "" || name("position") in errors}>
+          <summary>+ Position</summary>
+          <label class={name("position") in errors ? "field invalid" : "field"}>
+            <span>Position</span>
+            <select name={name("position")} id={fieldId(name("position"))}>
+              <option value="">—</option>
+              {positions.map((p) => (
+                <option value={p} selected={line.position === p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <FieldError name={name("position")} errors={errors} />
+          </label>
+        </details>
+        <div class="warranty">
+          <Field label="Warranty until" name={name("warranty_until")} value={line.warranty_until} errors={errors} type="date" />
+          <div class="warranty-picks" data-warranty-picks hidden>
+            {WARRANTY_MONTHS.map((m) => (
+              <button type="button" class="chip" data-months={String(m)}>
+                {m} months
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </details>
+  );
+}
 
 function LineRow({
   line,
@@ -15,12 +98,16 @@ function LineRow({
   items,
   errors,
   unread,
+  positions,
+  today,
 }: {
   line: LineValues;
   n: number | "__N__";
   items: ServiceItem[];
   errors: FormErrors;
   unread: Set<string>;
+  positions: readonly string[];
+  today: string;
 }) {
   const name = (f: string) => `line.${n}.${f}`;
   return (
@@ -47,6 +134,7 @@ function LineRow({
           </select>
         </label>
       </div>
+      <PartDetailsFields line={line} name={name} positions={positions} errors={errors} today={today} />
     </div>
   );
 }
@@ -85,6 +173,7 @@ export function ServiceForm({
   receiptKey = null,
   unread = [],
   notice,
+  today,
 }: {
   vehicle: Vehicle;
   items: ServiceItem[];
@@ -98,6 +187,8 @@ export function ServiceForm({
   unread?: string[];
   /** A banner above the form, e.g. after a scan. */
   notice?: string;
+  /** For telling a warranty that's still running from one that has expired. */
+  today: string;
 }) {
   const v = values.service;
   const unreadFields = new Set(unread);
@@ -171,7 +262,17 @@ export function ServiceForm({
             rows={values.lines}
             blank={blankLine}
             addLabel="Add line"
-            render={(line, n) => <LineRow line={line} n={n} items={items} errors={errors} unread={unreadFields} />}
+            render={(line, n) => (
+              <LineRow
+                line={line}
+                n={n}
+                items={items}
+                errors={errors}
+                unread={unreadFields}
+                positions={positionsFor(vehicle.type)}
+                today={today}
+              />
+            )}
           />
         </fieldset>
         <div class="actions">

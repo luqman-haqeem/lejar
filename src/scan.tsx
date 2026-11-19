@@ -80,9 +80,10 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
     const config = { apiKey: c.env.OPENROUTER_API_KEY, model: c.env.SCAN_MODEL };
     const result = await scanReceipt({ bytes: await file.arrayBuffer(), contentType: file.type }, config, today, aiFetch);
 
-    const form = result ? scanFormValues(result, items) : { values: blankServiceForm(), unread: [] };
+    const form = result ? scanFormValues(result, items, vehicle.type) : { values: blankServiceForm(), unread: [] };
     return c.html(
       <ServiceForm
+        today={c.get("today")}
         vehicle={vehicle}
         items={items}
         values={form.values}
