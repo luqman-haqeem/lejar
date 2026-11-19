@@ -29,7 +29,8 @@ export function Privacy({ contactEmail }: { contactEmail: string }) {
             and any odometer readings you add.
           </li>
           <li>
-            <strong>Receipt photos</strong> you attach or scan, stored privately. Only you can see them.
+            <strong>Receipt photos</strong> you attach or scan, and a <strong>photo of each vehicle</strong> if you add
+            one, stored privately. Only you can see them.
           </li>
           <li>
             A sign-in cookie that keeps you signed in for {SESSION_DAYS} days (plus a short-lived one while you sign in
@@ -40,9 +41,9 @@ export function Privacy({ contactEmail }: { contactEmail: string }) {
         <h2>Receipt scanning</h2>
         <p>
           When you use <strong>Scan receipt</strong>, the photo is stored and sent to <strong>OpenRouter</strong>, which
-          passes it to an AI model to read the date, odometer, workshop and amounts. You check the details before the
+          passes it to an AI model to read the date, odometer, workshop, amounts and part details. You check the details before the
           service is saved; if you don't save it, the photo is deleted within about a day. Photos you attach without
-          scanning are not sent anywhere.
+          scanning, and vehicle photos, are not sent anywhere.
         </p>
 
         <h2>Who sees your data</h2>
@@ -54,7 +55,7 @@ export function Privacy({ contactEmail }: { contactEmail: string }) {
 
         <h2>Deleting your data</h2>
         <p>
-          You can delete any service or receipt photo yourself. To delete your whole account and everything in it,
+          You can delete any service, receipt photo or vehicle photo yourself. To delete your whole account and everything in it,
           email <a href={`mailto:${contactEmail}?subject=Kereta%20account%20deletion`}>{contactEmail}</a> from the
           Google address you sign in with.
         </p>

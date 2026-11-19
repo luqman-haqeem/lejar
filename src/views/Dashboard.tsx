@@ -5,6 +5,7 @@ import { fmtKm } from "../lib/km";
 import { vehicleSummary } from "../lib/templates";
 import { GaugeIcon, ScanIcon, StatusIcon } from "./icons";
 import { Layout } from "./Layout";
+import { vehiclePhotoUrl } from "../receipts";
 
 export type VehicleDue = {
   vehicle: Vehicle;
@@ -168,6 +169,7 @@ export function ScheduleList({ due, limit }: { due: VehicleDue; limit?: number }
 export function Cover({ vehicle, estKm, href }: { vehicle: Vehicle; estKm?: number | null; href?: string }) {
   const body = (
     <>
+      {vehicle.photo_key && <img class="vehicle-photo cover-photo" src={vehiclePhotoUrl(vehicle.photo_key)} alt="" />}
       <span class="cover-text">
         <span class="cover-name">{vehicle.name}</span>
         <span class="cover-sub">
@@ -178,12 +180,13 @@ export function Cover({ vehicle, estKm, href }: { vehicle: Vehicle; estKm?: numb
       {vehicle.plate && <span class="plate">{vehicle.plate}</span>}
     </>
   );
+  const cls = vehicle.photo_key ? "cover with-photo" : "cover";
   return href ? (
-    <a class="cover" href={href}>
+    <a class={cls} href={href}>
       {body}
     </a>
   ) : (
-    <div class="cover">{body}</div>
+    <div class={cls}>{body}</div>
   );
 }
 

@@ -4,6 +4,7 @@ import { fmtKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { vehicleSummary } from "../lib/templates";
 import { Layout } from "./Layout";
+import { vehiclePhotoUrl } from "../receipts";
 import { hasPartDetails, partSummary } from "../lib/parts";
 
 /**
@@ -33,6 +34,9 @@ export function PrintHistory({
           <p>{vehicleSummary(vehicle)}</p>
         </div>
         <div class="print-meta">
+          {vehicle.photo_key && (
+            <img class="vehicle-photo print-photo" src={vehiclePhotoUrl(vehicle.photo_key)} alt={`Photo of ${vehicle.name}`} />
+          )}
           {vehicle.plate && <span class="plate">{vehicle.plate}</span>}
           <p>Generated {fmtDate(today)}</p>
         </div>

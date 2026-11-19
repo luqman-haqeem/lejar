@@ -29,9 +29,11 @@ export interface Vehicle {
   insurance_expiry: string | null;
   insurer: string;
   archived: number;
+  /** The Vehicle photo's R2 key, if it has one. */
+  photo_key: string | null;
 }
 
-export type VehicleDetails = Omit<Vehicle, "id" | "user_id" | "archived">;
+export type VehicleDetails = Omit<Vehicle, "id" | "user_id" | "archived" | "photo_key">;
 
 export interface ServiceItem {
   id: number;
@@ -524,18 +526,22 @@ export async function receiptKeyInUse(db: D1Database, key: string): Promise<bool
 }
 
 /**
- * Which of `keys` a service references. Storage maintenance across all users, so unlike the rest of
+ * Which of `keys` a service (receipt) or vehicle (photo) references. Storage maintenance across all users, so unlike the rest of
  * this module it isn't scoped to one user; it returns only keys the caller already holds.
  */
-export async function referencedReceiptKeys(db: D1Database, keys: string[]): Promise<Set<string>> {
+export async function referencedPhotoKeys(db: D1Database, keys: string[]): Promise<Set<string>> {
   const found = new Set<string>();
   for (let i = 0; i < keys.length; i += 50) {
     const chunk = keys.slice(i, i + 50);
+    const marks = chunk.map(() => "?").join(", ");
     const { results } = await db
-      .prepare(`SELECT receipt_key FROM services WHERE receipt_key IN (${chunk.map(() => "?").join(", ")})`)
-      .bind(...chunk)
-      .all<{ receipt_key: string }>();
-    for (const r of results) found.add(r.receipt_key);
+      .prepare(
+        `SELECT receipt_key AS key FROM services WHERE receipt_key IN (${marks})
+         UNION SELECT photo_key FROM vehicles WHERE photo_key IN (${marks})`,
+      )
+      .bind(...chunk, ...chunk)
+      .all<{ key: string }>();
+    for (const r of results) found.add(r.key);
   }
   return found;
 }
@@ -616,4 +622,17 @@ export async function listServicesWithLines(
     else byService.set(l.service_id, [l]);
   }
   return (services.results as Service[]).map((s) => ({ ...s, lines: byService.get(s.id) ?? [] }));
+}
+
+/** Sets or clears the vehicle's photo, returning the key it had, or undefined if it isn't the user's. */
+export async function setVehiclePhoto(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+  key: string | null,
+): Promise<string | null | undefined> {
+  const current = await getVehicle(db, userId, vehicleId);
+  if (!current) return undefined;
+  await db.prepare("UPDATE vehicles SET photo_key = ? WHERE id = ? AND user_id = ?").bind(key, vehicleId, userId).run();
+  return current.photo_key;
 }

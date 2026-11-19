@@ -179,6 +179,15 @@ a, button, label { -webkit-tap-highlight-color: transparent; touch-action: manip
 .vehicle-cover, main > .cover { border-radius: var(--radius); margin-bottom: 1rem; }
 a.cover:active { filter: brightness(1.15); }
 .cover-text { display: flex; flex-direction: column; min-width: 0; }
+/* The Vehicle photo as a small print pasted on the cover, left of the name. */
+.cover.with-photo { justify-content: flex-start; }
+.cover.with-photo .plate { margin-left: auto; }
+.cover-photo {
+  flex: none; width: 4.75rem; height: 4.75rem; object-fit: cover;
+  border: 0.22rem solid #f4efe2; border-radius: 0.1rem; transform: rotate(-3deg);
+  box-shadow: 0 0.2rem 0.45rem rgba(0, 0, 0, 0.4);
+}
+
 .cover-name { font-size: 1.5rem; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
 .cover-sub { margin-top: 0.2rem; font-size: 0.9rem; color: var(--navy-muted); font-variant-numeric: tabular-nums; }
 .plate {
@@ -357,6 +366,10 @@ input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin:
 .part-summary { padding: 0.5rem 0; font-size: 0.9rem; line-height: 1.35; color: var(--ink); }
 .part-add, .part-toggle, .part-position > summary { font-weight: 600; font-size: 0.92rem; color: var(--violet-text); }
 .part-toggle { flex: none; }
+.part-details-edit[open] > summary .part-add { font-size: 0; }
+.part-details-edit[open] > summary .part-add::before {
+  content: "Part details"; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
 .part-details-edit[open] > summary .part-toggle { font-size: 0; }
 .part-details-edit[open] > summary .part-toggle::before { content: "Close"; font-size: 0.92rem; }
 .part-fields { padding: 0.75rem 0.85rem 0.1rem; background: var(--paper); border-top: 1px solid var(--rule); }
@@ -512,3 +525,7 @@ fieldset[tabindex]:focus { outline: none; }
 .dev-login { margin-top: 1.25rem; }
 .dev-login .secondary { min-width: 14rem; }
 .dev-login p { font-size: 0.88rem; margin: 0.5rem 0 0; }
+
+/* Vehicle form: the current photo above the picker. */
+.vehicle-photo-current { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+.vehicle-photo-current .vehicle-photo { width: 6rem; height: 6rem; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--rule); }

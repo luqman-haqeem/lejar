@@ -5,7 +5,8 @@
 .print-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; border-bottom: 2px solid var(--ink); padding-bottom: 0.75rem; }
 .print-head h1 { margin: 0; }
 .print-head p { margin: 0.2rem 0 0; }
-.print-meta { text-align: right; }
+.print-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 0.4rem; text-align: right; }
+.print-photo { width: 7.5rem; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 0.15rem; }
 .print-service { padding: 0.7rem 0; border-bottom: 1px solid var(--line); break-inside: avoid; page-break-inside: avoid; }
 .print-service-head { display: grid; grid-template-columns: var(--date-col) 6.5rem 1fr auto; gap: 0.5rem; align-items: baseline; }
 .print-lines { width: 100%; border-collapse: collapse; margin-top: 0.35rem; font-size: 0.92rem; color: var(--muted); }

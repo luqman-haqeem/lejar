@@ -4,6 +4,8 @@ import type { DetailValues, FormValues, ItemValues } from "../vehicle-form";
 import { COMMON_MODELS, EXAMPLES, QUICK_PICKS } from "../lib/common-vehicles";
 import { isVehicleType, VEHICLE_TYPE_LABELS, type VehicleType } from "../lib/templates";
 import { BackIcon } from "./icons";
+import { PhotoCapture } from "./capture";
+import { vehiclePhotoUrl } from "../receipts";
 import { Layout } from "./Layout";
 
 export type AddFrom = "home" | "profile" | "scan";
@@ -163,6 +165,28 @@ function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }
   );
 }
 
+/** The optional Vehicle photo: the current one (with Remove) and a picker to add or replace it. */
+function VehiclePhoto({ photoKey, errors }: { photoKey: string | null; errors: FormErrors }) {
+  return (
+    <fieldset class="vehicle-photo-field">
+      <legend>Photo</legend>
+      {photoKey && (
+        <div class="vehicle-photo-current">
+          <img class="vehicle-photo" src={vehiclePhotoUrl(photoKey)} alt="Current photo" />
+          <label class="remove">
+            <input type="checkbox" name="remove_photo" value="1" /> Remove this photo
+          </label>
+        </div>
+      )}
+      <PhotoCapture
+        title={photoKey ? "Replace photo" : "Add a photo"}
+        note={photoKey ? "Take or choose a new one" : "Optional · shows on its cover"}
+        errors={errors}
+      />
+    </fieldset>
+  );
+}
+
 export function NewVehicle({
   values,
   errors = {},
@@ -188,9 +212,10 @@ export function NewVehicle({
       <h1>Add a vehicle</h1>
       {from === "scan" && <p class="notice">Add the vehicle first, then scan its receipt.</p>}
       <ErrorSummary errors={errors} />
-      <form method="post" action="/vehicles" class="vehicle-form">
+      <form method="post" action="/vehicles" enctype="multipart/form-data" class="vehicle-form" data-busy="Adding…">
         {from !== "profile" && <input type="hidden" name="from" value={from} />}
         <Details d={values} errors={errors} picks />
+        <VehiclePhoto photoKey={null} errors={errors} />
         <p class="hint">It starts with a typical service schedule for its type. You can adjust it any time.</p>
         <button type="submit" class="button">
           {from === "scan" ? "Add and scan receipt" : "Add vehicle"}
@@ -207,10 +232,12 @@ export function EditVehicle({
   archived,
   errors = {},
   saved = false,
+  photoKey,
 }: {
   id: number;
   values: FormValues;
   archived: boolean;
+  photoKey: string | null;
   errors?: FormErrors;
   saved?: boolean;
 }) {
@@ -230,8 +257,9 @@ export function EditVehicle({
         </p>
       )}
       <ErrorSummary errors={errors} />
-      <form method="post" action={`/vehicles/${id}`} class="vehicle-form">
+      <form method="post" action={`/vehicles/${id}`} enctype="multipart/form-data" class="vehicle-form" data-busy="Saving…">
         <Details d={values.details} errors={errors} typeFixed />
+        <VehiclePhoto photoKey={photoKey} errors={errors} />
         <Schedule items={values.items} errors={errors} />
         <button type="submit" class="button">
           Save

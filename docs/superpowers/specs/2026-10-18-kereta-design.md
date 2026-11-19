@@ -176,7 +176,7 @@ Terms are defined in `GLOSSARY.md`. Visual direction was chosen from a throwaway
 
 ### Vehicle photo
 - **What:** one optional photo per vehicle, set, replaced or removed from the vehicle form (Add and Edit). Not asked for during onboarding, which stays scan-first.
-- **Storage:** same client-side compression, size limit and private R2 bucket as receipts, under `vehicles/<user_id>/<uuid>.<ext>`, served to its owner only. `vehicles.photo_key` holds the key. Replacing or removing deletes the old object, and the orphan cleanup covers this prefix too.
+- **Storage:** same client-side compression, size limit and private R2 bucket as receipts, under `vehicle-photos/<user_id>/<uuid>.<ext>` (served at `/vehicle-photos/...`, which can't clash with `/vehicles/:id` routes), served to its owner only. `vehicles.photo_key` holds the key. Replacing or removing deletes the old object, and the orphan cleanup covers this prefix too.
 - **Framing:** no in-app cropper; the browser crops it to a fixed frame.
 - **Display (prototype variant "Pasted print"):** a small square print with a cream border, slightly tilted, on the left of the navy cover on Home and the vehicle page. On the print view, a small thumbnail above the plate. With no photo, every layout stays exactly as before, with no placeholder.
 - **Privacy page:** mention that vehicle photos are stored privately and are not sent to OpenRouter.

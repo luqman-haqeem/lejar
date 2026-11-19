@@ -12,19 +12,28 @@ import {
   listItems,
   listServices,
   setArchived,
+  setVehiclePhoto,
   updateVehicle,
   vehicleDueData,
   type Vehicle,
   yearTotals,
 } from "./db";
-import { type FormErrors, parseCount, readFields } from "./form";
+import { type Body, type FormErrors, parseCount, readFields } from "./form";
 import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
+import { deleteReceipt, photoProblem, putVehiclePhoto, uploadTooLarge } from "./receipts";
+import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
 import { ArchivedVehicles } from "./views/ArchivedVehicles";
 import { EditVehicle, isAddFrom, NewVehicle } from "./views/VehicleForm";
 import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 
+
+/** The photo file chosen on a vehicle form, if any. */
+const chosenPhoto = (body: Body) => (body.photo instanceof File && body.photo.size > 0 ? body.photo : null);
+
+/** A form post too big to hold an acceptable photo is refused before it's read. */
+const tooLarge = (c: Context<AppEnv>) => c.html(<PhotoTooLarge />, 413);
 
 async function history(
   c: Context<AppEnv>,
@@ -67,14 +76,25 @@ export function vehicleRoutes() {
 
   // A new vehicle opens its own page, which leads with the first step (scan the last receipt); one added
   // on the way to Scan goes straight on to Scan.
+  // The photo is stored only once the whole form is valid, so a failed submit leaves nothing behind
+  // (the user picks it again).
   routes.post("/vehicles", async (c) => {
+    if (uploadTooLarge(c.req.raw)) return tooLarge(c);
     const body = await c.req.parseBody();
     const from = isAddFrom(body.from) ? body.from : "profile";
     const values = readDetails(body);
     const details = parseDetails(values, c.get("today"));
+    const file = chosenPhoto(body);
+    const problem = file && photoProblem(file);
+    if (problem) {
+      const errors = { photo: problem.message, ...(details.ok ? {} : details.errors) };
+      return c.html(<NewVehicle values={values} errors={errors} from={from} />, problem.status);
+    }
     if (!details.ok) return c.html(<NewVehicle values={values} errors={details.errors} from={from} />, 400);
 
-    const id = await createVehicle(c.env.DB, c.get("userId"), details.value);
+    const userId = c.get("userId");
+    const id = await createVehicle(c.env.DB, userId, details.value);
+    if (file) await setVehiclePhoto(c.env.DB, userId, id, await putVehiclePhoto(c.env.RECEIPTS, userId, file));
     return c.redirect(from === "scan" ? `/scan?vehicle=${id}` : `/vehicles/${id}?added=1`, 302);
   });
 
@@ -127,7 +147,13 @@ export function vehicleRoutes() {
 
     const values = formValuesOf(vehicle, await listItems(c.env.DB, c.get("userId"), id));
     return c.html(
-      <EditVehicle id={id} values={values} archived={vehicle.archived === 1} saved={c.req.query("saved") === "1"} />,
+      <EditVehicle
+        id={id}
+        values={values}
+        archived={vehicle.archived === 1}
+        photoKey={vehicle.photo_key}
+        saved={c.req.query("saved") === "1"}
+      />,
     );
   });
 
@@ -137,17 +163,33 @@ export function vehicleRoutes() {
     const vehicle = await getVehicle(c.env.DB, userId, id);
     if (!vehicle) return notFound(c);
 
+    if (uploadTooLarge(c.req.raw)) return tooLarge(c);
     const body = await c.req.parseBody();
     // The type is fixed at creation: the schedule was seeded for it, and due-soon thresholds depend on it.
     const values = { details: { ...readDetails(body), type: vehicle.type }, items: readItems(body) };
     const details = parseDetails(values.details, c.get("today"));
     const items = parseItems(values.items, c.get("today"));
-    if (!details.ok || !items.ok) {
-      const errors = { ...(details.ok ? {} : details.errors), ...(items.ok ? {} : items.errors) };
-      return c.html(<EditVehicle id={id} values={values} archived={vehicle.archived === 1} errors={errors} />, 400);
+    const file = chosenPhoto(body);
+    const problem = file && photoProblem(file);
+    if (!details.ok || !items.ok || problem) {
+      const errors = {
+        ...(problem ? { photo: problem.message } : {}),
+        ...(details.ok ? {} : details.errors),
+        ...(items.ok ? {} : items.errors),
+      };
+      return c.html(
+        <EditVehicle id={id} values={values} archived={vehicle.archived === 1} photoKey={vehicle.photo_key} errors={errors} />,
+        problem ? problem.status : 400,
+      );
     }
 
     if (!(await updateVehicle(c.env.DB, userId, id, details.value, items.value))) return notFound(c);
+    // A new photo replaces the old one; "Remove" clears it. Either way the old object is deleted.
+    if (file || body.remove_photo === "1") {
+      const newKey = file ? await putVehiclePhoto(c.env.RECEIPTS, userId, file) : null;
+      const oldKey = await setVehiclePhoto(c.env.DB, userId, id, newKey);
+      if (oldKey) await deleteReceipt(c.env.RECEIPTS, oldKey);
+    }
     return c.redirect(`/vehicles/${id}/edit?saved=1`, 302);
   });
 
