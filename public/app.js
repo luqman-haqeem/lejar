@@ -109,16 +109,33 @@ for (const input of document.querySelectorAll("input[type=file][data-compress]")
   });
 }
 
-// Forms with data-busy show that message on their submit button while the server works (e.g. the
-// AI reading a receipt), and can't be sent twice.
+// Forms with data-busy can't be sent twice (a second tap while the first is on its way would save
+// twice), and show that message on the pressed button while the server works. Buttons are disabled
+// only after the browser has read the form, so the pressed button's value (e.g. "Save & add
+// another") is still sent.
 for (const form of document.querySelectorAll("form[data-busy]")) {
-  form.addEventListener("submit", () => {
-    for (const button of form.querySelectorAll("button[type=submit]")) {
-      button.disabled = true;
-      button.textContent = form.dataset.busy;
+  form.addEventListener("submit", (e) => {
+    if (e.defaultPrevented) return; // e.g. a data-confirm the user declined
+    if (form.dataset.sending) {
+      e.preventDefault();
+      return;
     }
+    form.dataset.sending = "1";
+    const pressed = e.submitter ?? form.querySelector("button[type=submit]");
+    setTimeout(() => {
+      for (const button of form.querySelectorAll("button[type=submit]")) button.disabled = true;
+      if (pressed) pressed.textContent = form.dataset.busy;
+    });
   });
 }
+// Coming back to a page from the browser's history restores it as it was: make its forms usable again.
+window.addEventListener("pageshow", (e) => {
+  if (!e.persisted) return;
+  for (const form of document.querySelectorAll("form[data-busy][data-sending]")) {
+    delete form.dataset.sending;
+    for (const button of form.querySelectorAll("button[type=submit]")) button.disabled = false;
+  }
+});
 
 // "Print / Save as PDF": the browser's own print dialog (Save as PDF on iPhone via Share → Print).
 for (const button of document.querySelectorAll("button[data-print]")) {

@@ -9,6 +9,7 @@ import {
   getVehicle,
   listItems,
   receiptKeyInUse,
+  serviceWithReceipt,
   type ServiceInput,
   updateService,
   type Vehicle,
@@ -145,6 +146,14 @@ export function serviceRoutes() {
     const vehicleId = idOf(body.vehicle_id);
     const vehicle = vehicleId === null ? null : await getVehicle(c.env.DB, userId, vehicleId);
     if (!vehicle) return notFound(c);
+
+    // The same new-visit form sent again (a second tap on Save while the first was on its way) still
+    // carries the receipt the first submit saved: show that visit rather than refusing the photo.
+    const postedKey = typeof body.receipt_key === "string" ? body.receipt_key.trim() : "";
+    if (postedKey !== "" && isOwnKey(postedKey, userId)) {
+      const saved = await serviceWithReceipt(c.env.DB, userId, postedKey);
+      if (saved) return c.redirect(`/vehicles/${saved.vehicle_id}?stamped=${saved.id}`, 302);
+    }
 
     return submitService(c, body, vehicle, { kind: "new" }, null, async (s) => {
       const id = await createService(c.env.DB, userId, vehicle.id, s);

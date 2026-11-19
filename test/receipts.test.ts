@@ -143,7 +143,7 @@ describe("keeping the photo through a failed save", () => {
     expect((await getService(env.DB, user, id))!.receipt_key).toBe(key);
   });
 
-  it("is 404 to attach someone else's photo or one another service already uses", async () => {
+  it("never lets a photo end up on two services", async () => {
     const alice = await makeUser("alice@example.com");
     const bob = await makeUser("bob@example.com");
     const alicesCar = await addCar(alice);
@@ -153,8 +153,11 @@ describe("keeping the photo through a failed save", () => {
 
     const stolen = await postMultipart("/services", bob, { vehicle_id: String(bobsCar), ...visit, receipt_key: alicesKey });
     expect(stolen.status).toBe(404);
+    // Alice's own photo, already on a saved visit, opens that visit instead of saving a second one.
     const shared = await postMultipart("/services", alice, { vehicle_id: String(alicesCar), ...visit, odometer_km: "53000", receipt_key: alicesKey });
-    expect(shared.status).toBe(404);
+    const [saved] = await listServices(env.DB, alice, alicesCar);
+    expect(shared.status).toBe(302);
+    expect(shared.headers.get("location")).toBe(`/vehicles/${alicesCar}?stamped=${saved.id}`);
     expect(await listServices(env.DB, bob, bobsCar)).toEqual([]);
     expect(await listServices(env.DB, alice, alicesCar)).toHaveLength(1);
   });
@@ -229,5 +232,35 @@ describe("cleaning up unsaved uploads", () => {
 
     await cleanupOrphans(env.RECEIPTS, env.DB, Date.now() + 25 * 3600_000);
     expect(await storedKeys(quitter)).toEqual([]);
+  });
+});
+
+describe("sending a scanned form twice", () => {
+  // A second tap on Save while the first is still on its way posts the same receipt again.
+  it("lands on the visit the first submit saved, without saving it twice", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    // The scan flow: the photo is stored first and the form carries its key.
+    const scanned = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: photo() });
+    const [key] = await storedKeys(user);
+    expect(scanned.status).toBe(400);
+
+    const form = { vehicle_id: String(car), ...visit, receipt_key: key };
+    const first = await postMultipart("/services", user, form);
+    const again = await postMultipart("/services", user, form);
+
+    expect(first.status).toBe(302);
+    expect(again.status).toBe(302);
+    expect(again.headers.get("location")).toBe(first.headers.get("location"));
+    expect(await listServices(env.DB, user, car)).toHaveLength(1);
+  });
+});
+
+describe("the service form", () => {
+  it("guards against being sent twice (public/app.js handles data-busy)", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const res = await app.request(`/services/new?vehicle=${car}`, { headers: await sessionHeaders(user) }, env);
+    expect(await res.text()).toMatch(/<form[^>]*action="\/services"[^>]*data-busy="Saving…"/);
   });
 });

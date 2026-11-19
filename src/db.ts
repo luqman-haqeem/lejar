@@ -485,6 +485,21 @@ export async function dashboardData(
 }
 
 /** True if any service already uses this receipt key. */
+/** The user's service that already holds this receipt photo, if any (on any of their vehicles). */
+export async function serviceWithReceipt(
+  db: D1Database,
+  userId: number,
+  key: string,
+): Promise<{ id: number; vehicle_id: number } | null> {
+  return db
+    .prepare(
+      `SELECT s.id, s.vehicle_id FROM services s JOIN vehicles v ON v.id = s.vehicle_id
+       WHERE s.receipt_key = ? AND v.user_id = ? LIMIT 1`,
+    )
+    .bind(key, userId)
+    .first<{ id: number; vehicle_id: number }>();
+}
+
 export async function receiptKeyInUse(db: D1Database, key: string): Promise<boolean> {
   return (await db.prepare("SELECT 1 FROM services WHERE receipt_key = ? LIMIT 1").bind(key).first()) !== null;
 }

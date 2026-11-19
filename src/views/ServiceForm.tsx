@@ -127,6 +127,7 @@ export function ServiceForm({
         action={isNew ? "/services" : `/services/${mode.serviceId}`}
         enctype="multipart/form-data"
         class="vehicle-form"
+        data-busy="Saving…"
       >
         {isNew && <input type="hidden" name="vehicle_id" value={String(vehicle.id)} />}
         <ReceiptPhoto receiptKey={receiptKey} errors={errors} />
