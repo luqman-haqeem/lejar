@@ -6,11 +6,14 @@ import { Dashboard, type VehicleDue } from "./views/Dashboard";
 
 export function vehicleDue({ vehicle, items, lastDone, readings }: DashboardVehicle, today: string): VehicleDue {
   const estKm = estimateKm(readings, today);
+  const due = items.map((i) => itemDue(i, lastDone.get(i.id) ?? null, estKm, vehicle.type, today));
   return {
     vehicle,
     estKm,
+    // Started once anything sets a schedule clock: a logged visit (it records a reading) or a baseline.
+    started: readings.some((r) => r.source === "service") || due.some((i) => i.lastDate !== null || i.lastKm !== null),
     odometer: odometerState(readings, today),
-    items: sortByUrgency(items.map((i) => itemDue(i, lastDone.get(i.id) ?? null, estKm, vehicle.type, today))),
+    items: sortByUrgency(due),
     roadtax: expiryStatus(vehicle.roadtax_expiry, today),
     insurance: expiryStatus(vehicle.insurance_expiry, today),
   };

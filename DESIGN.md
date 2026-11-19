@@ -332,6 +332,14 @@ Item name left (600), status right (tabular, 0.95rem, with its status icon). The
 ### Visit stamp (signature)
 A double-ruled violet frame on the page colour, Courier Prime uppercase: the date over a rule, then the workshop, then km and RM. Each stamp tilts a little; pressing straightens it and washes it violet. A visit just saved (`.stamp-new`, from `?stamped=<id>` after Save) is struck onto the page once: it drops from 1.35x scale and -6deg, fades in, and settles into its tilt over 520ms with an expo ease-out and a violet wash. It is the one authored motion moment in the app. With reduced motion, stamps sit straight, the strike is off and transitions are off.
 
+### First run
+Shown from state alone, with no "seen" flags, so each piece goes away by itself.
+- **Blank booklet (empty Home):** the heading "Start your service book", one line of body, then a real navy cover reading "Your vehicle / Car or motorbike" with a dashed Cover Silver outline where the plate goes. Its ruled page lists the three steps (add the vehicle, scan its last service receipt, see what's due) as numbered rows under the ink head rule, each with a faded note. A full-width violet "Add your first vehicle" button sits below.
+- **Start block (vehicle page, schedule not started):** a ruled block on the page colour under a 2px ink rule. It holds "Start with the last service", one sentence on why one receipt sets the schedule, Scan receipt and Log by hand as the action pair, and a violet text link to set last-done dates by hand. It replaces the usual actions until a visit is logged or a baseline is set. Add vehicle lands here with an "<name> added." notice.
+- **Start row (dashboard card, schedule not started):** one ruled row, "Schedule not started", whose violet link with a scan icon reads "Scan last receipt". It replaces the unknown item rows and the odometer prompt; renewals stay.
+- **Stamp placeholder (empty history):** a dashed hairline frame with stamp corners, tilted -1.2deg, in Barlow (not Courier, because it is not a stamp): "First stamp goes here" over a faded line saying old receipts can be backdated.
+- **Scan with no vehicle:** opens Add vehicle with the Scan tab current, a notice ("Add the vehicle first, then scan its receipt.") and the button "Add and scan receipt", then continues to Scan.
+
 ### Inputs / Fields
 - **Style:** page fill, 1.5px field-line border, 4px corners, 2.875rem tall, labels above in 0.9rem 600 faded ink.
 - **Focus:** violet border plus the 3px violet outline at zero offset.

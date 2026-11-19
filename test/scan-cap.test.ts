@@ -77,7 +77,7 @@ describe("the scan limit in the app", () => {
       { method: "POST", headers: await sessionHeaders(userId), body: new URLSearchParams({ type: "car", name: "Myvi" }) },
       capped,
     );
-    return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+    return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
   }
 
   async function scan(app: ReturnType<typeof createApp>, capped: Cloudflare.Env, userId: number, car: number, file: File) {

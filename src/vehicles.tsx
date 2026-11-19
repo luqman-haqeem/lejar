@@ -22,7 +22,7 @@ import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
 import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
 import { ArchivedVehicles } from "./views/ArchivedVehicles";
-import { EditVehicle, NewVehicle } from "./views/VehicleForm";
+import { EditVehicle, isAddFrom, NewVehicle } from "./views/VehicleForm";
 import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 
 
@@ -32,6 +32,7 @@ async function history(
   reading: ReadingValues,
   errors: FormErrors = {},
   stamped: number | null = null,
+  added = false,
 ) {
   const userId = c.get("userId");
   const [services, totals, { items, lastDone, readings }] = await Promise.all([
@@ -51,6 +52,7 @@ async function history(
       reading={reading}
       errors={errors}
       stamped={stamped}
+      added={added}
     />
   );
 }
@@ -58,22 +60,38 @@ async function history(
 export function vehicleRoutes() {
   const routes = new Hono<AppEnv>();
 
-  routes.get("/vehicles/new", (c) => c.html(<NewVehicle values={readDetails({})} from={c.req.query("from") === "home" ? "home" : "profile"} />));
+  routes.get("/vehicles/new", (c) => {
+    const from = c.req.query("from");
+    return c.html(<NewVehicle values={readDetails({})} from={isAddFrom(from) ? from : "profile"} />);
+  });
 
+  // A new vehicle opens its own page, which leads with the first step (scan the last receipt); one added
+  // on the way to Scan goes straight on to Scan.
   routes.post("/vehicles", async (c) => {
-    const values = readDetails(await c.req.parseBody());
+    const body = await c.req.parseBody();
+    const from = isAddFrom(body.from) ? body.from : "profile";
+    const values = readDetails(body);
     const details = parseDetails(values, c.get("today"));
-    if (!details.ok) return c.html(<NewVehicle values={values} errors={details.errors} />, 400);
+    if (!details.ok) return c.html(<NewVehicle values={values} errors={details.errors} from={from} />, 400);
 
     const id = await createVehicle(c.env.DB, c.get("userId"), details.value);
-    return c.redirect(`/vehicles/${id}/edit`, 302);
+    return c.redirect(from === "scan" ? `/scan?vehicle=${id}` : `/vehicles/${id}?added=1`, 302);
   });
 
   routes.get("/vehicles/:id{[0-9]+}", async (c) => {
     const vehicle = await getVehicle(c.env.DB, c.get("userId"), Number(c.req.param("id")));
     if (!vehicle) return notFound(c);
     const stamped = Number(c.req.query("stamped"));
-    return c.html(await history(c, vehicle, { date: c.get("today"), km: "" }, {}, Number.isInteger(stamped) ? stamped : null));
+    return c.html(
+      await history(
+        c,
+        vehicle,
+        { date: c.get("today"), km: "" },
+        {},
+        Number.isInteger(stamped) ? stamped : null,
+        c.req.query("added") === "1",
+      ),
+    );
   });
 
   routes.post("/vehicles/:id{[0-9]+}/readings", async (c) => {

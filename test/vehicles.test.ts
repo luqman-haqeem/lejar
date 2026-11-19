@@ -11,7 +11,7 @@ const post = (path: string, userId: number, fields: Record<string, string>) => p
 
 async function addVehicle(userId: number, fields: Record<string, string> = {}): Promise<number> {
   const res = await post("/vehicles", userId, { type: "car", name: "Myvi", plate: "wxy 1234", ...fields });
-  const id = res.headers.get("location")?.match(/^\/vehicles\/(\d+)\/edit$/)?.[1];
+  const id = res.headers.get("location")?.match(/^\/vehicles\/(\d+)\?added=1$/)?.[1];
   if (!id) throw new Error(`vehicle not created: ${res.status}`);
   return Number(id);
 }
@@ -19,8 +19,46 @@ async function addVehicle(userId: number, fields: Record<string, string> = {}): 
 const schedule = async (vehicleId: number) =>
   (await itemsOf(vehicleId)).map((i) => [i.name, i.interval_km, i.interval_months]);
 
+describe("first run for a new vehicle", () => {
+  it("lands on the vehicle page with a confirmation and the scan-first start block", async () => {
+    const user = await makeUser();
+    const id = await addVehicle(user);
+    const html = await (await app.request(`/vehicles/${id}?added=1`, { headers: await sessionHeaders(user) }, env)).text();
+    expect(html).toContain("Myvi added.");
+    expect(html).toContain("Start with the last service");
+    expect(html).toContain(`href="/scan?vehicle=${id}"`);
+    expect(html).toContain(`href="/vehicles/${id}/edit"`);
+    expect(html).toContain("First stamp goes here");
+  });
+
+  it("drops the start block once a last-done baseline is set", async () => {
+    const user = await makeUser();
+    const id = await addVehicle(user);
+    const form = await currentForm(id);
+    form["item.0.baseline_date"] = "2026-06-01";
+    expect((await post(`/vehicles/${id}`, user, form)).status).toBe(302);
+    const html = await (await app.request(`/vehicles/${id}`, { headers: await sessionHeaders(user) }, env)).text();
+    expect(html).not.toContain("Start with the last service");
+  });
+
+  it("goes on to Scan when the vehicle was added on the way there", async () => {
+    const user = await makeUser();
+    const form = await (await app.request("/vehicles/new?from=scan", { headers: await sessionHeaders(user) }, env)).text();
+    expect(form).toContain("Add the vehicle first, then scan its receipt.");
+    expect(form).toContain('name="from" value="scan"');
+    const res = await post("/vehicles", user, { type: "car", name: "Myvi", from: "scan" });
+    expect(res.headers.get("location")).toMatch(/^\/scan\?vehicle=\d+$/);
+  });
+
+  it("keeps the scan intent when the form comes back with errors", async () => {
+    const res = await post("/vehicles", await makeUser(), { type: "car", name: "", from: "scan" });
+    expect(res.status).toBe(400);
+    expect(await res.text()).toContain('name="from" value="scan"');
+  });
+});
+
 describe("adding a vehicle", () => {
-  it("creates a car with its details and opens its schedule for editing", async () => {
+  it("creates a car with its details and opens its page", async () => {
     const user = await makeUser();
     const res = await post("/vehicles", user, {
       type: "car",
@@ -35,7 +73,7 @@ describe("adding a vehicle", () => {
     });
 
     expect(res.status).toBe(302);
-    const id = Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+    const id = Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
     expect(await getVehicle(env.DB, user, id)).toMatchObject({
       type: "car",
       name: "Myvi",

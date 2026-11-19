@@ -5,6 +5,9 @@ import { isVehicleType, VEHICLE_TYPE_LABELS } from "../lib/templates";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
+export type AddFrom = "home" | "profile" | "scan";
+export const isAddFrom = (v: unknown): v is AddFrom => v === "home" || v === "profile" || v === "scan";
+
 const blankItem: ItemValues = { id: "", name: "", km: "", months: "", baseline_date: "", baseline_km: "", remove: "" };
 
 function Details({ d, errors, typeFixed = false }: { d: DetailValues; errors: FormErrors; typeFixed?: boolean }) {
@@ -99,24 +102,30 @@ export function NewVehicle({
 }: {
   values: DetailValues;
   errors?: FormErrors;
-  /** Where the back link returns to: Home's first-vehicle button, or Profile. */
-  from?: "home" | "profile";
+  /**
+   * Where the user came from: Home's first-vehicle button, Profile, or the Scan tab with no vehicle yet
+   * (which goes on to Scan once the vehicle is added).
+   */
+  from?: AddFrom;
 }) {
+  const home = from !== "profile";
   return (
-    <Layout title="Add vehicle" signedIn>
+    <Layout title="Add vehicle" signedIn tab={from === "scan" ? "scan" : undefined}>
       <p class="crumb">
-        <a href={from === "home" ? "/" : "/profile"}>
+        <a href={home ? "/" : "/profile"}>
           <BackIcon />
-          {from === "home" ? "Home" : "Profile"}
+          {home ? "Home" : "Profile"}
         </a>
       </p>
       <h1>Add a vehicle</h1>
+      {from === "scan" && <p class="notice">Add the vehicle first, then scan its receipt.</p>}
       <ErrorSummary errors={errors} />
       <form method="post" action="/vehicles" class="vehicle-form">
+        {from !== "profile" && <input type="hidden" name="from" value={from} />}
         <Details d={values} errors={errors} />
-        <p class="hint">It starts with a typical service schedule for its type, which you can adjust next.</p>
+        <p class="hint">It starts with a typical service schedule for its type. You can adjust it any time.</p>
         <button type="submit" class="button">
-          Add vehicle
+          {from === "scan" ? "Add and scan receipt" : "Add vehicle"}
         </button>
       </form>
     </Layout>

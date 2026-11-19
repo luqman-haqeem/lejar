@@ -252,6 +252,44 @@ a.due-when { color: var(--violet-text); font-weight: 600; min-height: 2.75rem; }
 .stamp-shop { font-size: 0.85rem; overflow-wrap: anywhere; }
 .stamp-figures { display: flex; flex-direction: column; font-size: 0.85rem; }
 
+/* ---------- First run: blank booklet on Home, start block on a new vehicle ---------- */
+.first-run { margin-top: 0.75rem; }
+.first-run h1 { margin: 0 0 0.35rem; text-wrap: balance; }
+.first-run > p { margin: 0 0 1.25rem; }
+.first-run .button { width: 100%; }
+.start-row { border-bottom: 0; }
+.plate-blank {
+  width: 5.75rem; height: 1.75rem; padding: 0; background: transparent; box-shadow: none;
+  border: 1.5px dashed var(--navy-muted);
+}
+.steps { list-style: none; margin: 0; counter-reset: step; }
+.steps li {
+  counter-increment: step; display: grid; grid-template-columns: 1.75rem 1fr; column-gap: 0.25rem;
+  padding: 0.7rem 1rem; border-bottom: 1px solid var(--rule);
+}
+.steps li:first-child { border-top: 2px solid var(--ink); }
+.steps li:last-child { border-bottom: 0; }
+.steps li::before {
+  content: counter(step); grid-row: span 2; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.step-name { font-weight: 600; color: var(--ink); }
+.step-note { font-size: 0.9rem; color: var(--muted); }
+
+.start {
+  margin: 0.25rem 0 1.5rem; padding: 0.9rem 1rem 0.5rem;
+  background: var(--page); border: 1px solid var(--rule); border-top: 2px solid var(--ink);
+}
+.start h2 { margin: 0 0 0.35rem; }
+.start p { margin: 0; }
+.start .actions { margin: 0.9rem 0 0.25rem; }
+
+.stamp-blank {
+  display: flex; flex-direction: column; gap: 0.2rem; max-width: 18rem; margin: 0.75rem 0.25rem 0;
+  padding: 0.8rem 0.9rem; border: 2px dashed var(--rule); border-radius: 0.55rem;
+  color: var(--muted); font-size: 0.92rem; line-height: 1.45; transform: rotate(-1.2deg);
+}
+.stamp-blank-title { font-weight: 700; color: var(--ink); font-size: 1rem; }
+
 .totals { margin: 0; background: var(--page); border: 1px solid var(--rule); border-top: 2px solid var(--ink); }
 .totals div { display: flex; justify-content: space-between; align-items: center; min-height: 2.75rem; padding: 0.45rem 0.9rem; }
 .totals div + div { border-top: 1px solid var(--rule); }

@@ -34,7 +34,7 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
     const vehicles = await listVehicles(c.env.DB, userId);
     const requested = idOf(c.req.query("vehicle"));
     if (requested !== null && !(await getVehicle(c.env.DB, userId, requested))) return notFound(c);
-    if (vehicles.length === 0) return c.redirect("/vehicles/new", 302);
+    if (vehicles.length === 0) return c.redirect("/vehicles/new?from=scan", 302);
     const { perUser, global } = caps(c);
     const left = await scansLeft(c.env.DB, userId, c.get("today"), perUser, global);
     return c.html(<ScanPage vehicles={vehicles} selected={requested ?? vehicles[0].id} left={left} />);

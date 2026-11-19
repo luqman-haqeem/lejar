@@ -40,7 +40,7 @@ async function addCar(app: App, userId: number, name = "Myvi"): Promise<number> 
     { method: "POST", headers: await sessionHeaders(userId), body: new URLSearchParams({ type: "car", name }) },
     env,
   );
-  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
 }
 
 async function scan(app: App, userId: number, fields: Record<string, string | File>) {
@@ -90,7 +90,7 @@ describe("the scan page", () => {
     const { app } = appReplying(READ);
     const res = await app.request("/scan", { headers: await sessionHeaders(await makeUser()) }, env);
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe("/vehicles/new");
+    expect(res.headers.get("location")).toBe("/vehicles/new?from=scan");
   });
 });
 

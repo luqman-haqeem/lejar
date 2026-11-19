@@ -33,3 +33,12 @@ export async function itemsOf(vehicleId: number) {
   const owner = await env.DB.prepare("SELECT user_id FROM vehicles WHERE id = ?").bind(vehicleId).first<{ user_id: number }>();
   return listItems(env.DB, owner!.user_id, vehicleId);
 }
+
+/**
+ * Starts a vehicle's schedule (as if the owner had set one last-done date) on its last item, leaving the
+ * others unknown, so the dashboard shows its rows rather than the "not started" row.
+ */
+export async function startSchedule(vehicleId: number, date = "2026-10-01") {
+  const items = await itemsOf(vehicleId);
+  await env.DB.prepare("UPDATE service_items SET baseline_date = ? WHERE id = ?").bind(date, items.at(-1)!.id).run();
+}

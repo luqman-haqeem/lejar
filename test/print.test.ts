@@ -16,7 +16,7 @@ async function addCar(userId: number): Promise<number> {
     model: "Myvi 1.5 AV",
     year: "2019",
   });
-  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
 }
 
 async function carWithHistory() {

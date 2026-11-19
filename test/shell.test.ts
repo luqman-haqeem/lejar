@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { createApp } from "../src/index";
-import { makeUser, postForm, sessionHeaders } from "./helpers";
+import { makeUser, postForm, sessionHeaders, startSchedule } from "./helpers";
 
 const app = createApp();
 const get = async (path: string, userId: number) => app.request(path, { headers: await sessionHeaders(userId) }, env);
@@ -9,7 +9,7 @@ const page = async (path: string, userId: number) => (await get(path, userId)).t
 
 async function addCar(userId: number, name = "Myvi") {
   const res = await postForm(app, "/vehicles", userId, { type: "car", name, plate: "WXY 1234" });
-  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
 }
 
 /** The tab bar's links as [href, current?]. */
@@ -94,6 +94,7 @@ describe("vehicle page schedule", () => {
   it("shows every schedule item plus road tax and insurance, and the dashboard links to it", async () => {
     const user = await makeUser();
     const car = await addCar(user);
+    await startSchedule(car);
     const html = await page(`/vehicles/${car}`, user);
     const schedule = html.match(/<section id="schedule"[^>]*>(.*?)<\/section>/s)?.[1] ?? "";
     // The car template has 8 items; the dashboard shows only the top 3.

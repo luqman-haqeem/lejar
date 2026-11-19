@@ -3,12 +3,14 @@ import { fmtDate } from "../lib/dates";
 import { type ExpiryStatus, type ItemDue, type OdometerState, STALE_ODOMETER_DAYS } from "../lib/due";
 import { fmtKm } from "../lib/km";
 import { vehicleSummary } from "../lib/templates";
-import { GaugeIcon, StatusIcon } from "./icons";
+import { GaugeIcon, ScanIcon, StatusIcon } from "./icons";
 import { Layout } from "./Layout";
 
 export type VehicleDue = {
   vehicle: Vehicle;
   estKm: number | null;
+  /** False until a visit is logged or a last-done baseline is set: every item is still unknown. */
+  started: boolean;
   odometer: OdometerState;
   /** Most urgent first. */
   items: ItemDue[];
@@ -122,15 +124,26 @@ const ODOMETER_PROMPT: Record<OdometerState, string | null> = {
  */
 export function ScheduleList({ due, limit }: { due: VehicleDue; limit?: number }) {
   const v = due.vehicle;
-  const shown = limit === undefined ? due.items : due.items.slice(0, limit);
-  const more = due.items.length - shown.length;
-  const prompt = ODOMETER_PROMPT[due.odometer];
+  // On a dashboard card, a book not yet started is one row pointing at the step that fills it in,
+  // instead of a column of "Set last done". The vehicle page still lists every item.
+  const unstarted = limit !== undefined && !due.started;
+  const shown = unstarted ? [] : limit === undefined ? due.items : due.items.slice(0, limit);
+  const more = unstarted ? 0 : due.items.length - shown.length;
+  const prompt = unstarted ? null : ODOMETER_PROMPT[due.odometer];
   return (
     <>
       <ul class="due-list">
-        {shown.map((item) => (
-          <DueRow vehicleId={v.id} item={item} />
-        ))}
+        {unstarted ? (
+          <li class="due s-unknown start-row">
+            <span class="due-name">Schedule not started</span>
+            <a class="due-when" href={`/scan?vehicle=${v.id}`}>
+              <ScanIcon />
+              Scan last receipt
+            </a>
+          </li>
+        ) : (
+          shown.map((item) => <DueRow vehicleId={v.id} item={item} />)
+        )}
       </ul>
       {more > 0 && (
         <a class="more" href={`/vehicles/${v.id}#schedule`}>
@@ -191,9 +204,32 @@ export function Dashboard({ vehicles, archivedCount }: { vehicles: VehicleDue[];
   if (vehicles.length === 0) {
     return (
       <Layout title="Dashboard" signedIn tab="home">
-        <section class="empty">
-          <h1>No vehicles yet</h1>
-          <p>Add a car or motorbike to start tracking its services, road tax and insurance.</p>
+        <section class="first-run">
+          <h1>Start your service book</h1>
+          <p>Every service, receipt and renewal for your car or motorbike, in one booklet.</p>
+          <div class="book blank-book">
+            <div class="cover" aria-hidden="true">
+              <span class="cover-text">
+                <span class="cover-name">Your vehicle</span>
+                <span class="cover-sub">Car or motorbike</span>
+              </span>
+              <span class="plate plate-blank" />
+            </div>
+            <ol class="book-page steps">
+            <li>
+              <span class="step-name">Add your vehicle</span>
+              <span class="step-note">About a minute</span>
+            </li>
+            <li>
+              <span class="step-name">Scan its last service receipt</span>
+              <span class="step-note">Sets when each item is next due</span>
+            </li>
+            <li>
+              <span class="step-name">See what's due</span>
+              <span class="step-note">Oil, filters, road tax, insurance</span>
+            </li>
+            </ol>
+          </div>
           <a class="button" href="/vehicles/new?from=home">
             Add your first vehicle
           </a>

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createApp } from "../src/index";
 import { cookieValue } from "./fake-google";
 
-import { itemsOf, makeUser, postForm, sessionHeaders } from "./helpers";
+import { itemsOf, makeUser, postForm, sessionHeaders, startSchedule } from "./helpers";
 
 const app = createApp();
 
@@ -14,6 +14,19 @@ describe("empty dashboard", () => {
     const html = await res.text();
     expect(html).toContain("Add your first vehicle");
     expect(html).toContain('href="/vehicles/new?from=home"');
+    expect(html).toContain("Scan its last service receipt");
+  });
+
+  it("shows a new vehicle as one start row instead of a column of unknowns", async () => {
+    const user = await makeUser();
+    const res = await postForm(app, "/vehicles", user, { type: "car", name: "Myvi" });
+    const id = Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
+    const html = await (await app.request("/", { headers: await sessionHeaders(user) }, env)).text();
+    expect(html).toContain("Schedule not started");
+    expect(html).toContain(`href="/scan?vehicle=${id}"`);
+    expect(html).not.toContain("Set last done");
+    expect(html).not.toContain("Add an odometer reading");
+    expect(html).toContain("Road tax");
   });
 });
 
@@ -40,7 +53,7 @@ describe("what's due on the dashboard", () => {
 
   async function addCar(userId: number, fields: Record<string, string> = {}) {
     const res = await post("/vehicles", userId, { type: "car", name: "Myvi", ...fields });
-    return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+    return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
   }
 
   /** Road tax or insurance as [status, text], with any icon markup dropped. */
@@ -75,6 +88,7 @@ describe("what's due on the dashboard", () => {
   it("links an item with no history straight to setting its baseline", async () => {
     const user = await makeUser();
     const car = await addCar(user);
+    await startSchedule(car);
     const [engineOil] = await itemsOf(car);
     const html = await dashboard(user);
     expect(dueRows(html)).toContainEqual(["unknown", "Engine oil"]);
@@ -153,6 +167,7 @@ describe("what's due on the dashboard", () => {
   it("prompts for an odometer reading when the last one is over 30 days old", async () => {
     const user = await makeUser();
     const car = await addCar(user);
+    await startSchedule(car);
     await post(`/vehicles/${car}/readings`, user, { date: "2026-09-08", km: "40000" }); // 40 days ago
     expect(await dashboard(user)).toContain(`href="/vehicles/${car}#odometer"`);
 

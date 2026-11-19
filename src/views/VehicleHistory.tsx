@@ -19,6 +19,7 @@ export function VehicleHistory({
   reading,
   errors = {},
   stamped = null,
+  added = false,
 }: {
   vehicle: Vehicle;
   /** What's due on this vehicle, for its full schedule. */
@@ -31,6 +32,8 @@ export function VehicleHistory({
   errors?: FormErrors;
   /** A visit just saved: its stamp is struck as the page opens. */
   stamped?: number | null;
+  /** Just added: confirm it, since this is where Add vehicle lands. */
+  added?: boolean;
 }) {
   const justStamped = stamped !== null && services.some((s) => s.id === stamped);
   return (
@@ -43,22 +46,50 @@ export function VehicleHistory({
       </p>
       <h1 class="visually-hidden">{vehicle.name}</h1>
       <Cover vehicle={vehicle} estKm={due.estKm} />
-      <div class="actions">
-        <a class="button" href={`/scan?vehicle=${vehicle.id}`}>
-          Scan receipt
-        </a>
-        <a class="secondary" href={`/services/new?vehicle=${vehicle.id}`}>
-          Log by hand
-        </a>
-      </div>
-      <div class="actions quiet-actions">
-        <a class="text-link" href={`/vehicles/${vehicle.id}/edit`}>
-          Edit details &amp; schedule
-        </a>
-        <a class="text-link" href={`/vehicles/${vehicle.id}/print`}>
-          Print / PDF
-        </a>
-      </div>
+      {added && (
+        <p class="notice" role="status">
+          {vehicle.name} added.
+        </p>
+      )}
+      {due.started ? (
+        <>
+          <div class="actions">
+            <a class="button" href={`/scan?vehicle=${vehicle.id}`}>
+              Scan receipt
+            </a>
+            <a class="secondary" href={`/services/new?vehicle=${vehicle.id}`}>
+              Log by hand
+            </a>
+          </div>
+          <div class="actions quiet-actions">
+            <a class="text-link" href={`/vehicles/${vehicle.id}/edit`}>
+              Edit details &amp; schedule
+            </a>
+            <a class="text-link" href={`/vehicles/${vehicle.id}/print`}>
+              Print / PDF
+            </a>
+          </div>
+        </>
+      ) : (
+        <section class="start" aria-labelledby="start-title">
+          <h2 id="start-title">Start with the last service</h2>
+          <p>
+            Scan the receipt from {vehicle.name}'s last workshop visit. Its date, km and the work done set when engine
+            oil, filters and the rest are next due.
+          </p>
+          <div class="actions">
+            <a class="button" href={`/scan?vehicle=${vehicle.id}`}>
+              Scan receipt
+            </a>
+            <a class="secondary" href={`/services/new?vehicle=${vehicle.id}`}>
+              Log by hand
+            </a>
+          </div>
+          <a class="text-link" href={`/vehicles/${vehicle.id}/edit`}>
+            No receipt? Set last-done dates yourself
+          </a>
+        </section>
+      )}
 
       {justStamped && (
         <p class="notice" role="status">
@@ -76,7 +107,10 @@ export function VehicleHistory({
       <section id="history">
         <h2>History</h2>
         {services.length === 0 ? (
-          <p>No services logged yet. Old paper records can be backdated.</p>
+          <div class="stamp-blank">
+            <span class="stamp-blank-title">First stamp goes here</span>
+            <span>Each logged visit is stamped in this history. Old paper receipts can be backdated.</span>
+          </div>
         ) : (
           <ol class="stamps">
             {services.map((s) => (

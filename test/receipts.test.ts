@@ -16,7 +16,7 @@ async function addCar(userId: number): Promise<number> {
     { method: "POST", headers: await sessionHeaders(userId), body: new URLSearchParams({ type: "car", name: "Myvi" }) },
     env,
   );
-  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
 }
 
 /** Posts a multipart service form, like the browser does once a photo is attached. */

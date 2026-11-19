@@ -10,7 +10,7 @@ const get = async (path: string, userId: number) => app.request(path, { headers:
 
 async function addCar(userId: number, name = "Myvi"): Promise<number> {
   const res = await post("/vehicles", userId, { type: "car", name });
-  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
+  return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\?added=1$/)![1]);
 }
 
 /** Logs a service through the form and returns the response. */
