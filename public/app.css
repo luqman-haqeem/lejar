@@ -343,6 +343,27 @@ a.due-when { color: var(--violet-text); font-weight: 600; min-height: 2.75rem; }
 .type-choice .field-error { flex-basis: 100%; margin-top: 0; }
 input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin: 0; accent-color: var(--violet); flex: none; }
 .hint { font-size: 0.92rem; }
+.field-hint { margin: -0.55rem 0 0.85rem; font-size: 0.88rem; color: var(--muted); }
+.renewals > .hint { margin: 0 0 0.85rem; }
+
+/* Common models: one tap fills make, model and name. */
+.picks { margin: 0.25rem 0 1.1rem; }
+.picks-label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 0.4rem; }
+.pick-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.pick-row[hidden] { display: none; }
+.pick {
+  min-height: 2.75rem; padding: 0 0.95rem; font: inherit; font-weight: 600; color: var(--ink);
+  background: var(--page); border: 1.5px solid var(--field-line); border-radius: var(--radius); cursor: pointer;
+  transition: background-color 120ms ease-out;
+}
+.pick:hover { background: var(--violet-tint); }
+.pick:active { background: var(--rule); }
+.pick[aria-pressed=true] { background: var(--violet-tint); color: var(--violet-text); border-color: var(--violet); box-shadow: inset 0 0 0 1px var(--violet); }
+.picks-hint { margin: 0.5rem 0 0; color: var(--muted); }
+
+/* "Insurance expires on the same day" hides the second date; the server copies road tax across. */
+.same-day { display: flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; font-weight: 600; margin: -0.4rem 0 0.6rem; }
+.renewals:has(input[name=insurance_same]:checked) .insurance-date { display: none; }
 .item { background: var(--page); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.85rem 0.85rem 0.25rem; margin-bottom: 0.75rem; }
 .item .field { margin-bottom: 0.65rem; }
 .remove { display: flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; font-size: 0.92rem; color: var(--muted); margin-bottom: 0.4rem; }

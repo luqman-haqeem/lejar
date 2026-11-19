@@ -162,3 +162,81 @@ for (const input of document.querySelectorAll("input[data-pref]")) {
     } catch {}
   });
 }
+
+// Vehicle form: the make and model suggestions and the placeholders follow the vehicle type; a common
+// model is one tap; the name follows the model until the user types their own.
+for (const details of document.querySelectorAll("fieldset[data-examples]")) {
+  const form = details.form;
+  const examples = JSON.parse(details.dataset.examples);
+  const field = (n) => form.elements.namedItem(n);
+  const make = field("make");
+  const model = field("model");
+  const name = field("name");
+  const picks = details.querySelector("[data-picks]");
+  const allModels = {}; // type -> every <option> of its models list, to filter by make
+  for (const list of document.querySelectorAll("datalist[id^=models-]")) allModels[list.id] = [...list.children];
+
+  const type = () => form.querySelector("input[name=type]:checked")?.value ?? (make.getAttribute("list") || "makes-car").slice(6);
+  const filterModels = () => {
+    const id = `models-${type()}`;
+    const options = allModels[id] ?? [];
+    const typed = make.value.trim().toLowerCase();
+    const matching = options.filter((o) => o.dataset.make.toLowerCase() === typed);
+    document.getElementById(id)?.replaceChildren(...(matching.length ? matching : options));
+  };
+  const markPicks = () => {
+    for (const b of details.querySelectorAll(".pick"))
+      b.setAttribute("aria-pressed", String(b.dataset.make === make.value.trim() && b.dataset.model === model.value.trim()));
+  };
+  const nameFollowsModel = () => {
+    const eg = examples[type()] ?? examples.car;
+    if (name.dataset.auto) name.value = model.value.trim();
+    name.placeholder = model.value.trim() || `e.g. ${eg.name}`;
+  };
+  const applyType = () => {
+    const t = type();
+    const eg = examples[t] ?? examples.car;
+    make.setAttribute("list", `makes-${t}`);
+    model.setAttribute("list", `models-${t}`);
+    make.placeholder = `e.g. ${eg.make}`;
+    model.placeholder = `e.g. ${eg.model}`;
+    field("plate").placeholder = `e.g. ${eg.plate}`;
+    for (const row of details.querySelectorAll(".pick-row")) row.hidden = row.dataset.type !== t;
+    filterModels();
+    nameFollowsModel();
+  };
+
+  // Adding a vehicle: a name left blank (or matching the model) follows the model; typing a different
+  // one stops that. Editing never renames.
+  if (picks && (name.value === "" || name.value === model.value)) name.dataset.auto = "1";
+  if (picks) name.addEventListener("input", () => {
+    if (name.value.trim() === "" || name.value === model.value) name.dataset.auto = "1";
+    else delete name.dataset.auto;
+  });
+  make.addEventListener("input", () => (filterModels(), markPicks()));
+  model.addEventListener("input", () => (nameFollowsModel(), markPicks()));
+  // Switching type clears a common model picked for the other type (a Myvi isn't a motorbike).
+  const clearOtherTypePick = () => {
+    const picked = details.querySelector(`.pick-row:not([data-type="${type()}"]) .pick[aria-pressed="true"]`);
+    if (!picked) return;
+    make.value = model.value = "";
+    if (name.dataset.auto) name.value = "";
+  };
+  for (const radio of form.querySelectorAll("input[name=type]"))
+    radio.addEventListener("change", () => {
+      clearOtherTypePick();
+      applyType();
+      markPicks();
+    });
+  for (const b of details.querySelectorAll(".pick"))
+    b.addEventListener("click", () => {
+      make.value = b.dataset.make;
+      model.value = b.dataset.model;
+      filterModels();
+      nameFollowsModel();
+      markPicks();
+    });
+  if (picks) picks.hidden = false;
+  applyType();
+  markPicks();
+}

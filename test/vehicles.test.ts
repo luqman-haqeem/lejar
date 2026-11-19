@@ -88,6 +88,34 @@ describe("adding a vehicle", () => {
     });
   });
 
+  it("gives insurance the road tax date when it expires on the same day", async () => {
+    const user = await makeUser();
+    const res = await post("/vehicles", user, {
+      type: "car",
+      name: "Myvi",
+      roadtax_expiry: "2027-03-05",
+      insurance_same: "1",
+      insurance_expiry: "2026-01-01", // stale value from the hidden field
+    });
+    const id = Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)/)![1]);
+    expect(await getVehicle(env.DB, user, id)).toMatchObject({ roadtax_expiry: "2027-03-05", insurance_expiry: "2027-03-05" });
+  });
+
+  it("names a vehicle after its model when the name is left blank", async () => {
+    const user = await makeUser();
+    const res = await post("/vehicles", user, { type: "car", name: "", make: "Perodua", model: "Axia" });
+    const id = Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)/)![1]);
+    expect((await getVehicle(env.DB, user, id))?.name).toBe("Axia");
+  });
+
+  it("offers common models and ticks same-day insurance on a new form", async () => {
+    const user = await makeUser();
+    const html = await (await app.request("/vehicles/new", { headers: await sessionHeaders(user) }, env)).text();
+    expect(html).toContain('data-make="Perodua" data-model="Myvi"');
+    expect(html).toContain('list="models-car"');
+    expect(html).toMatch(/name="insurance_same" value="1" checked/);
+  });
+
   it("starts a car on the default car schedule", async () => {
     const id = await addVehicle(await makeUser(), { type: "car" });
     expect(await schedule(id)).toEqual([
@@ -121,7 +149,7 @@ describe("refusing a bad vehicle", () => {
 
     expect(res.status).toBe(400);
     const html = await res.text();
-    expect(html).toContain("Give the vehicle a name.");
+    expect(html).toContain("Give the vehicle a name, or fill in its model.");
     expect(html).toContain("Road tax expiry isn&#39;t a valid date.");
     expect(html).toContain('value="ABC 1"');
     expect(await listVehicles(env.DB, user)).toEqual([]);
@@ -131,9 +159,9 @@ describe("refusing a bad vehicle", () => {
     const user = await makeUser();
     const html = await (await post("/vehicles", user, { type: "car", name: "" })).text();
 
-    expect(html).toContain('<a href="#f-name">Give the vehicle a name.</a>');
-    expect(html).toMatch(/<input name="name" id="f-name"[^>]*aria-describedby="f-name-error"/);
-    expect(html).toContain('<span class="field-error" id="f-name-error">Give the vehicle a name.</span>');
+    expect(html).toContain('<a href="#f-name">Give the vehicle a name, or fill in its model.</a>');
+    expect(html).toMatch(/<input name="name" id="f-name"[^>]*aria-describedby="f-name-error name-hint"/);
+    expect(html).toContain('<span class="field-error" id="f-name-error">Give the vehicle a name, or fill in its model.</span>');
   });
 });
 

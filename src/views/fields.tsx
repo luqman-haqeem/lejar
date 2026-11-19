@@ -45,12 +45,18 @@ export type FieldProps = {
   required?: boolean;
   autocapitalize?: "characters";
   max?: string;
+  /** Id of a <datalist> of suggestions. */
+  list?: string;
+  autocomplete?: "off";
+  /** Id of a hint shown near the field, read out with it. */
+  hint?: string;
   /** Marks a field the receipt scan couldn't read, for the user to fill in. */
   highlight?: boolean;
 };
 
-export function Field({ label, name, value, errors, errorKey = name, type = "text", highlight, ...rest }: FieldProps) {
+export function Field({ label, name, value, errors, errorKey = name, type = "text", highlight, hint, ...rest }: FieldProps) {
   const invalid = errorKey in errors;
+  const describedBy = [invalid && errorId(errorKey), hint].filter(Boolean).join(" ");
   return (
     <label class={invalid ? "field invalid" : highlight ? "field unread" : "field"}>
       <span>{label}</span>
@@ -60,7 +66,7 @@ export function Field({ label, name, value, errors, errorKey = name, type = "tex
         type={type}
         value={value}
         aria-invalid={invalid ? "true" : undefined}
-        aria-describedby={invalid ? errorId(errorKey) : undefined}
+        aria-describedby={describedBy || undefined}
         {...rest}
       />
       <FieldError name={errorKey} errors={errors} />

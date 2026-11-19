@@ -1,7 +1,8 @@
 import type { FormErrors } from "../form";
 import { ErrorSummary, Field, FieldError, type FieldProps, fieldId, RepeatableRows } from "./fields";
 import type { DetailValues, FormValues, ItemValues } from "../vehicle-form";
-import { isVehicleType, VEHICLE_TYPE_LABELS } from "../lib/templates";
+import { COMMON_MODELS, EXAMPLES, QUICK_PICKS } from "../lib/common-vehicles";
+import { isVehicleType, VEHICLE_TYPE_LABELS, type VehicleType } from "../lib/templates";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
@@ -10,42 +11,109 @@ export const isAddFrom = (v: unknown): v is AddFrom => v === "home" || v === "pr
 
 const blankItem: ItemValues = { id: "", name: "", km: "", months: "", baseline_date: "", baseline_km: "", remove: "" };
 
-function Details({ d, errors, typeFixed = false }: { d: DetailValues; errors: FormErrors; typeFixed?: boolean }) {
+function Suggestions() {
   return (
-    <fieldset class="details">
-      <legend>Vehicle</legend>
-      {typeFixed && isVehicleType(d.type) ? (
-        <p class="muted">{VEHICLE_TYPE_LABELS[d.type]}</p>
-      ) : (
-        <div class={"type" in errors ? "type-choice invalid" : "type-choice"}>
-          {Object.entries(VEHICLE_TYPE_LABELS).map(([value, label], i) => (
-            <label>
-              <input
-                type="radio"
-                name="type"
-                value={value}
-                id={i === 0 ? fieldId("type") : undefined}
-                checked={d.type ? d.type === value : i === 0}
-              />{" "}
-              {label}
-            </label>
+    <>
+      {Object.entries(COMMON_MODELS).map(([type, makes]) => (
+        <>
+          <datalist id={`makes-${type}`}>
+            {Object.keys(makes).map((make) => (
+              <option value={make} />
+            ))}
+          </datalist>
+          <datalist id={`models-${type}`}>
+            {Object.entries(makes).flatMap(([make, models]) => models.map((model) => <option value={model} data-make={make} />))}
+          </datalist>
+        </>
+      ))}
+    </>
+  );
+}
+
+/** One tap fills make, model and name. Needs public/app.js, so hidden until it runs. */
+function QuickPicks({ type }: { type: VehicleType }) {
+  return (
+    <div class="picks" data-picks hidden>
+      <span class="picks-label" id="picks-label">
+        Common models
+      </span>
+      {Object.entries(QUICK_PICKS).map(([t, picks]) => (
+        <div class="pick-row" role="group" aria-labelledby="picks-label" data-type={t} hidden={t !== type}>
+          {picks.map((p) => (
+            <button
+              type="button"
+              class="pick"
+              data-make={p.make}
+              data-model={p.model}
+              aria-label={`${p.make} ${p.model}`}
+              aria-pressed="false"
+            >
+              {p.model}
+            </button>
           ))}
-          <FieldError name="type" errors={errors} />
         </div>
-      )}
-      <Field label="Name" name="name" value={d.name} errors={errors} placeholder="e.g. Myvi" required />
-      <Field label="Plate" name="plate" value={d.plate} errors={errors} autocapitalize="characters" />
-      <div class="pair">
-        <Field label="Make" name="make" value={d.make} errors={errors} />
-        <Field label="Model" name="model" value={d.model} errors={errors} />
-      </div>
-      <Field label="Year" name="year" value={d.year} errors={errors} inputmode="numeric" />
-      <div class="pair">
+      ))}
+      <p class="hint picks-hint">Not listed? Type the make and model below.</p>
+    </div>
+  );
+}
+
+function Details({ d, errors, typeFixed = false, picks = false }: { d: DetailValues; errors: FormErrors; typeFixed?: boolean; picks?: boolean }) {
+  const type: VehicleType = isVehicleType(d.type) ? d.type : "car";
+  const eg = EXAMPLES[type];
+  // Ticked when both dates match, including both blank, so a new vehicle starts with one date to fill in.
+  const sameDay = d.insurance_expiry === d.roadtax_expiry;
+  return (
+    <>
+      <fieldset class="details" data-examples={JSON.stringify(EXAMPLES)}>
+        <legend>Vehicle</legend>
+        {typeFixed && isVehicleType(d.type) ? (
+          <p class="muted">{VEHICLE_TYPE_LABELS[d.type]}</p>
+        ) : (
+          <div class={"type" in errors ? "type-choice invalid" : "type-choice"}>
+            {Object.entries(VEHICLE_TYPE_LABELS).map(([value, label], i) => (
+              <label>
+                <input
+                  type="radio"
+                  name="type"
+                  value={value}
+                  id={i === 0 ? fieldId("type") : undefined}
+                  checked={type === value}
+                />{" "}
+                {label}
+              </label>
+            ))}
+            <FieldError name="type" errors={errors} />
+          </div>
+        )}
+        {picks && <QuickPicks type={type} />}
+        <Suggestions />
+        <div class="pair">
+          <Field label="Make" name="make" value={d.make} errors={errors} placeholder={`e.g. ${eg.make}`} list={`makes-${type}`} autocomplete="off" />
+          <Field label="Model" name="model" value={d.model} errors={errors} placeholder={`e.g. ${eg.model}`} list={`models-${type}`} autocomplete="off" />
+        </div>
+        <div class="pair">
+          <Field label="Plate" name="plate" value={d.plate} errors={errors} placeholder={`e.g. ${eg.plate}`} autocapitalize="characters" />
+          <Field label="Year" name="year" value={d.year} errors={errors} placeholder="e.g. 2019" inputmode="numeric" />
+        </div>
+        <Field label="Name" name="name" value={d.name} errors={errors} placeholder={`e.g. ${eg.name}`} hint="name-hint" />
+        <p class="field-hint" id="name-hint">
+          What you call it on Home. Leave blank to use the model.
+        </p>
+      </fieldset>
+      <fieldset class="renewals">
+        <legend>Road tax and insurance</legend>
+        <p class="hint">Road tax expiry is in the MyJPJ app. Insurance expiry is on your cover note.</p>
         <Field label="Road tax expiry" name="roadtax_expiry" type="date" value={d.roadtax_expiry} errors={errors} />
-        <Field label="Insurance expiry" name="insurance_expiry" type="date" value={d.insurance_expiry} errors={errors} />
-      </div>
-      <Field label="Insurer" name="insurer" value={d.insurer} errors={errors} />
-    </fieldset>
+        <label class="same-day">
+          <input type="checkbox" name="insurance_same" value="1" checked={sameDay} /> Insurance expires on the same day
+        </label>
+        <div class="insurance-date">
+          <Field label="Insurance expiry" name="insurance_expiry" type="date" value={d.insurance_expiry} errors={errors} />
+        </div>
+        <Field label="Insurer" name="insurer" value={d.insurer} errors={errors} placeholder="e.g. Etiqa" />
+      </fieldset>
+    </>
   );
 }
 
@@ -122,12 +190,13 @@ export function NewVehicle({
       <ErrorSummary errors={errors} />
       <form method="post" action="/vehicles" class="vehicle-form">
         {from !== "profile" && <input type="hidden" name="from" value={from} />}
-        <Details d={values} errors={errors} />
+        <Details d={values} errors={errors} picks />
         <p class="hint">It starts with a typical service schedule for its type. You can adjust it any time.</p>
         <button type="submit" class="button">
           {from === "scan" ? "Add and scan receipt" : "Add vehicle"}
         </button>
       </form>
+      <script src="/app.js" defer></script>
     </Layout>
   );
 }

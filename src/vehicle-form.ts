@@ -13,8 +13,13 @@ export type ItemValues = Record<(typeof ITEM_FIELDS)[number], string>;
 /** What the form shows: either a saved vehicle, or exactly what the user typed. */
 export type FormValues = { details: DetailValues; items: ItemValues[] };
 
+/**
+ * With "insurance expires the same day" ticked, insurance takes the road tax date (the insurance
+ * date field is hidden then, so whatever it holds is stale).
+ */
 export function readDetails(body: Body): DetailValues {
-  return readFields(body, DETAIL_FIELDS, ["roadtax_expiry", "insurance_expiry"]);
+  const d = readFields(body, DETAIL_FIELDS, ["roadtax_expiry", "insurance_expiry"]);
+  return body.insurance_same === "1" ? { ...d, insurance_expiry: d.roadtax_expiry } : d;
 }
 
 export function readItems(body: Body): ItemValues[] {
@@ -43,7 +48,9 @@ export function parseDetails(d: DetailValues, today: string): Parsed<VehicleDeta
   const thisYear = Number(today.slice(0, 4));
 
   if (!isVehicleType(d.type)) errors.type = "Choose car or motorbike.";
-  if (!d.name) errors.name = "Give the vehicle a name.";
+  // A blank name falls back to the model ("Myvi"), so picking a common model is enough.
+  const name = d.name || d.model;
+  if (!name) errors.name = "Give the vehicle a name, or fill in its model.";
   const year = parseCount(d.year, 1900, thisYear + 1);
   if (year === undefined) errors.year = `Year must be between 1900 and ${thisYear + 1}.`;
   const roadtax = optionalDate(d.roadtax_expiry);
@@ -56,7 +63,7 @@ export function parseDetails(d: DetailValues, today: string): Parsed<VehicleDeta
     ok: true,
     value: {
       type: d.type as VehicleType,
-      name: d.name,
+      name,
       plate: d.plate.toUpperCase().replace(/\s+/g, " "),
       make: d.make,
       model: d.model,
