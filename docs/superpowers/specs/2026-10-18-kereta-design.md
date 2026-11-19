@@ -4,7 +4,7 @@
 The user tried carereta.my, a Malaysian digital car service book, and wants their own version. They'll use it themselves first, but **anyone with a Google account can sign up** (decided 2026-10-18), and each user sees only their own data. It will be a **standalone web app with no Hermes connection**.
 
 What the user decided:
-- **Features:** service log and history, due-date tracking (service by km or date, road tax, insurance), and receipt photo scan. Fuel, tyres and the duplicate-part alert are out of scope.
+- **Features:** service log and history, due-date tracking (service by km or date, road tax, insurance), and receipt photo scan. Fuel, a tyre module (tread depth, rotation, per-tyre tracking) and the duplicate-part alert are out of scope. Recording what was fitted is in scope as generic **Part details** on service lines (see the addendum).
 - **Vehicles:** several, both cars and motorbikes, each with its own intervals.
 - **Odometer:** taken from each service log. Mileage between services is estimated.
 - **Login:** **Google sign-in, open to anyone** with a verified Google account. There's no allowlist.
@@ -160,3 +160,23 @@ This is a plain OAuth 2.0 authorization-code flow with PKCE, written by hand or 
   3. Set the secrets and run `wrangler deploy`.
   4. Add the production redirect URI in Google Cloud.
   5. Sign in from the iPhone and add the app to the Home Screen.
+
+## Addendum (2026-11-19): Part details and Vehicle photo
+Terms are defined in `GLOSSARY.md`. Visual direction was chosen from a throwaway prototype on branch `prototype/part-details-photo`.
+
+### Part details
+- **What:** optional facts on any service line: **brand** (free text), **spec** (free text), **position** (All / Front / Rear / Front left / Front right / Rear left / Rear right; motorbikes get All / Front / Rear), **warranty until** (a date). A line without them is still complete.
+- **Generic:** nothing knows a line is a tyre, battery or wiper. There's no tyre module. Revisit only if real data shows tyre-size lines dominate.
+- **Spec formatting:** when the Spec looks like a tyre size, it is normalised: `2055516`, `205 55 16` → `205/55 R16`; a trailing load index / speed rating (`91V`) is kept. Anything else is kept exactly as typed. The same normalisation is applied to scan output and on the server.
+- **Warranty:** stored as a date only (no km warranties). The form offers 12 / 18 / 24-month quick picks counted from the service date, or an exact date. Shown passively as "Warranty until DD/MM/YYYY", or "Warranty expired DD/MM/YYYY" once past. No reminders.
+- **Data:** nullable columns on `service_lines`: `part_brand`, `part_spec`, `part_position`, `warranty_until`.
+- **Form (prototype variant "Summary row"):** under each line, a line with details shows one summary sentence ("Michelin · 205/55 R16 91V · Front · Warranty until 02/03/2028") and **Edit**, which opens the fields. A line without details shows a quiet "+ Part details". Inside the panel, Position sits behind "+ Position" unless it already has a value.
+- **Display (prototype variant "Sub-line"):** on the service view and the print view, details appear as a muted second line under the line's description. Empty fields are never shown.
+- **Scan:** the receipt schema gains optional brand, spec, position and warranty per line. Position is filled only when the receipt states it, except that a quantity of 4 tyres means All. Unread part fields stay blank and are not highlighted. Nothing is stored until the user saves.
+
+### Vehicle photo
+- **What:** one optional photo per vehicle, set, replaced or removed from the vehicle form (Add and Edit). Not asked for during onboarding, which stays scan-first.
+- **Storage:** same client-side compression, size limit and private R2 bucket as receipts, under `vehicles/<user_id>/<uuid>.<ext>`, served to its owner only. `vehicles.photo_key` holds the key. Replacing or removing deletes the old object, and the orphan cleanup covers this prefix too.
+- **Framing:** no in-app cropper; the browser crops it to a fixed frame.
+- **Display (prototype variant "Pasted print"):** a small square print with a cream border, slightly tilted, on the left of the navy cover on Home and the vehicle page. On the print view, a small thumbnail above the plate. With no photo, every layout stays exactly as before, with no placeholder.
+- **Privacy page:** mention that vehicle photos are stored privately and are not sent to OpenRouter.
