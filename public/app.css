@@ -421,3 +421,8 @@ fieldset[tabindex]:focus { outline: none; }
 @media (max-width: 30rem) {
   .totals div, .lines li, .row-link { padding-inline: 1rem; }
 }
+
+/* Local dev sign-in on the sign-in page (localhost with DEV_LOGIN=1 only). */
+.dev-login { margin-top: 1.25rem; }
+.dev-login .secondary { min-width: 14rem; }
+.dev-login p { font-size: 0.88rem; margin: 0.5rem 0 0; }

@@ -14,6 +14,17 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 
+/** Hosts the local dev sign-in answers on. Exact matches only, so "localhost.example.com" is refused. */
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/**
+ * True only on a local dev server with DEV_LOGIN=1 in .dev.vars, where Google sign-in can't complete.
+ * Both must hold: production never sets the flag, and a deployed host is never local.
+ */
+export function devLoginAllowed(c: Context<AppEnv>): boolean {
+  return c.env.DEV_LOGIN === "1" && LOCAL_HOSTS.has(new URL(c.req.url).hostname);
+}
+
 export type GoogleClient = { clientId: string; clientSecret: string; redirectUri: string };
 export type GoogleIdentity = { sub: string; email: string; verified: boolean };
 
@@ -120,6 +131,17 @@ export function authRoutes(fetchFn: typeof fetch = fetch) {
     }
 
     const userId = await upsertUser(c.env.DB, identity.sub, identity.email);
+    setCookie(c, SESSION_COOKIE, await signSession(userId, c.env.SESSION_SECRET), {
+      ...cookieOptions(c, "/"),
+      maxAge: SESSION_TTL_MS / 1000,
+    });
+    return c.redirect("/", 302);
+  });
+
+  // Always registered, so a refused request is a plain 404 rather than a redirect to sign-in.
+  routes.post("/auth/dev", async (c) => {
+    if (!devLoginAllowed(c)) return c.text("Not found", 404);
+    const userId = await upsertUser(c.env.DB, "dev-local", "dev@localhost");
     setCookie(c, SESSION_COOKIE, await signSession(userId, c.env.SESSION_SECRET), {
       ...cookieOptions(c, "/"),
       maxAge: SESSION_TTL_MS / 1000,

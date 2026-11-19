@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
 import type { AppEnv } from "./app-types";
-import { authRoutes, SESSION_COOKIE } from "./auth";
+import { authRoutes, devLoginAllowed, SESSION_COOKIE } from "./auth";
 import { dashboardRoutes } from "./dashboard";
 import { todayKL } from "./lib/dates";
 import { verifySession } from "./session";
@@ -21,7 +21,7 @@ export function createApp(deps: AppDeps = {}) {
   const app = new Hono<AppEnv>();
 
   app.get("/healthz", (c) => c.text("ok"));
-  app.get("/login", (c) => c.html(<Login />));
+  app.get("/login", (c) => c.html(<Login devLogin={devLoginAllowed(c)} />));
   app.get("/privacy", (c) => c.html(<Privacy contactEmail={c.env.CONTACT_EMAIL} />));
   app.route("/", authRoutes(deps.fetchFn));
 

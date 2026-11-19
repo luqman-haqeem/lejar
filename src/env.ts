@@ -15,4 +15,9 @@ export type Env = {
   SCAN_CAP_GLOBAL: string;
   /** Shown on /privacy for questions and deletion requests. A secret, to keep the address out of the repo. */
   CONTACT_EMAIL: string;
+  /**
+   * Local development only: "1" in .dev.vars offers "Sign in as local dev user" on localhost, since
+   * Google sign-in can't complete there. Never set in production; it also refuses any non-local host.
+   */
+  DEV_LOGIN?: string;
 };

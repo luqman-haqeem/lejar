@@ -15,6 +15,8 @@ export default defineConfig(async () => {
             SESSION_SECRET: "test-session-secret",
             OPENROUTER_API_KEY: "test-openrouter-key",
             CONTACT_EMAIL: "contact@example.com",
+            // Off unless a test turns it on, whatever .dev.vars says.
+            DEV_LOGIN: "",
           },
         },
       }),

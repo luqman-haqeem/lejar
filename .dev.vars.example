@@ -4,3 +4,7 @@ GOOGLE_CLIENT_SECRET=
 SESSION_SECRET=   # any long random string, e.g. `openssl rand -base64 32`
 OPENROUTER_API_KEY=
 CONTACT_EMAIL=     # shown on /privacy; in production: npx wrangler secret put CONTACT_EMAIL
+
+# Local only: 1 offers "Sign in as local dev user" on localhost, since Google sign-in can't complete there.
+# Never set this in production (it is also refused on any non-local host).
+DEV_LOGIN=1
