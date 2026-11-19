@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-19T00:00:00Z",
+  "generatedAt": "2026-11-19T07:38:42Z",
   "title": "Design System: Kereta",
   "extensions": {
     "colorMeta": {
@@ -709,6 +709,14 @@
       "css": ".ds-field { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; display: block; } .ds-field > span { display: block; font-size: 0.9rem; font-weight: 600; color: var(--muted, #5f5a4f); margin-bottom: 0.3rem; } .ds-field input { width: 100%; box-sizing: border-box; min-height: 2.875rem; padding: 0.6rem 0.7rem; border: 1.5px solid var(--field-line, #8a8270); border-radius: var(--radius, 0.25rem); font: inherit; font-size: 1rem; font-weight: 500; background: var(--page, #fbf8f0); color: var(--ink, #1f2328); caret-color: var(--violet, #6b3fa0); } .ds-field input::placeholder { color: var(--muted, #5f5a4f); opacity: 1; } .ds-field input:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 0; border-color: var(--violet, #6b3fa0); }"
     },
     {
+      "name": "Common-model Picks",
+      "kind": "chip",
+      "refersTo": "pick",
+      "description": "One-tap common models on Add vehicle: plain 4px buttons on the page colour; the selected one takes the Stamp Wash and a violet border.",
+      "html": "<div class=\"ds-picks\"><span class=\"ds-picks-label\" id=\"ds-picks-label\">Common models</span><div class=\"ds-pick-row\" role=\"group\" aria-labelledby=\"ds-picks-label\"><button type=\"button\" class=\"ds-pick\" aria-pressed=\"false\" aria-label=\"Perodua Myvi\">Myvi</button><button type=\"button\" class=\"ds-pick\" aria-pressed=\"true\" aria-label=\"Perodua Axia\">Axia</button><button type=\"button\" class=\"ds-pick\" aria-pressed=\"false\" aria-label=\"Proton Saga\">Saga</button><button type=\"button\" class=\"ds-pick\" aria-pressed=\"false\" aria-label=\"Honda City\">City</button></div></div>",
+      "css": ".ds-picks { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; } .ds-picks-label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--muted, #5f5a4f); margin-bottom: 0.4rem; } .ds-pick-row { display: flex; flex-wrap: wrap; gap: 0.5rem; } .ds-pick { min-height: 2.75rem; padding: 0 0.95rem; font: inherit; font-size: 1rem; font-weight: 600; color: var(--ink, #1f2328); background: var(--page, #fbf8f0); border: 1.5px solid var(--field-line, #8a8270); border-radius: var(--radius, 0.25rem); cursor: pointer; transition: background-color 120ms ease-out; } .ds-pick:hover { background: var(--violet-tint, #efe8f6); } .ds-pick:active { background: var(--rule, #d8cfbb); } .ds-pick:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 2px; } .ds-pick[aria-pressed=true] { background: var(--violet-tint, #efe8f6); color: var(--violet-text, #5d3590); border-color: var(--violet, #6b3fa0); box-shadow: inset 0 0 0 1px var(--violet, #6b3fa0); }"
+    },
+    {
       "name": "Tab Bar",
       "kind": "nav",
       "refersTo": "tabbar",
@@ -727,7 +735,7 @@
   ],
   "narrative": {
     "northStar": "The Stamped Service Book",
-    "overview": "Kereta is the dealer service booklet that lives in the glovebox, rebuilt for a phone held at a workshop counter. Every vehicle opens on a navy booklet cover carrying its name and a black number plate; under it sits a cream, ruled page of schedule rows; every logged visit lands in the history as a slightly crooked rubber stamp in violet ink. The whole interface is paper, ink and one stamp colour. Depth comes from rules and covers, not from floating cards.\n\nDensity is that of a printed form: rows at least 2.875rem tall, hairline rules between them, a 2px ink rule heading each ruled block, and tabular figures wherever a number sits in a column. The type is a single sturdy grotesque (Barlow) set at medium weight, with a typewriter face (Courier Prime) reserved for the stamps alone, so the stamp reads as a different instrument from the page it is pressed onto. The world refuses the category's soft cards with coloured status dots: status is told in words, with an icon, in a colour, on a ruled line.\n\nAt night the booklet keeps its structure. The ground turns navy-black, the page a little lighter, the rules dark slate, and the ink a warm cream; navy covers, black plates and violet stamps all survive the switch.",
+    "overview": "**Creative North Star: \"The Stamped Service Book\"**\n\nKereta is the dealer service booklet that lives in the glovebox, rebuilt for a phone held at a workshop counter. Every vehicle opens on a navy booklet cover carrying its name and a black number plate; under it sits a cream, ruled page of schedule rows; every logged visit lands in the history as a slightly crooked rubber stamp in violet ink. The whole interface is paper, ink and one stamp colour. Depth comes from rules and covers, not from floating cards.\n\nDensity is that of a printed form: rows at least 2.875rem tall, hairline rules between them, a 2px ink rule heading each ruled block, and tabular figures wherever a number sits in a column. The type is a single sturdy grotesque (Barlow) set at medium weight, with a typewriter face (Courier Prime) reserved for the stamps alone, so the stamp reads as a different instrument from the page it is pressed onto. The world refuses the category's soft cards with coloured status dots: status is told in words, with an icon, in a colour, on a ruled line.\n\nAt night the booklet keeps its structure. The ground turns navy-black, the page a little lighter, the rules dark slate, and the ink a warm cream; navy covers, black plates and violet stamps all survive the switch.",
     "keyCharacteristics": [
       "Navy booklet cover (shell, vehicle covers, tab bar, selected segment) over a cream ruled page.",
       "Ruled hairlines under a 2px ink head rule for every list, table and schedule.",
@@ -779,9 +787,10 @@
       "Do show every flagged status as colour plus icon plus words: overdue red with the circle-cross, due-soon amber-brown with the clock, unknown violet with the pencil.",
       "Do keep every touch target at least 2.75rem, and rows, inputs and buttons at 2.875rem.",
       "Do size everything in rem so `html[data-text-size]` (100% / 112.5% / 125%) scales the booklet.",
-      "Do theme through the tokens only: `html[data-theme]` is `system`, `light` or `dark`, and the dark tokens hang off the resolved `html[data-scheme=\"dark\"]`, defined once.",
+      "Do theme through the tokens only: `html[data-theme]` holds the choice (`system`, `light` or `dark`), and the dark tokens hang off the resolved `html[data-scheme=\"dark\"]`, defined once.",
       "Do let booklets run edge to edge below 30rem, and hold the tab bar's tabs to the 36rem column on wide screens.",
-      "Do use tabular figures for dates, km and money in rows, totals, facts and cover sublines."
+      "Do use tabular figures for dates, km and money in rows, totals, facts and cover sublines.",
+      "Do write placeholders as \"e.g.\" examples under a persistent label, never as the label."
     ],
     "donts": [
       "Don't use soft floating cards or coloured status dots; status lives on a ruled line, in words.",
