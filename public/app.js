@@ -263,6 +263,9 @@ document.addEventListener("click", (e) => {
   const serviceDate = pick.form?.elements.namedItem("date")?.value;
   if (!until) return;
   const from = /^\d{4}-\d{2}-\d{2}$/.test(serviceDate ?? "") ? new Date(`${serviceDate}T00:00:00Z`) : new Date();
-  const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + Number(pick.dataset.months), from.getUTCDate()));
+  // Same as addMonths in src/lib/dates.ts: 31 Aug + 18 months is 28 Feb, not 3 Mar.
+  const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + Number(pick.dataset.months), 1));
+  const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(from.getUTCDate(), lastDay));
   until.value = d.toISOString().slice(0, 10);
 });

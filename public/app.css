@@ -182,10 +182,9 @@ a.cover:active { filter: brightness(1.15); }
 /* The Vehicle photo as a small print pasted on the cover, left of the name. */
 .cover.with-photo { justify-content: flex-start; }
 .cover.with-photo .plate { margin-left: auto; }
-.cover-photo {
+.pasted-photo {
   flex: none; width: 4.75rem; height: 4.75rem; object-fit: cover;
-  border: 0.22rem solid #f4efe2; border-radius: 0.1rem; transform: rotate(-3deg);
-  box-shadow: 0 0.2rem 0.45rem rgba(0, 0, 0, 0.4);
+  border: 0.22rem solid var(--paper); border-radius: 0.1rem; transform: rotate(-3deg);
 }
 
 .cover-name { font-size: 1.5rem; font-weight: 700; line-height: 1.1; overflow-wrap: anywhere; }
@@ -366,12 +365,11 @@ input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin:
 .part-summary { padding: 0.5rem 0; font-size: 0.9rem; line-height: 1.35; color: var(--ink); }
 .part-add, .part-toggle, .part-position > summary { font-weight: 600; font-size: 0.92rem; color: var(--violet-text); }
 .part-toggle { flex: none; }
-.part-details-edit[open] > summary .part-add { font-size: 0; }
-.part-details-edit[open] > summary .part-add::before {
-  content: "Part details"; font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+/* Each label holds its closed and open wording as real text; only the one that applies is shown. */
+.part-details-edit[open] > summary .when-closed, .part-details-edit:not([open]) > summary .when-open { display: none; }
+.part-details-edit[open] > summary .part-add {
+  font-size: 0.8rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
 }
-.part-details-edit[open] > summary .part-toggle { font-size: 0; }
-.part-details-edit[open] > summary .part-toggle::before { content: "Close"; font-size: 0.92rem; }
 .part-fields { padding: 0.75rem 0.85rem 0.1rem; background: var(--paper); border-top: 1px solid var(--rule); }
 .part-position { margin-bottom: 0.65rem; }
 .part-position[open] > summary { display: none; }
@@ -380,7 +378,7 @@ input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin:
 .warranty-picks[hidden] { display: none; }
 .chip {
   min-height: 2.75rem; padding: 0 0.8rem; font: inherit; font-size: 0.88rem; font-weight: 600; color: var(--ink);
-  background: var(--page); border: 1.5px solid var(--field-line); border-radius: 999px; cursor: pointer;
+  background: var(--page); border: 1.5px solid var(--field-line); border-radius: 1rem; cursor: pointer; /* rounded.pill */
 }
 .chip:hover { background: var(--violet-tint); }
 /* On the service view and the print view: a muted line under the part. */

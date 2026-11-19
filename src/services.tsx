@@ -19,7 +19,7 @@ import { checkOdometer } from "./odometer";
 import { inBackground } from "./background";
 import {
   cleanupOrphans,
-  deleteReceipt,
+  deletePhoto,
   isOwnKey,
   photoProblem,
   putReceipt,
@@ -204,7 +204,7 @@ export function serviceRoutes() {
     const mode = { kind: "edit", serviceId: id } as const;
     return submitService(c, await c.req.parseBody(), owned.vehicle, mode, oldKey, async (s) => {
       if (!(await updateService(c.env.DB, c.get("userId"), id, s))) return notFound(c);
-      if (oldKey !== s.receipt_key) await deleteReceipt(c.env.RECEIPTS, oldKey);
+      if (oldKey !== s.receipt_key) await deletePhoto(c.env.RECEIPTS, oldKey);
       return c.redirect(`/services/${id}`, 302);
     });
   });
@@ -212,7 +212,7 @@ export function serviceRoutes() {
   routes.post("/services/:id{[0-9]+}/delete", async (c) => {
     const deleted = await deleteService(c.env.DB, c.get("userId"), Number(c.req.param("id")));
     if (!deleted) return notFound(c);
-    await deleteReceipt(c.env.RECEIPTS, deleted.receiptKey);
+    await deletePhoto(c.env.RECEIPTS, deleted.receiptKey);
     return c.redirect(`/vehicles/${deleted.vehicleId}`, 302);
   });
 

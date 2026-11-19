@@ -21,7 +21,7 @@ import {
 import { type Body, type FormErrors, parseCount, readFields } from "./form";
 import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
-import { deleteReceipt, photoProblem, putVehiclePhoto, uploadTooLarge } from "./receipts";
+import { deletePhoto, photoProblem, putVehiclePhoto, uploadTooLarge } from "./receipts";
 import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { formValuesOf, parseDetails, parseItems, readDetails, readItems } from "./vehicle-form";
 import { ArchivedVehicles } from "./views/ArchivedVehicles";
@@ -188,7 +188,7 @@ export function vehicleRoutes() {
     if (file || body.remove_photo === "1") {
       const newKey = file ? await putVehiclePhoto(c.env.RECEIPTS, userId, file) : null;
       const oldKey = await setVehiclePhoto(c.env.DB, userId, id, newKey);
-      if (oldKey) await deleteReceipt(c.env.RECEIPTS, oldKey);
+      if (oldKey) await deletePhoto(c.env.RECEIPTS, oldKey);
     }
     return c.redirect(`/vehicles/${id}/edit?saved=1`, 302);
   });

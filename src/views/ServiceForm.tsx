@@ -44,10 +44,16 @@ function PartDetailsFields({
         {summary ? (
           <>
             <span class="part-summary">{summary}</span>
-            <span class="part-toggle">Edit</span>
+            <span class="part-toggle">
+              <span class="when-closed">Edit</span>
+              <span class="when-open">Close</span>
+            </span>
           </>
         ) : (
-          <span class="part-add">+ Part details</span>
+          <span class="part-add">
+            <span class="when-closed">+ Part details</span>
+            <span class="when-open">Part details</span>
+          </span>
         )}
       </summary>
       <div class="part-fields">

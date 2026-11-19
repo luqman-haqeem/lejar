@@ -169,7 +169,7 @@ export function ScheduleList({ due, limit }: { due: VehicleDue; limit?: number }
 export function Cover({ vehicle, estKm, href }: { vehicle: Vehicle; estKm?: number | null; href?: string }) {
   const body = (
     <>
-      {vehicle.photo_key && <img class="vehicle-photo cover-photo" src={vehiclePhotoUrl(vehicle.photo_key)} alt="" />}
+      {vehicle.photo_key && <img class="vehicle-photo pasted-photo" src={vehiclePhotoUrl(vehicle.photo_key)} alt="" />}
       <span class="cover-text">
         <span class="cover-name">{vehicle.name}</span>
         <span class="cover-sub">

@@ -63,7 +63,8 @@ export async function receiptExists(bucket: R2Bucket, key: string): Promise<bool
   return (await bucket.head(key)) !== null;
 }
 
-export async function deleteReceipt(bucket: R2Bucket, key: string | null): Promise<void> {
+/** Deletes a stored photo (a receipt or a Vehicle photo); nothing to do for null. */
+export async function deletePhoto(bucket: R2Bucket, key: string | null): Promise<void> {
   if (key) await bucket.delete(key);
 }
 
