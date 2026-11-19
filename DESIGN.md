@@ -296,7 +296,7 @@ Each vehicle on the dashboard is a booklet: a full-width navy cover, then its ru
 The booklet is flat. Depth is told by material, not by shadow: the navy cover sits above the cream page because it is a different material, the page is lighter than the ground, and blocks are held by a 2px ink head rule and 1px hairlines. Pressed states darken or wash (brightness filters, `violet-tint` fills), never lift.
 
 ### Shadow Vocabulary
-- **Raised Scan disc** (`box-shadow: 0 0.35rem 0.8rem rgba(10, 14, 35, 0.35)`): the violet Scan disc in the tab bar, raised 1.6rem above the bar inside a 0.3rem navy collar. It is the only shadow in the system.
+- **Raised Scan disc** (`box-shadow: 0 0.35rem 0.8rem color-mix(in srgb, var(--navy) 60%, #000 40%)`, a darkened navy so the shadow follows the theme): the violet Scan disc in the tab bar, raised 1.6rem above the bar inside a 0.3rem navy collar. It is the only shadow in the system.
 - **Plate edge** (`box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28)`): a faint inner rim on the black plate so it separates from the navy cover.
 
 ### Named Rules
@@ -318,6 +318,7 @@ Solid and stamped, never glossy.
 - **Text links and quiet links:** 600 weight, 2.75rem tall; links in `violet-text`, quiet and back links in faded ink. Press drops opacity to 0.6.
 - **Focus:** a 3px violet outline, 2px offset, 4px corners, on every focusable element.
 - **Busy:** a submitting form disables its buttons (opacity 0.55) and swaps the label for the form's busy message.
+- **Local dev sign-in:** on localhost with `DEV_LOGIN=1` only, the sign-in page adds a secondary "Sign in as local dev user" button (14rem minimum) under Google's, with a faded 0.88rem "Local development only" note. It never renders on a deployed host, so it is not part of the shipped surface.
 
 ### Cover (signature)
 A navy band, white 1.5rem vehicle name, a Cover Silver subline (type, make and model, year, estimated km in tabular figures) and the plate pinned right. On the dashboard the whole cover is a link; press brightens it.
@@ -336,7 +337,7 @@ A double-ruled violet frame on the page colour, Courier Prime uppercase: the dat
 - **Focus:** violet border plus the 3px violet outline at zero offset.
 - **Error:** red border plus 1px red outline, a red 600 message below, and a linked error summary (2px red frame) at the top of the form.
 - **Unread (from a scan):** amber-brown border, `soon-bg` fill, "· couldn't read" after the label.
-- **Receipt capture:** a large dashed-violet tap face with a camera icon, title and note, over an invisible native file input.
+- **Receipt capture:** a large dashed-violet tap face (5rem minimum) with a 2.25rem camera icon, a 700 1.125rem title and a faded 0.9rem note, over an invisible native file input that receives every tap, key and screen-reader action. Once a photo is picked the note reads "Chosen: <file name>"; focus puts the 3px violet outline on the face, press washes it `violet-tint`, and an error turns the dashes solid red.
 
 ### Navigation
 A fixed navy tab bar, 4.25rem plus the safe-area inset: Home, a raised violet Scan disc labelled "Scan receipt", and Profile. Inactive tabs are Cover Silver; the current tab turns white and its icon stroke thickens to 2.4. Deeper pages carry a back crumb (chevron plus label, faded ink) instead of a tab.
