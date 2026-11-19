@@ -48,7 +48,7 @@ Kereta is a personal digital service book: every service, receipt and renewal in
 
 - The name **Kereta** is fixed.
 - The voice is plain, direct English. Malay terms Malaysian owners actually use (e.g. road tax, minyak hitam, cukai jalan) are welcome where they read naturally.
-- There are no other binding identity assets. The current teal theme colour and icons are incumbent, not committed.
+- There are no other binding identity assets. The current look (navy booklet covers, cream ruled pages, violet visit stamps; see DESIGN.md) and the navy "K" Home Screen icons are the incumbent design, not brand commitments.
 
 ## Evidence on Hand
 
