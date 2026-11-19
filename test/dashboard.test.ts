@@ -13,7 +13,7 @@ describe("empty dashboard", () => {
     expect(res.status).toBe(200);
     const html = await res.text();
     expect(html).toContain("Add your first vehicle");
-    expect(html).toContain('href="/vehicles/new"');
+    expect(html).toContain('href="/vehicles/new?from=home"');
   });
 });
 

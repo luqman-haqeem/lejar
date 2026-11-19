@@ -110,3 +110,33 @@ describe("vehicle page schedule", () => {
     expect(html).toContain(`<a class="secondary" href="/services/new?vehicle=${car}">`);
   });
 });
+
+describe("a newly logged visit", () => {
+  it("lands on the vehicle page as the highlighted stamp", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const res = await postForm(app, "/services", user, {
+      vehicle_id: String(car),
+      date: "2026-01-05",
+      odometer_km: "38000",
+      workshop: "Ah Seng",
+      total: "120",
+    });
+    expect(res.status).toBe(302);
+    const location = res.headers.get("location")!;
+    expect(location).toMatch(new RegExp(`^/vehicles/${car}\\?stamped=\\d+$`));
+    const id = location.split("=")[1];
+    const html = await page(location, user);
+    expect(html).toContain(`<a class="stamp stamp-new" href="/services/${id}">`);
+    expect(html).toMatch(/role="status"[^>]*>Saved\./);
+  });
+});
+
+describe("adding a vehicle", () => {
+  it("goes back to wherever it was opened from", async () => {
+    const user = await makeUser();
+    expect(await page("/", user)).toContain('href="/vehicles/new?from=home"');
+    expect(await page("/vehicles/new?from=home", user)).toMatch(/<p class="crumb"><a href="\/">/);
+    expect(await page("/vehicles/new", user)).toMatch(/<p class="crumb"><a href="\/profile">/);
+  });
+});

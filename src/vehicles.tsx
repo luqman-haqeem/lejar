@@ -8,13 +8,12 @@ import {
   createVehicle,
   deleteManualReading,
   getVehicle,
-  lastDoneByItem,
   listArchivedVehicles,
   listItems,
-  listReadings,
   listServices,
   setArchived,
   updateVehicle,
+  vehicleDueData,
   type Vehicle,
   yearTotals,
 } from "./db";
@@ -27,14 +26,18 @@ import { EditVehicle, NewVehicle } from "./views/VehicleForm";
 import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 
 
-async function history(c: Context<AppEnv>, vehicle: Vehicle, reading: ReadingValues, errors: FormErrors = {}) {
+async function history(
+  c: Context<AppEnv>,
+  vehicle: Vehicle,
+  reading: ReadingValues,
+  errors: FormErrors = {},
+  stamped: number | null = null,
+) {
   const userId = c.get("userId");
-  const [services, totals, readings, items, lastDone] = await Promise.all([
+  const [services, totals, { items, lastDone, readings }] = await Promise.all([
     listServices(c.env.DB, userId, vehicle.id),
     yearTotals(c.env.DB, userId, vehicle.id),
-    listReadings(c.env.DB, userId, vehicle.id),
-    listItems(c.env.DB, userId, vehicle.id),
-    lastDoneByItem(c.env.DB, userId, vehicle.id),
+    vehicleDueData(c.env.DB, userId, vehicle.id),
   ]);
   const due = vehicleDue({ vehicle, items, lastDone, readings }, c.get("today"));
   const manualReadings = readings.filter((r) => r.source === "manual").reverse();
@@ -47,6 +50,7 @@ async function history(c: Context<AppEnv>, vehicle: Vehicle, reading: ReadingVal
       manualReadings={manualReadings}
       reading={reading}
       errors={errors}
+      stamped={stamped}
     />
   );
 }
@@ -54,7 +58,7 @@ async function history(c: Context<AppEnv>, vehicle: Vehicle, reading: ReadingVal
 export function vehicleRoutes() {
   const routes = new Hono<AppEnv>();
 
-  routes.get("/vehicles/new", (c) => c.html(<NewVehicle values={readDetails({})} />));
+  routes.get("/vehicles/new", (c) => c.html(<NewVehicle values={readDetails({})} from={c.req.query("from") === "home" ? "home" : "profile"} />));
 
   routes.post("/vehicles", async (c) => {
     const values = readDetails(await c.req.parseBody());
@@ -68,7 +72,8 @@ export function vehicleRoutes() {
   routes.get("/vehicles/:id{[0-9]+}", async (c) => {
     const vehicle = await getVehicle(c.env.DB, c.get("userId"), Number(c.req.param("id")));
     if (!vehicle) return notFound(c);
-    return c.html(await history(c, vehicle, { date: c.get("today"), km: "" }));
+    const stamped = Number(c.req.query("stamped"));
+    return c.html(await history(c, vehicle, { date: c.get("today"), km: "" }, {}, Number.isInteger(stamped) ? stamped : null));
   });
 
   routes.post("/vehicles/:id{[0-9]+}/readings", async (c) => {

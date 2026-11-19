@@ -7,7 +7,7 @@ export type Tab = "home" | "scan" | "profile";
  * Text size and theme are per-device choices (Profile → Appearance), kept in localStorage. Applied in
  * <head> before first paint so pages never flash the wrong theme or size.
  */
-const PREFS_SCRIPT = `try{var d=document.documentElement,t=localStorage.getItem("kereta-theme"),s=localStorage.getItem("kereta-text-size");if(t)d.dataset.theme=t;if(s)d.dataset.textSize=s}catch(e){}`;
+const PREFS_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("kereta-theme"),s=localStorage.getItem("kereta-text-size");if(t)d.dataset.theme=t;if(s)d.dataset.textSize=s}catch(e){}var m=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)");function a(){var t=d.dataset.theme;d.dataset.scheme=t==="dark"||(t!=="light"&&m&&m.matches)?"dark":"light"}a();if(m&&m.addEventListener)m.addEventListener("change",a);window.keretaScheme=a})();`;
 
 function TabBar({ tab }: { tab?: Tab }) {
   const current = (t: Tab) => (tab === t ? "page" : undefined);

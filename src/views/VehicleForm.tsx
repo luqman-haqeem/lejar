@@ -92,13 +92,22 @@ function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }
   );
 }
 
-export function NewVehicle({ values, errors = {} }: { values: DetailValues; errors?: FormErrors }) {
+export function NewVehicle({
+  values,
+  errors = {},
+  from = "profile",
+}: {
+  values: DetailValues;
+  errors?: FormErrors;
+  /** Where the back link returns to: Home's first-vehicle button, or Profile. */
+  from?: "home" | "profile";
+}) {
   return (
     <Layout title="Add vehicle" signedIn>
       <p class="crumb">
-        <a href="/profile">
+        <a href={from === "home" ? "/" : "/profile"}>
           <BackIcon />
-          Profile
+          {from === "home" ? "Home" : "Profile"}
         </a>
       </p>
       <h1>Add a vehicle</h1>

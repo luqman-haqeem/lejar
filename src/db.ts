@@ -404,6 +404,25 @@ export async function findOdometerConflict(
     .first<Pick<Reading, "date" | "km">>();
 }
 
+/** One vehicle's schedule, last-done points and odometer readings (oldest first), in one round trip. */
+export async function vehicleDueData(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+): Promise<{ items: ServiceItem[]; lastDone: Map<number, LastDone>; readings: Reading[] }> {
+  const scope = { userId, vehicleId };
+  const [items, lastDone, readings] = await db.batch<unknown>([
+    itemsQuery(db, scope),
+    lastDoneQuery(db, scope),
+    readingsQuery(db, scope),
+  ]);
+  return {
+    items: items.results as ServiceItem[],
+    lastDone: toLastDone(lastDone.results as LastDoneRow[]),
+    readings: readings.results as Reading[],
+  };
+}
+
 /** Per schedule item, the date and odometer of the latest service with a line linked to it. */
 export async function lastDoneByItem(
   db: D1Database,

@@ -615,6 +615,11 @@
         "purpose": "Stamp straightening and wash on press."
       },
       {
+        "name": "stamp-strike",
+        "value": "520ms cubic-bezier(0.16, 1, 0.3, 1), 150ms delay",
+        "purpose": "A just-saved visit's stamp is struck onto the page once; off under reduced motion."
+      },
+      {
         "name": "reduced-motion",
         "value": "transition: none; stamps untilted",
         "purpose": "prefers-reduced-motion: reduce."
@@ -649,7 +654,7 @@
           "light",
           "dark"
         ],
-        "fallback": "prefers-color-scheme when system or unset",
+        "fallback": "Resolved by the <head> script into html[data-scheme] (dark when the choice is dark, or system/unset while the phone prefers dark); dark tokens apply on screen only.",
         "storage": "localStorage kereta-theme"
       }
     }
@@ -774,7 +779,7 @@
       "Do show every flagged status as colour plus icon plus words: overdue red with the circle-cross, due-soon amber-brown with the clock, unknown violet with the pencil.",
       "Do keep every touch target at least 2.75rem, and rows, inputs and buttons at 2.875rem.",
       "Do size everything in rem so `html[data-text-size]` (100% / 112.5% / 125%) scales the booklet.",
-      "Do theme through the tokens only: `html[data-theme]` is `system`, `light` or `dark`, with `prefers-color-scheme` as the fallback when it is `system` or unset.",
+      "Do theme through the tokens only: `html[data-theme]` is `system`, `light` or `dark`, and the dark tokens hang off the resolved `html[data-scheme=\"dark\"]`, defined once.",
       "Do let booklets run edge to edge below 30rem, and hold the tab bar's tabs to the 36rem column on wide screens.",
       "Do use tabular figures for dates, km and money in rows, totals, facts and cover sublines."
     ],

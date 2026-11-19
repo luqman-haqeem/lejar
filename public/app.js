@@ -139,6 +139,7 @@ for (const input of document.querySelectorAll("input[data-pref]")) {
   input.addEventListener("change", () => {
     if (!input.checked) return;
     document.documentElement.dataset[pref.attr] = input.value;
+    window.keretaScheme?.(); // re-resolve light or dark for the new Theme choice
     try {
       localStorage.setItem(pref.key, input.value);
     } catch {}

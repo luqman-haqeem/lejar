@@ -245,7 +245,7 @@ Cream paper, navy covers, ink-black text and a single rubber-stamp violet, with 
 - **Field Line** (`field-line`): the 1.5px border of text inputs and selects, darker than the hairline so fields read as fields.
 - **Plate Black and White** (`plate-black`, `plate-white`): the number-plate badge only, identical in both themes.
 
-The `-dark` tokens are the same roles at night, applied when `html[data-theme="dark"]`, or when the theme is `system` or unset and the phone prefers dark. `navy-ink`, `violet-ink` and the plate colours do not change.
+The `-dark` tokens are the same roles at night, applied when `html[data-scheme="dark"]`, on screen only. The inline `<head>` script resolves `data-scheme` from the Theme choice (`html[data-theme]`): `dark`, or `system`/unset while the phone prefers dark. It follows the phone live, so printing always uses the light tokens. `navy-ink`, `violet-ink` and the plate colours do not change.
 
 ### Named Rules
 **The One Stamp Rule.** Violet is the only accent. It marks what the user can do (primary action, links, focus) and what they have done (stamps). Nothing decorative is violet.
@@ -329,7 +329,7 @@ A black badge, white 700 text at 0.95rem with 0.06em tracking, 0.2rem corners an
 Item name left (600), status right (tabular, 0.95rem, with its status icon). The first row sits under the 2px ink head rule; rows are separated by hairlines. Overdue rows take the red wash with red bold text; due-soon rows turn amber-brown with a bold date; unknown rows show a violet pencil link to where the missing value is filled in. Renewals (road tax, insurance) follow the same pattern under their own head rule. The odometer prompt closes the page as a violet gauge-icon link.
 
 ### Visit stamp (signature)
-A double-ruled violet frame on the page colour, Courier Prime uppercase: the date over a rule, then the workshop, then km and RM. Each stamp tilts a little; pressing straightens it and washes it violet. With reduced motion, stamps sit straight and transitions are off.
+A double-ruled violet frame on the page colour, Courier Prime uppercase: the date over a rule, then the workshop, then km and RM. Each stamp tilts a little; pressing straightens it and washes it violet. A visit just saved (`.stamp-new`, from `?stamped=<id>` after Save) is struck onto the page once: it drops from 1.35x scale and -6deg, fades in, and settles into its tilt over 520ms with an expo ease-out and a violet wash. It is the one authored motion moment in the app. With reduced motion, stamps sit straight, the strike is off and transitions are off.
 
 ### Inputs / Fields
 - **Style:** page fill, 1.5px field-line border, 4px corners, 2.875rem tall, labels above in 0.9rem 600 faded ink.
@@ -358,7 +358,7 @@ Inline line icons on a 24px grid, 2px round strokes in `currentColor`, 1.25rem (
 - **Do** show every flagged status as colour plus icon plus words: overdue red with the circle-cross, due-soon amber-brown with the clock, unknown violet with the pencil.
 - **Do** keep every touch target at least 2.75rem, and rows, inputs and buttons at 2.875rem.
 - **Do** size everything in rem so `html[data-text-size]` (100% / 112.5% / 125%) scales the booklet.
-- **Do** theme through the tokens only: `html[data-theme]` is `system`, `light` or `dark`, with `prefers-color-scheme` as the fallback when it is `system` or unset.
+- **Do** theme through the tokens only: `html[data-theme]` holds the choice (`system`, `light` or `dark`), and the dark tokens hang off the resolved `html[data-scheme="dark"]`, defined once.
 - **Do** let booklets run edge to edge below 30rem, and hold the tab bar's tabs to the 36rem column on wide screens.
 - **Do** use tabular figures for dates, km and money in rows, totals, facts and cover sublines.
 

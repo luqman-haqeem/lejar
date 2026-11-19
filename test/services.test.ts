@@ -44,7 +44,7 @@ describe("logging a service", () => {
     });
 
     expect(res.status).toBe(302);
-    expect(res.headers.get("location")).toBe(`/vehicles/${car}`);
+    expect(res.headers.get("location")).toMatch(new RegExp(`^/vehicles/${car}\\?stamped=\\d+$`));
     const [summary] = await listServices(env.DB, user, car);
     const service = await getService(env.DB, user, summary.id);
     expect(service).toMatchObject({

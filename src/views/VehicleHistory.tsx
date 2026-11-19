@@ -18,6 +18,7 @@ export function VehicleHistory({
   manualReadings,
   reading,
   errors = {},
+  stamped = null,
 }: {
   vehicle: Vehicle;
   /** What's due on this vehicle, for its full schedule. */
@@ -28,7 +29,10 @@ export function VehicleHistory({
   manualReadings: Reading[];
   reading: ReadingValues;
   errors?: FormErrors;
+  /** A visit just saved: its stamp is struck as the page opens. */
+  stamped?: number | null;
 }) {
+  const justStamped = stamped !== null && services.some((s) => s.id === stamped);
   return (
     <Layout title={vehicle.name} signedIn>
       <p class="crumb">
@@ -56,6 +60,12 @@ export function VehicleHistory({
         </a>
       </div>
 
+      {justStamped && (
+        <p class="notice" role="status">
+          Saved. <a href="#history">See it stamped in the history</a>
+        </p>
+      )}
+
       <section id="schedule" class="schedule-section">
         <h2>Schedule</h2>
         <div class="book-page ruled">
@@ -63,7 +73,7 @@ export function VehicleHistory({
         </div>
       </section>
 
-      <section>
+      <section id="history">
         <h2>History</h2>
         {services.length === 0 ? (
           <p>No services logged yet. Old paper records can be backdated.</p>
@@ -71,7 +81,7 @@ export function VehicleHistory({
           <ol class="stamps">
             {services.map((s) => (
               <li>
-                <a class="stamp" href={`/services/${s.id}`}>
+                <a class={s.id === stamped ? "stamp stamp-new" : "stamp"} href={`/services/${s.id}`}>
                   <span class="stamp-date">{fmtDate(s.date)}</span>
                   <span class="stamp-shop">{s.workshop || "Service"}</span>
                   <span class="stamp-figures">

@@ -194,7 +194,7 @@ export function Dashboard({ vehicles, archivedCount }: { vehicles: VehicleDue[];
         <section class="empty">
           <h1>No vehicles yet</h1>
           <p>Add a car or motorbike to start tracking its services, road tax and insurance.</p>
-          <a class="button" href="/vehicles/new">
+          <a class="button" href="/vehicles/new?from=home">
             Add your first vehicle
           </a>
           {archivedCount > 0 && (

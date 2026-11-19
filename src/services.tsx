@@ -147,8 +147,10 @@ export function serviceRoutes() {
     if (!vehicle) return notFound(c);
 
     return submitService(c, body, vehicle, { kind: "new" }, null, async (s) => {
-      if ((await createService(c.env.DB, userId, vehicle.id, s)) === null) return notFound(c);
-      if (body.action !== "save_add") return c.redirect(`/vehicles/${vehicle.id}`, 302);
+      const id = await createService(c.env.DB, userId, vehicle.id, s);
+      if (id === null) return notFound(c);
+      // Back to the vehicle, where the new visit lands as the highlighted stamp.
+      if (body.action !== "save_add") return c.redirect(`/vehicles/${vehicle.id}?stamped=${id}`, 302);
       const next = new URLSearchParams({ vehicle: String(vehicle.id), workshop: s.workshop, saved: "1" });
       return c.redirect(`/services/new?${next}`, 302);
     });
