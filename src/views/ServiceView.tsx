@@ -3,6 +3,7 @@ import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { receiptUrl } from "../receipts";
+import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
 export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; service: ServiceWithLines; items: ServiceItem[] }) {
@@ -10,7 +11,10 @@ export function ServiceView({ vehicle, service, items }: { vehicle: Vehicle; ser
   return (
     <Layout title={`Service ${fmtDate(service.date)}`} signedIn>
       <p class="crumb">
-        <a href={`/vehicles/${vehicle.id}`}>← {vehicle.name}</a>
+        <a href={`/vehicles/${vehicle.id}`}>
+          <BackIcon />
+          {vehicle.name}
+        </a>
       </p>
       <h1>{service.workshop || "Service"}</h1>
       <dl class="facts">

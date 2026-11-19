@@ -29,11 +29,6 @@ describe("signing out", () => {
     expect(cookieValue(res, "kereta_session")).toBe("");
   });
 
-  it("offers a sign-out button on the dashboard", async () => {
-    const res = await app.request("/", { headers: await sessionHeaders(await makeUser()) }, env);
-    const html = await res.text();
-    expect(html).toMatch(/<form[^>]*method="post"[^>]*action="\/logout"|<form[^>]*action="\/logout"[^>]*method="post"/);
-  });
 });
 
 describe("what's due on the dashboard", () => {
@@ -47,6 +42,12 @@ describe("what's due on the dashboard", () => {
     const res = await post("/vehicles", userId, { type: "car", name: "Myvi", ...fields });
     return Number(res.headers.get("location")!.match(/^\/vehicles\/(\d+)\/edit$/)![1]);
   }
+
+  /** Road tax or insurance as [status, text], with any icon markup dropped. */
+  const renewal = (html: string, label: string) => {
+    const m = html.match(new RegExp(`<li class="renewal s-(\\w+)"><span class="due-name">${label}</span>(.*?)</li>`));
+    return m ? [m[1], m[2].replace(/<[^>]*>/g, "")] : null;
+  };
 
   /** Each due row on the page as [status, item name]. */
   const dueRows = (html: string) =>
@@ -137,16 +138,16 @@ describe("what's due on the dashboard", () => {
     const user = await makeUser();
     await addCar(user, { roadtax_expiry: "2026-11-01", insurance_expiry: "2026-10-18" });
     const html = await dashboard(user);
-    expect(html).toMatch(/<span class="chip s-soon">Road tax in 14 days<\/span>/);
-    expect(html).toMatch(/<span class="chip s-overdue">Insurance expired 18\/10\/2026<\/span>/);
+    expect(renewal(html, "Road tax")).toEqual(["soon", "in 14 days"]);
+    expect(renewal(html, "Insurance")).toEqual(["overdue", "Expired 18/10/2026"]);
   });
 
   it("says when road tax or insurance hasn't been set", async () => {
     const user = await makeUser();
     await addCar(user);
     const html = await dashboard(user);
-    expect(html).toContain("Road tax not set");
-    expect(html).toContain("Insurance not set");
+    expect(renewal(html, "Road tax")).toEqual(["unknown", "Not set"]);
+    expect(renewal(html, "Insurance")).toEqual(["unknown", "Not set"]);
   });
 
   it("prompts for an odometer reading when the last one is over 30 days old", async () => {

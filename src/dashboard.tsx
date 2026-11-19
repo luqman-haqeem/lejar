@@ -4,7 +4,7 @@ import { dashboardData, type DashboardVehicle } from "./db";
 import { estimateKm, expiryStatus, itemDue, odometerState, sortByUrgency } from "./lib/due";
 import { Dashboard, type VehicleDue } from "./views/Dashboard";
 
-function vehicleDue({ vehicle, items, lastDone, readings }: DashboardVehicle, today: string): VehicleDue {
+export function vehicleDue({ vehicle, items, lastDone, readings }: DashboardVehicle, today: string): VehicleDue {
   const estKm = estimateKm(readings, today);
   return {
     vehicle,

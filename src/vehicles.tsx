@@ -1,12 +1,14 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppEnv } from "./app-types";
+import { vehicleDue } from "./dashboard";
 import { notFound } from "./http";
 import {
   addReading,
   createVehicle,
   deleteManualReading,
   getVehicle,
+  lastDoneByItem,
   listArchivedVehicles,
   listItems,
   listReadings,
@@ -27,15 +29,19 @@ import { type ReadingValues, VehicleHistory } from "./views/VehicleHistory";
 
 async function history(c: Context<AppEnv>, vehicle: Vehicle, reading: ReadingValues, errors: FormErrors = {}) {
   const userId = c.get("userId");
-  const [services, totals, readings] = await Promise.all([
+  const [services, totals, readings, items, lastDone] = await Promise.all([
     listServices(c.env.DB, userId, vehicle.id),
     yearTotals(c.env.DB, userId, vehicle.id),
     listReadings(c.env.DB, userId, vehicle.id),
+    listItems(c.env.DB, userId, vehicle.id),
+    lastDoneByItem(c.env.DB, userId, vehicle.id),
   ]);
+  const due = vehicleDue({ vehicle, items, lastDone, readings }, c.get("today"));
   const manualReadings = readings.filter((r) => r.source === "manual").reverse();
   return (
     <VehicleHistory
       vehicle={vehicle}
+      due={due}
       services={services}
       totals={totals}
       manualReadings={manualReadings}

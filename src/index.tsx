@@ -6,6 +6,7 @@ import { dashboardRoutes } from "./dashboard";
 import { todayKL } from "./lib/dates";
 import { verifySession } from "./session";
 import { printRoutes } from "./print";
+import { profileRoutes } from "./profile";
 import { receiptRoutes } from "./receipts";
 import { scanRoutes } from "./scan";
 import { serviceRoutes } from "./services";
@@ -38,6 +39,7 @@ export function createApp(deps: AppDeps = {}) {
   app.route("/", serviceRoutes());
   app.route("/", receiptRoutes());
   app.route("/", scanRoutes(deps.aiFetch));
+  app.route("/", profileRoutes());
 
   return app;
 }

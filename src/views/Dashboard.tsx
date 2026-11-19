@@ -3,6 +3,7 @@ import { fmtDate } from "../lib/dates";
 import { type ExpiryStatus, type ItemDue, type OdometerState, STALE_ODOMETER_DAYS } from "../lib/due";
 import { fmtKm } from "../lib/km";
 import { vehicleSummary } from "../lib/templates";
+import { GaugeIcon, StatusIcon } from "./icons";
 import { Layout } from "./Layout";
 
 export type VehicleDue = {
@@ -36,6 +37,7 @@ function FixLink({ vehicleId, item }: { vehicleId: number; item: ItemDue }) {
   if (item.needs === "reading") {
     return (
       <a class="due-when" href={`/vehicles/${vehicleId}#odometer`}>
+        <StatusIcon status={item.status} />
         {dueText(item)} · add odometer
       </a>
     );
@@ -43,6 +45,7 @@ function FixLink({ vehicleId, item }: { vehicleId: number; item: ItemDue }) {
   const missing = item.lastDate === null && item.lastKm === null ? "" : item.lastKm === null ? " km" : " date";
   return (
     <a class="due-when" href={`/vehicles/${vehicleId}/edit#item-${item.itemId}`}>
+      <StatusIcon status={item.status} />
       Set last done{missing}
     </a>
   );
@@ -52,113 +55,163 @@ function DueRow({ vehicleId, item }: { vehicleId: number; item: ItemDue }) {
   return (
     <li class={`due s-${item.status}`}>
       <span class="due-name">{item.name}</span>
-      {item.needs ? <FixLink vehicleId={vehicleId} item={item} /> : <span class="due-when">{dueText(item)}</span>}
+      {item.needs ? (
+        <FixLink vehicleId={vehicleId} item={item} />
+      ) : (
+        <span class="due-when">
+          <StatusIcon status={item.status} />
+          {dueText(item)}
+        </span>
+      )}
     </li>
   );
 }
 
-const EXPIRY_CLASS: Record<ExpiryStatus["status"], string> = { overdue: "overdue", soon: "soon", ok: "ok", unset: "unknown" };
+const EXPIRY_STATUS: Record<ExpiryStatus["status"], "overdue" | "soon" | "ok" | "unknown"> = {
+  overdue: "overdue",
+  soon: "soon",
+  ok: "ok",
+  unset: "unknown",
+};
 
-function expiryText(label: string, e: ExpiryStatus): string {
+function expiryText(e: ExpiryStatus): string {
   switch (e.status) {
     case "unset":
-      return `${label} not set`;
+      return "Not set";
     case "overdue":
-      return `${label} expired ${fmtDate(e.date)}`;
+      return `Expired ${fmtDate(e.date)}`;
     case "soon":
-      return `${label} in ${days(e.daysLeft)}`;
+      return `in ${days(e.daysLeft)}`;
     case "ok":
-      return `${label} ${fmtDate(e.date)}`;
+      return fmtDate(e.date);
   }
 }
 
-function ExpiryChip({ label, expiry, extra }: { label: string; expiry: ExpiryStatus; extra?: string }) {
-  const text = expiryText(label, expiry);
-  return <span class={`chip s-${EXPIRY_CLASS[expiry.status]}`}>{extra && expiry.date ? `${text} · ${extra}` : text}</span>;
+/** Road tax or insurance as a schedule row; an unset date links to where it's entered. */
+function RenewalRow({ vehicleId, label, expiry }: { vehicleId: number; label: string; expiry: ExpiryStatus }) {
+  const status = EXPIRY_STATUS[expiry.status];
+  const when = (
+    <>
+      <StatusIcon status={status} />
+      {expiryText(expiry)}
+    </>
+  );
+  return (
+    <li class={`renewal s-${status}`}>
+      <span class="due-name">{label}</span>
+      {expiry.status === "unset" ? (
+        <a class="due-when" href={`/vehicles/${vehicleId}/edit`}>
+          {when}
+        </a>
+      ) : (
+        <span class="due-when">{when}</span>
+      )}
+    </li>
+  );
 }
 
 const ODOMETER_PROMPT: Record<OdometerState, string | null> = {
   none: "Add an odometer reading to track km",
-  stale: `Update odometer: last reading over ${STALE_ODOMETER_DAYS} days ago`,
+  stale: `Update odometer · last reading ${STALE_ODOMETER_DAYS}+ days ago`,
   fresh: null,
 };
 
-function VehicleCard({ due }: { due: VehicleDue }) {
+/**
+ * A vehicle's ruled schedule: items most urgent first (optionally only the top few), then road tax and
+ * insurance, then an odometer prompt when the km estimate needs a fresh reading.
+ */
+export function ScheduleList({ due, limit }: { due: VehicleDue; limit?: number }) {
   const v = due.vehicle;
-  const subtitle = vehicleSummary(v);
-  const more = due.items.length - TOP_ITEMS;
+  const shown = limit === undefined ? due.items : due.items.slice(0, limit);
+  const more = due.items.length - shown.length;
+  const prompt = ODOMETER_PROMPT[due.odometer];
   return (
-    <article class="card">
-      <a class="card-head" href={`/vehicles/${v.id}`}>
-        <h2>{v.name}</h2>
-        {v.plate && <span class="plate">{v.plate}</span>}
-      </a>
-      <p class="muted">
-        {subtitle}
-        {due.estKm !== null && <span class="est-km"> · ~{fmtKm(due.estKm)}</span>}
-      </p>
-      {ODOMETER_PROMPT[due.odometer] && (
-        <a class="prompt" href={`/vehicles/${v.id}#odometer`}>
-          {ODOMETER_PROMPT[due.odometer]}
-        </a>
-      )}
+    <>
       <ul class="due-list">
-        {due.items.slice(0, TOP_ITEMS).map((item) => (
+        {shown.map((item) => (
           <DueRow vehicleId={v.id} item={item} />
         ))}
       </ul>
       {more > 0 && (
-        <a class="more" href={`/vehicles/${v.id}/edit`}>
+        <a class="more" href={`/vehicles/${v.id}#schedule`}>
           {more} more on the schedule
         </a>
       )}
-      <div class="chips">
-        <ExpiryChip label="Road tax" expiry={due.roadtax} />
-        <ExpiryChip label="Insurance" expiry={due.insurance} extra={v.insurer || undefined} />
-      </div>
-    </article>
+      <ul class="due-list renewals">
+        <RenewalRow vehicleId={v.id} label="Road tax" expiry={due.roadtax} />
+        <RenewalRow vehicleId={v.id} label={v.insurer ? `Insurance · ${v.insurer}` : "Insurance"} expiry={due.insurance} />
+      </ul>
+      {prompt && (
+        <a class="prompt" href={`/vehicles/${v.id}#odometer`}>
+          <GaugeIcon />
+          {prompt}
+        </a>
+      )}
+    </>
   );
 }
 
-function ArchivedLink({ count }: { count: number }) {
-  if (count === 0) return null;
+/** A vehicle's navy booklet cover: name, plate and what it is. Links to its history. */
+export function Cover({ vehicle, estKm, href }: { vehicle: Vehicle; estKm?: number | null; href?: string }) {
+  const body = (
+    <>
+      <span class="cover-text">
+        <span class="cover-name">{vehicle.name}</span>
+        <span class="cover-sub">
+          {vehicleSummary(vehicle)}
+          {estKm != null && <span class="est-km"> · ~{fmtKm(estKm)}</span>}
+        </span>
+      </span>
+      {vehicle.plate && <span class="plate">{vehicle.plate}</span>}
+    </>
+  );
+  return href ? (
+    <a class="cover" href={href}>
+      {body}
+    </a>
+  ) : (
+    <div class="cover">{body}</div>
+  );
+}
+
+function VehicleCard({ due }: { due: VehicleDue }) {
+  const v = due.vehicle;
   return (
-    <p class="archived-link">
-      <a href="/vehicles/archived">Archived vehicles ({count})</a>
-    </p>
+    <article class="book" aria-label={v.name}>
+      <h2 class="visually-hidden">{v.name}</h2>
+      <Cover vehicle={v} estKm={due.estKm} href={`/vehicles/${v.id}`} />
+      <div class="book-page">
+        <ScheduleList due={due} limit={TOP_ITEMS} />
+      </div>
+    </article>
   );
 }
 
 export function Dashboard({ vehicles, archivedCount }: { vehicles: VehicleDue[]; archivedCount: number }) {
   if (vehicles.length === 0) {
     return (
-      <Layout title="Dashboard" signedIn>
+      <Layout title="Dashboard" signedIn tab="home">
         <section class="empty">
           <h1>No vehicles yet</h1>
           <p>Add a car or motorbike to start tracking its services, road tax and insurance.</p>
           <a class="button" href="/vehicles/new">
             Add your first vehicle
           </a>
+          {archivedCount > 0 && (
+            <p class="archived-link">
+              <a href="/vehicles/archived">Archived vehicles ({archivedCount})</a>
+            </p>
+          )}
         </section>
-        <ArchivedLink count={archivedCount} />
       </Layout>
     );
   }
   return (
-    <Layout title="Dashboard" signedIn>
-      <div class="page-head">
-        <h1>Your vehicles</h1>
-        <a class="button small" href="/vehicles/new">
-          Add vehicle
-        </a>
-      </div>
+    <Layout title="Dashboard" signedIn tab="home">
+      <h1 class="visually-hidden">Your vehicles</h1>
       {vehicles.map((due) => (
         <VehicleCard due={due} />
       ))}
-      <ArchivedLink count={archivedCount} />
-      <a class="button scan-fab" href="/scan">
-        Scan receipt
-      </a>
     </Layout>
   );
 }

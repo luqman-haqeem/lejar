@@ -4,12 +4,15 @@ import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
 import { fmtRM } from "../lib/money";
 import { ErrorSummary, Field } from "./fields";
+import { Cover, ScheduleList, type VehicleDue } from "./Dashboard";
+import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
 export type ReadingValues = { date: string; km: string };
 
 export function VehicleHistory({
   vehicle,
+  due,
   services,
   totals,
   manualReadings,
@@ -17,6 +20,8 @@ export function VehicleHistory({
   errors = {},
 }: {
   vehicle: Vehicle;
+  /** What's due on this vehicle, for its full schedule. */
+  due: VehicleDue;
   services: Service[];
   totals: YearTotal[];
   /** Newest first. */
@@ -26,44 +31,57 @@ export function VehicleHistory({
 }) {
   return (
     <Layout title={vehicle.name} signedIn>
-      <div class="page-head">
-        <h1>{vehicle.name}</h1>
-        {vehicle.plate && <span class="plate">{vehicle.plate}</span>}
-      </div>
-      <div class="actions">
-        <a class="button" href={`/services/new?vehicle=${vehicle.id}`}>
-          Log a service
+      <p class="crumb">
+        <a href="/">
+          <BackIcon />
+          Home
         </a>
-        <a class="secondary" href={`/scan?vehicle=${vehicle.id}`}>
+      </p>
+      <h1 class="visually-hidden">{vehicle.name}</h1>
+      <Cover vehicle={vehicle} estKm={due.estKm} />
+      <div class="actions">
+        <a class="button" href={`/scan?vehicle=${vehicle.id}`}>
           Scan receipt
         </a>
-        <a class="secondary" href={`/vehicles/${vehicle.id}/print`}>
-          Print / PDF
-        </a>
-        <a class="secondary" href={`/vehicles/${vehicle.id}/edit`}>
-          Details &amp; schedule
+        <a class="secondary" href={`/services/new?vehicle=${vehicle.id}`}>
+          Log by hand
         </a>
       </div>
+      <div class="actions quiet-actions">
+        <a class="text-link" href={`/vehicles/${vehicle.id}/edit`}>
+          Edit details &amp; schedule
+        </a>
+        <a class="text-link" href={`/vehicles/${vehicle.id}/print`}>
+          Print / PDF
+        </a>
+      </div>
+
+      <section id="schedule" class="schedule-section">
+        <h2>Schedule</h2>
+        <div class="book-page ruled">
+          <ScheduleList due={due} />
+        </div>
+      </section>
 
       <section>
         <h2>History</h2>
         {services.length === 0 ? (
           <p>No services logged yet. Old paper records can be backdated.</p>
         ) : (
-          <ul class="history">
+          <ol class="stamps">
             {services.map((s) => (
               <li>
-                <a href={`/services/${s.id}`}>
-                  <span class="when">{fmtDate(s.date)}</span>
-                  <span class="what">
-                    {s.workshop || "Service"}
-                    <span class="muted"> · {fmtKm(s.odometer_km)}</span>
+                <a class="stamp" href={`/services/${s.id}`}>
+                  <span class="stamp-date">{fmtDate(s.date)}</span>
+                  <span class="stamp-shop">{s.workshop || "Service"}</span>
+                  <span class="stamp-figures">
+                    <span>{fmtKm(s.odometer_km)}</span>
+                    <span>{fmtRM(s.total_sen)}</span>
                   </span>
-                  <span class="cost">{fmtRM(s.total_sen)}</span>
                 </a>
               </li>
             ))}
-          </ul>
+          </ol>
         )}
       </section>
 

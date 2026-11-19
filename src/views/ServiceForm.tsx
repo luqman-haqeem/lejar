@@ -1,8 +1,10 @@
 import type { ServiceItem, Vehicle } from "../db";
 import type { FormErrors } from "../form";
 import type { LineValues, ServiceFormValues } from "../service-form";
-import { ErrorSummary, Field, errorId, FieldError, fieldId, RepeatableRows } from "./fields";
+import { PhotoCapture } from "./capture";
+import { ErrorSummary, Field, FieldError, fieldId, RepeatableRows } from "./fields";
 import { receiptUrl } from "../receipts";
+import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
 const blankLine: LineValues = { description: "", cost: "", item: "" };
@@ -62,19 +64,11 @@ function ReceiptPhoto({ receiptKey, errors }: { receiptKey: string | null; error
           </label>
         </>
       )}
-      <label class={"photo" in errors ? "field invalid" : "field"}>
-        <span>{receiptKey ? "Replace photo" : "Attach a photo"}</span>
-        <input
-          type="file"
-          name="photo"
-          id={fieldId("photo")}
-          accept="image/*"
-          data-compress
-          aria-invalid={"photo" in errors ? "true" : undefined}
-          aria-describedby={"photo" in errors ? errorId("photo") : undefined}
-        />
-        <FieldError name="photo" errors={errors} />
-      </label>
+      <PhotoCapture
+        title={receiptKey ? "Replace photo" : "Add a receipt photo"}
+        note={receiptKey ? "Take or choose a new one" : "Optional · take or choose one"}
+        errors={errors}
+      />
     </fieldset>
   );
 }
@@ -111,7 +105,10 @@ export function ServiceForm({
   return (
     <Layout title={isNew ? "Log a service" : "Edit service"} signedIn>
       <p class="crumb">
-        <a href={`/vehicles/${vehicle.id}`}>← {vehicle.name}</a>
+        <a href={`/vehicles/${vehicle.id}`}>
+          <BackIcon />
+          {vehicle.name}
+        </a>
       </p>
       <h1>{isNew ? "Log a service" : "Edit service"}</h1>
       {saved && (

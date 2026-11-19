@@ -9,3 +9,9 @@ export async function upsertUser(db: D1Database, googleSub: string, email: strin
     .first<{ id: number }>();
   return row!.id;
 }
+
+/** The email a user signed in with, for showing on their profile. */
+export async function getUserEmail(db: D1Database, userId: number): Promise<string | null> {
+  const row = await db.prepare("SELECT email FROM users WHERE id = ?").bind(userId).first<{ email: string }>();
+  return row?.email ?? null;
+}

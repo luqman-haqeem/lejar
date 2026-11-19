@@ -1,0 +1,790 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-19T00:00:00Z",
+  "title": "Design System: Kereta",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Glovebox Cream",
+        "canonical": "#f4efe2",
+        "tonalRamp": [
+          "#312b1c",
+          "#55492b",
+          "#7f6b39",
+          "#ac8f44",
+          "#c0a768",
+          "#cdbe98",
+          "#e0d9c7",
+          "#f5f4ef"
+        ]
+      },
+      "page": {
+        "role": "neutral",
+        "displayName": "Booklet Page",
+        "canonical": "#fbf8f0",
+        "tonalRamp": [
+          "#342c19",
+          "#5b4c25",
+          "#89702f",
+          "#bb9635",
+          "#ccae5b",
+          "#d5c290",
+          "#e4dbc4",
+          "#f6f4ef"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Ruled Hairline",
+        "canonical": "#d8cfbb",
+        "tonalRamp": [
+          "#2d2920",
+          "#4c4533",
+          "#716447",
+          "#978458",
+          "#ae9e79",
+          "#c3b9a2",
+          "#dbd6cc",
+          "#f4f3f1"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1f2328",
+        "tonalRamp": [
+          "#232629",
+          "#3a3f46",
+          "#525b66",
+          "#697687",
+          "#8893a0",
+          "#abb2ba",
+          "#d0d3d7",
+          "#f1f2f3"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Faded Ink",
+        "canonical": "#5f5a4f",
+        "tonalRamp": [
+          "#282724",
+          "#44413c",
+          "#635e55",
+          "#837c6d",
+          "#9d978b",
+          "#b8b5ad",
+          "#d6d5d1",
+          "#f3f2f2"
+        ]
+      },
+      "field-line": {
+        "role": "neutral",
+        "displayName": "Field Line",
+        "canonical": "#8a8270",
+        "tonalRamp": [
+          "#292724",
+          "#45423b",
+          "#645f54",
+          "#847c6c",
+          "#9e988a",
+          "#b9b5ac",
+          "#d7d5d1",
+          "#f3f3f2"
+        ]
+      },
+      "navy": {
+        "role": "secondary",
+        "displayName": "Booklet-Cover Navy",
+        "canonical": "#24305e",
+        "tonalRamp": [
+          "#1c2031",
+          "#2b3454",
+          "#39477e",
+          "#445aac",
+          "#687abf",
+          "#98a3cd",
+          "#c7cce0",
+          "#eff1f5"
+        ]
+      },
+      "navy-ink": {
+        "role": "secondary",
+        "displayName": "Cover White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#5c5c5c",
+          "#787878",
+          "#949494",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "navy-muted": {
+        "role": "secondary",
+        "displayName": "Cover Silver",
+        "canonical": "#c3c9e4",
+        "tonalRamp": [
+          "#1d212f",
+          "#2e3551",
+          "#3e4979",
+          "#4c5ca4",
+          "#6f7cb9",
+          "#9ca4c9",
+          "#c9cdde",
+          "#f0f1f5"
+        ]
+      },
+      "violet": {
+        "role": "primary",
+        "displayName": "Rubber-Stamp Violet",
+        "canonical": "#6b3fa0",
+        "tonalRamp": [
+          "#251c30",
+          "#3e2c54",
+          "#593a7e",
+          "#7345aa",
+          "#9069be",
+          "#b099cc",
+          "#d3c8e0",
+          "#f2eff5"
+        ]
+      },
+      "violet-ink": {
+        "role": "primary",
+        "displayName": "On-Violet White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#5c5c5c",
+          "#787878",
+          "#949494",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "violet-text": {
+        "role": "primary",
+        "displayName": "Stamp Ink Violet",
+        "canonical": "#5d3590",
+        "tonalRamp": [
+          "#251b31",
+          "#3d2a55",
+          "#573880",
+          "#7142ad",
+          "#8e67c1",
+          "#af97ce",
+          "#d2c7e0",
+          "#f2eff5"
+        ]
+      },
+      "violet-tint": {
+        "role": "primary",
+        "displayName": "Stamp Wash",
+        "canonical": "#efe8f6",
+        "tonalRamp": [
+          "#261c31",
+          "#402c54",
+          "#5c3a7e",
+          "#7845ab",
+          "#9469bf",
+          "#b298cd",
+          "#d4c8e0",
+          "#f2eff5"
+        ]
+      },
+      "overdue": {
+        "role": "tertiary",
+        "displayName": "Overdue Red",
+        "canonical": "#a8231c",
+        "tonalRamp": [
+          "#371715",
+          "#61221f",
+          "#932a24",
+          "#cb2d25",
+          "#da554e",
+          "#dd8c88",
+          "#e7c2c0",
+          "#f7eeee"
+        ]
+      },
+      "overdue-bg": {
+        "role": "tertiary",
+        "displayName": "Overdue Wash",
+        "canonical": "#f7e1dc",
+        "tonalRamp": [
+          "#351d17",
+          "#5d2d23",
+          "#8d3d2b",
+          "#c14a2f",
+          "#d16d57",
+          "#d89b8d",
+          "#e5c9c2",
+          "#f6f0ee"
+        ]
+      },
+      "soon": {
+        "role": "tertiary",
+        "displayName": "Due-Soon Amber-Brown",
+        "canonical": "#7f4c00",
+        "tonalRamp": [
+          "#3e2b0f",
+          "#6e4912",
+          "#a96b0e",
+          "#ec8f04",
+          "#f6a732",
+          "#eebe77",
+          "#efd9b8",
+          "#f9f4ec"
+        ]
+      },
+      "soon-bg": {
+        "role": "tertiary",
+        "displayName": "Due-Soon Wash",
+        "canonical": "#f6e8c8",
+        "tonalRamp": [
+          "#372d15",
+          "#614d1f",
+          "#947224",
+          "#cb9825",
+          "#daaf4e",
+          "#ddc388",
+          "#e7dbc0",
+          "#f7f4ee"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Error Red",
+        "canonical": "#a8231c",
+        "tonalRamp": [
+          "#371715",
+          "#61221f",
+          "#932a24",
+          "#cb2d25",
+          "#da554e",
+          "#dd8c88",
+          "#e7c2c0",
+          "#f7eeee"
+        ]
+      },
+      "plate-black": {
+        "role": "neutral",
+        "displayName": "Plate Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#5c5c5c",
+          "#787878",
+          "#949494",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "plate-white": {
+        "role": "neutral",
+        "displayName": "Plate White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#5c5c5c",
+          "#787878",
+          "#949494",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "paper-dark": {
+        "role": "neutral",
+        "displayName": "Glovebox Cream (dark)",
+        "canonical": "#11141c",
+        "tonalRamp": [
+          "#20242c",
+          "#343b4b",
+          "#49536f",
+          "#5c6b94",
+          "#7c89ac",
+          "#a4acc1",
+          "#cdd1da",
+          "#f1f2f4"
+        ],
+        "theme": "dark"
+      },
+      "page-dark": {
+        "role": "neutral",
+        "displayName": "Booklet Page (dark)",
+        "canonical": "#191d28",
+        "tonalRamp": [
+          "#21242c",
+          "#353b4a",
+          "#4a536e",
+          "#5d6b93",
+          "#7d89aa",
+          "#a5acc0",
+          "#cdd1da",
+          "#f1f2f4"
+        ],
+        "theme": "dark"
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Ruled Hairline (dark)",
+        "canonical": "#303748",
+        "tonalRamp": [
+          "#22242b",
+          "#373c49",
+          "#4c556b",
+          "#616e8f",
+          "#808ca7",
+          "#a7aebe",
+          "#ced1d9",
+          "#f1f2f4"
+        ],
+        "theme": "dark"
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Ink (dark)",
+        "canonical": "#ece6d8",
+        "tonalRamp": [
+          "#2e291e",
+          "#504630",
+          "#776741",
+          "#a08850",
+          "#b6a172",
+          "#c7bb9e",
+          "#ddd7ca",
+          "#f4f3f0"
+        ],
+        "theme": "dark"
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Faded Ink (dark)",
+        "canonical": "#aaa392",
+        "tonalRamp": [
+          "#292723",
+          "#45423a",
+          "#656052",
+          "#867e6a",
+          "#a09988",
+          "#bab6ab",
+          "#d7d5d0",
+          "#f3f3f1"
+        ],
+        "theme": "dark"
+      },
+      "field-line-dark": {
+        "role": "neutral",
+        "displayName": "Field Line (dark)",
+        "canonical": "#6f7890",
+        "tonalRamp": [
+          "#232529",
+          "#3a3d46",
+          "#525766",
+          "#697187",
+          "#878ea1",
+          "#abafba",
+          "#d0d2d7",
+          "#f1f2f3"
+        ],
+        "theme": "dark"
+      },
+      "navy-dark": {
+        "role": "secondary",
+        "displayName": "Booklet-Cover Navy (dark)",
+        "canonical": "#1d2650",
+        "tonalRamp": [
+          "#1b1f31",
+          "#2a3255",
+          "#374480",
+          "#4255ae",
+          "#6676c2",
+          "#97a0ce",
+          "#c7cbe1",
+          "#eff0f5"
+        ],
+        "theme": "dark"
+      },
+      "navy-muted-dark": {
+        "role": "secondary",
+        "displayName": "Cover Silver (dark)",
+        "canonical": "#aeb6da",
+        "tonalRamp": [
+          "#1d212f",
+          "#2f3551",
+          "#3f4979",
+          "#4d5ca3",
+          "#6f7db8",
+          "#9ca4c9",
+          "#c9cdde",
+          "#f0f1f5"
+        ],
+        "theme": "dark"
+      },
+      "violet-dark": {
+        "role": "primary",
+        "displayName": "Rubber-Stamp Violet (dark)",
+        "canonical": "#7f52bd",
+        "tonalRamp": [
+          "#251c31",
+          "#3c2b54",
+          "#56397f",
+          "#7044ac",
+          "#8d68c0",
+          "#ae98cd",
+          "#d2c7e0",
+          "#f2eff5"
+        ],
+        "theme": "dark"
+      },
+      "violet-text-dark": {
+        "role": "primary",
+        "displayName": "Stamp Ink Violet (dark)",
+        "canonical": "#c7a8ee",
+        "tonalRamp": [
+          "#241636",
+          "#3c215f",
+          "#562890",
+          "#6f2ac6",
+          "#8c52d6",
+          "#ae8adb",
+          "#d2c1e6",
+          "#f2eef7"
+        ],
+        "theme": "dark"
+      },
+      "violet-tint-dark": {
+        "role": "primary",
+        "displayName": "Stamp Wash (dark)",
+        "canonical": "#2a2140",
+        "tonalRamp": [
+          "#231f2e",
+          "#3a314f",
+          "#514375",
+          "#68539d",
+          "#8775b3",
+          "#ab9fc6",
+          "#d0cbdc",
+          "#f1f0f4"
+        ],
+        "theme": "dark"
+      },
+      "overdue-dark": {
+        "role": "tertiary",
+        "displayName": "Overdue Red (dark)",
+        "canonical": "#ff8f84",
+        "tonalRamp": [
+          "#3e130f",
+          "#6e1a12",
+          "#a91c0e",
+          "#ec1904",
+          "#f64432",
+          "#ee8277",
+          "#efbdb8",
+          "#f9edec"
+        ],
+        "theme": "dark"
+      },
+      "overdue-bg-dark": {
+        "role": "tertiary",
+        "displayName": "Overdue Wash (dark)",
+        "canonical": "#3a1c1b",
+        "tonalRamp": [
+          "#2f1e1e",
+          "#51302f",
+          "#78413f",
+          "#a2504e",
+          "#b87370",
+          "#c89e9d",
+          "#decaca",
+          "#f5f0f0"
+        ],
+        "theme": "dark"
+      },
+      "soon-dark": {
+        "role": "tertiary",
+        "displayName": "Due-Soon Amber-Brown (dark)",
+        "canonical": "#f0b660",
+        "tonalRamp": [
+          "#3a2a13",
+          "#664719",
+          "#9c681c",
+          "#d88a18",
+          "#e5a443",
+          "#e4bc81",
+          "#ebd8bd",
+          "#f8f3ed"
+        ],
+        "theme": "dark"
+      },
+      "soon-bg-dark": {
+        "role": "tertiary",
+        "displayName": "Due-Soon Wash (dark)",
+        "canonical": "#362a14",
+        "tonalRamp": [
+          "#31291b",
+          "#55462b",
+          "#7f6638",
+          "#ad8843",
+          "#c1a167",
+          "#cebb97",
+          "#e0d7c7",
+          "#f5f3ef"
+        ],
+        "theme": "dark"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Sign-in title only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles; visually hidden where a cover names the page."
+      },
+      "cover-name": {
+        "displayName": "Cover Name",
+        "purpose": "Vehicle name on its navy cover."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section heads and form legends."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text and inputs."
+      },
+      "body-strong": {
+        "displayName": "Body Strong",
+        "purpose": "Row names, links, buttons step to 600-700."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels and segmented legends, faded ink."
+      },
+      "tab-label": {
+        "displayName": "Tab Label",
+        "purpose": "Tab bar captions."
+      },
+      "plate": {
+        "displayName": "Plate",
+        "purpose": "Number-plate badge."
+      },
+      "stamp-date": {
+        "displayName": "Stamp Date",
+        "purpose": "Date line of a visit stamp; Courier Prime uppercase."
+      },
+      "stamp-body": {
+        "displayName": "Stamp Body",
+        "purpose": "Workshop, km and RM inside a stamp."
+      }
+    },
+    "shadows": [
+      {
+        "name": "scan-disc",
+        "value": "0 0.35rem 0.8rem rgba(10, 14, 35, 0.35)",
+        "purpose": "The raised violet Scan disc in the tab bar; the only drop shadow."
+      },
+      {
+        "name": "plate-rim",
+        "value": "inset 0 0 0 1px rgba(255, 255, 255, 0.28)",
+        "purpose": "Faint inner rim separating the black plate from the navy cover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": "120ms ease-out",
+        "purpose": "Button, segment and filter state changes."
+      },
+      {
+        "name": "stamp",
+        "value": "150ms ease-out",
+        "purpose": "Stamp straightening and wash on press."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "transition: none; stamps untilted",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-edge",
+        "value": "30rem",
+        "purpose": "Below it, booklets run edge to edge and form submits span the column."
+      },
+      {
+        "name": "column",
+        "value": "36rem",
+        "purpose": "Content column max width; the tab bar's tabs are held to it on wide screens."
+      }
+    ],
+    "preferences": {
+      "textSize": {
+        "attribute": "html[data-text-size]",
+        "values": {
+          "default": "100%",
+          "large": "112.5%",
+          "larger": "125%"
+        },
+        "storage": "localStorage kereta-text-size"
+      },
+      "theme": {
+        "attribute": "html[data-theme]",
+        "values": [
+          "system",
+          "light",
+          "dark"
+        ],
+        "fallback": "prefers-color-scheme when system or unset",
+        "storage": "localStorage kereta-theme"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Violet fill for the one main action on a page (Scan receipt, Add vehicle, Save).",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Scan receipt</a>",
+      "css": ".ds-btn-primary { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; display: inline-flex; align-items: center; justify-content: center; min-height: 2.875rem; padding: 0.6rem 1.15rem; border-radius: var(--radius, 0.25rem); background: var(--violet, #6b3fa0); color: var(--violet-ink, #fff); font-size: 1rem; font-weight: 700; text-decoration: none; border: 0; transition: filter 120ms ease-out; } .ds-btn-primary:hover { filter: brightness(1.08); } .ds-btn-primary:active { filter: brightness(0.88); } .ds-btn-primary:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Page-coloured button with a 1.5px ink border for the companion action (Log by hand, Save reading).",
+      "html": "<a class=\"ds-btn-secondary\" href=\"#\">Log by hand</a>",
+      "css": ".ds-btn-secondary { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; display: inline-flex; align-items: center; justify-content: center; min-height: 2.875rem; padding: 0.6rem 1.15rem; border-radius: var(--radius, 0.25rem); background: var(--page, #fbf8f0); color: var(--ink, #1f2328); border: 1.5px solid var(--ink, #1f2328); font-size: 1rem; font-weight: 700; text-decoration: none; transition: background-color 120ms ease-out; } .ds-btn-secondary:hover { background: var(--violet-tint, #efe8f6); } .ds-btn-secondary:active { background: var(--rule, #d8cfbb); } .ds-btn-secondary:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Vehicle Cover with Plate",
+      "kind": "card",
+      "refersTo": "cover",
+      "description": "The navy booklet cover that opens every vehicle: name, subline in tabular figures, black number plate.",
+      "html": "<a class=\"ds-cover\" href=\"#\"><span class=\"ds-cover-text\"><span class=\"ds-cover-name\">Myvi</span><span class=\"ds-cover-sub\">Car · Perodua Myvi 2019 · ~68,824 km</span></span><span class=\"ds-plate\">WXY 1234</span></a>",
+      "css": ".ds-cover { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 1rem 1rem 1.05rem; border-radius: var(--radius, 0.25rem); background: var(--navy, #24305e); color: var(--navy-ink, #fff); text-decoration: none; } .ds-cover:active { filter: brightness(1.15); } .ds-cover:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 2px; } .ds-cover-text { display: flex; flex-direction: column; min-width: 0; } .ds-cover-name { font-size: 1.5rem; font-weight: 700; line-height: 1.1; } .ds-cover-sub { margin-top: 0.2rem; font-size: 0.9rem; font-weight: 500; color: var(--navy-muted, #c3c9e4); font-variant-numeric: tabular-nums; } .ds-plate { flex: none; padding: 0.3rem 0.55rem 0.25rem; border-radius: 0.2rem; background: #000; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.06em; white-space: nowrap; }"
+    },
+    {
+      "name": "Ruled Schedule",
+      "kind": "custom",
+      "refersTo": "schedule-row",
+      "description": "Ruled page of schedule rows under a 2px ink head rule; flagged statuses carry colour, icon and words.",
+      "html": "<ul class=\"ds-due-list\"><li class=\"ds-due ds-overdue\"><span class=\"ds-due-name\">Engine oil</span><span class=\"ds-due-when\"><svg class=\"ds-si\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m9 9 6 6M15 9l-6 6\"/></svg>312 km overdue</span></li><li class=\"ds-due ds-soon\"><span class=\"ds-due-name\">Road tax</span><span class=\"ds-due-when\"><svg class=\"ds-si\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/></svg>in 13 days</span></li><li class=\"ds-due\"><span class=\"ds-due-name\">Air filter</span><span class=\"ds-due-when\">in 9,176 km · in 74 days</span></li></ul>",
+      "css": ".ds-due-list { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; list-style: none; margin: 0; padding: 0; background: var(--page, #fbf8f0); border: 1px solid var(--rule, #d8cfbb); border-top: 2px solid var(--ink, #1f2328); color: var(--ink, #1f2328); } .ds-due { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; min-height: 2.875rem; padding: 0.55rem 1rem; border-bottom: 1px solid var(--rule, #d8cfbb); } .ds-due:last-child { border-bottom: 0; } .ds-due-name { font-weight: 600; } .ds-due-when { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.95rem; font-weight: 500; color: var(--muted, #5f5a4f); font-variant-numeric: tabular-nums; } .ds-si { width: 1.05rem; height: 1.05rem; flex: none; } .ds-overdue { background: var(--overdue-bg, #f7e1dc); } .ds-overdue .ds-due-name, .ds-overdue .ds-due-when { color: var(--overdue, #a8231c); font-weight: 700; } .ds-soon .ds-due-name, .ds-soon .ds-due-when { color: var(--soon, #7f4c00); } .ds-soon .ds-due-when { font-weight: 700; }"
+    },
+    {
+      "name": "Visit Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "A logged visit as a tilted, double-ruled violet rubber stamp in Courier Prime uppercase.",
+      "html": "<a class=\"ds-stamp\" href=\"#\"><span class=\"ds-stamp-date\">14/06/2026</span><span class=\"ds-stamp-shop\">Bengkel Ah Seng, Cheras</span><span class=\"ds-stamp-fig\">62,150 km<br>RM 285.00</span></a>",
+      "css": ".ds-stamp { display: flex; flex-direction: column; gap: 0.15rem; width: 10rem; padding: 0.65rem 0.7rem 0.7rem; border: 2px solid var(--violet-text, #5d3590); border-radius: 0.55rem; outline: 1px solid var(--violet-text, #5d3590); outline-offset: -6px; color: var(--violet-text, #5d3590); background: var(--page, #fbf8f0); text-decoration: none; font-family: \"Courier Prime\", ui-monospace, Menlo, monospace; font-weight: 700; text-transform: uppercase; font-variant-numeric: tabular-nums; line-height: 1.25; transform: rotate(-1.6deg); transition: transform 150ms ease-out, background-color 150ms ease-out; } .ds-stamp:active { transform: none; background: var(--violet-tint, #efe8f6); } .ds-stamp:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 2px; } .ds-stamp-date { font-size: 1rem; padding-bottom: 0.2rem; margin-bottom: 0.15rem; border-bottom: 1px solid var(--violet-text, #5d3590); } .ds-stamp-shop, .ds-stamp-fig { font-size: 0.85rem; } @media (prefers-reduced-motion: reduce) { .ds-stamp { transform: none; transition: none; } }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Labelled input on the page colour with a 1.5px field-line border; violet on focus, red when invalid.",
+      "html": "<label class=\"ds-field\"><span>Odometer (km)</span><input inputmode=\"numeric\" placeholder=\"e.g. 68,900\"></label>",
+      "css": ".ds-field { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; display: block; } .ds-field > span { display: block; font-size: 0.9rem; font-weight: 600; color: var(--muted, #5f5a4f); margin-bottom: 0.3rem; } .ds-field input { width: 100%; box-sizing: border-box; min-height: 2.875rem; padding: 0.6rem 0.7rem; border: 1.5px solid var(--field-line, #8a8270); border-radius: var(--radius, 0.25rem); font: inherit; font-size: 1rem; font-weight: 500; background: var(--page, #fbf8f0); color: var(--ink, #1f2328); caret-color: var(--violet, #6b3fa0); } .ds-field input::placeholder { color: var(--muted, #5f5a4f); opacity: 1; } .ds-field input:focus-visible { outline: 3px solid var(--violet, #6b3fa0); outline-offset: 0; border-color: var(--violet, #6b3fa0); }"
+    },
+    {
+      "name": "Tab Bar",
+      "kind": "nav",
+      "refersTo": "tabbar",
+      "description": "Fixed navy bar: Home, raised violet Scan disc, Profile; current tab in white.",
+      "html": "<nav class=\"ds-tabbar\" aria-label=\"Main\"><a href=\"#\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 10.5 12 3l9 7.5\"/><path d=\"M5 9v11h5v-6h4v6h5V9\"/></svg><span>Home</span></a><a href=\"#\" class=\"ds-tab-scan\"><span class=\"ds-scan-disc\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 7V4h3M18 4h3v3M21 17v3h-3M6 20H3v-3\"/><path d=\"M8 7h8v10l-2-1-2 1-2-1-2 1z\"/><path d=\"M10 10h4M10 13h3\"/></svg></span><span>Scan receipt</span></a><a href=\"#\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6\"/></svg><span>Profile</span></a></nav>",
+      "css": ".ds-tabbar { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; display: grid; grid-template-columns: repeat(3, 1fr); height: 4.25rem; margin-top: 2rem; background: var(--navy, #24305e); color: var(--navy-muted, #c3c9e4); } .ds-tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.2rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.01em; color: inherit; text-decoration: none; } .ds-tabbar a[aria-current=page] { color: var(--navy-ink, #fff); } .ds-tabbar a:active { opacity: 0.7; } .ds-tabbar a:focus-visible { outline: 3px solid var(--navy-ink, #fff); outline-offset: -4px; } .ds-tabbar svg { width: 1.25rem; height: 1.25rem; } .ds-tab-scan { justify-content: flex-end !important; padding-bottom: 0.55rem; color: var(--navy-ink, #fff) !important; } .ds-scan-disc { display: grid; place-items: center; width: 3.5rem; height: 3.5rem; margin-top: -1.6rem; border-radius: 50%; background: var(--violet, #6b3fa0); color: var(--violet-ink, #fff); border: 0.3rem solid var(--navy, #24305e); box-shadow: 0 0.35rem 0.8rem rgba(10, 14, 35, 0.35); box-sizing: border-box; } .ds-scan-disc svg { width: 1.6rem; height: 1.6rem; } .ds-tab-scan:active .ds-scan-disc { filter: brightness(0.88); }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segment-selected",
+      "description": "Ink-framed equal segments for Appearance choices; the selected one fills navy.",
+      "html": "<fieldset class=\"ds-seg\"><legend>Theme</legend><div class=\"ds-segments\"><label><input type=\"radio\" name=\"ds-theme\" checked><span>Match phone</span></label><label><input type=\"radio\" name=\"ds-theme\"><span>Light</span></label><label><input type=\"radio\" name=\"ds-theme\"><span>Dark</span></label></div></fieldset>",
+      "css": ".ds-seg { font-family: \"Barlow\", system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif; border: 0; padding: 0; margin: 0; min-width: 0; } .ds-seg legend { padding: 0; margin-bottom: 0.4rem; font-weight: 600; color: var(--muted, #5f5a4f); font-size: 0.9rem; } .ds-segments { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1.5px solid var(--ink, #1f2328); border-radius: var(--radius, 0.25rem); overflow: hidden; } .ds-segments label { position: relative; display: flex; } .ds-segments label + label { border-left: 1.5px solid var(--ink, #1f2328); } .ds-segments input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; } .ds-segments span { flex: 1; display: grid; place-items: center; min-height: 2.75rem; padding: 0.3rem 0.4rem; text-align: center; font-weight: 600; background: var(--page, #fbf8f0); color: var(--ink, #1f2328); transition: background-color 120ms ease-out; } .ds-segments input:checked + span { background: var(--navy, #24305e); color: var(--navy-ink, #fff); } .ds-segments input:focus-visible + span { outline: 3px solid var(--violet, #6b3fa0); outline-offset: -3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Stamped Service Book",
+    "overview": "Kereta is the dealer service booklet that lives in the glovebox, rebuilt for a phone held at a workshop counter. Every vehicle opens on a navy booklet cover carrying its name and a black number plate; under it sits a cream, ruled page of schedule rows; every logged visit lands in the history as a slightly crooked rubber stamp in violet ink. The whole interface is paper, ink and one stamp colour. Depth comes from rules and covers, not from floating cards.\n\nDensity is that of a printed form: rows at least 2.875rem tall, hairline rules between them, a 2px ink rule heading each ruled block, and tabular figures wherever a number sits in a column. The type is a single sturdy grotesque (Barlow) set at medium weight, with a typewriter face (Courier Prime) reserved for the stamps alone, so the stamp reads as a different instrument from the page it is pressed onto. The world refuses the category's soft cards with coloured status dots: status is told in words, with an icon, in a colour, on a ruled line.\n\nAt night the booklet keeps its structure. The ground turns navy-black, the page a little lighter, the rules dark slate, and the ink a warm cream; navy covers, black plates and violet stamps all survive the switch.",
+    "keyCharacteristics": [
+      "Navy booklet cover (shell, vehicle covers, tab bar, selected segment) over a cream ruled page.",
+      "Ruled hairlines under a 2px ink head rule for every list, table and schedule.",
+      "Violet is the only accent: stamp ink, the primary action, links, focus, selection.",
+      "Barlow throughout; Courier Prime uppercase only inside stamps.",
+      "Small 4px corners; plates are black badges; stamps are the one softer, tilted shape.",
+      "Everything sized in rem so the Text size preference scales the whole booklet."
+    ],
+    "rules": [
+      {
+        "name": "The One Stamp Rule",
+        "body": "Violet is the only accent. It marks what the user can do (primary action, links, focus) and what they have done (stamps). Nothing decorative is violet.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red-Means-Late Rule",
+        "body": "Red and amber-brown are status colours and nothing else. Errors share the red because they are also \"act now\"; no other surface uses them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Words-Icon-Colour Rule",
+        "body": "A flagged status (overdue, due soon, unknown) is always colour plus an icon plus words: circle-cross for overdue, clock for due soon, pencil for unknown. Colour alone never carries a status. An \"ok\" row is words only, in faded ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Typewriter-Only-In-Stamps Rule",
+        "body": "Courier Prime appears inside a stamp and nowhere else. Every other figure, including dates, odometer readings and money in rows and totals, is Barlow with tabular numerals.",
+        "section": "typography"
+      },
+      {
+        "name": "The Rem Rule",
+        "body": "Every size, padding and target is in rem, so the Text size preference (`html[data-text-size]`: default 100%, `large` 112.5%, `larger` 125%) scales the whole booklet. Px is allowed only for border widths and hairlines.",
+        "section": "typography"
+      },
+      {
+        "name": "The 44 Rule",
+        "body": "Every touch target is at least 2.75rem (44px at 100% text size): text links, crumbs, segments, quiet links and the \"more\" link. Rows, inputs and buttons are 2.875rem; profile rows 3.25rem.",
+        "section": "layout"
+      },
+      {
+        "name": "The Ruled-Not-Raised Rule",
+        "body": "Lists, tables, schedules, totals, facts and profile rows are ruled blocks on the page colour, headed by a 2px ink rule; they never get a drop shadow. The one shadow belongs to the Scan disc.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do open each vehicle with its navy cover and plate, then a ruled page; keep the cover-over-page radius split (top on the cover, bottom on the page).",
+      "Do head every list, table or schedule with a 2px ink rule and separate rows with 1px `rule` hairlines on the `page` colour.",
+      "Do show every flagged status as colour plus icon plus words: overdue red with the circle-cross, due-soon amber-brown with the clock, unknown violet with the pencil.",
+      "Do keep every touch target at least 2.75rem, and rows, inputs and buttons at 2.875rem.",
+      "Do size everything in rem so `html[data-text-size]` (100% / 112.5% / 125%) scales the booklet.",
+      "Do theme through the tokens only: `html[data-theme]` is `system`, `light` or `dark`, with `prefers-color-scheme` as the fallback when it is `system` or unset.",
+      "Do let booklets run edge to edge below 30rem, and hold the tab bar's tabs to the 36rem column on wide screens.",
+      "Do use tabular figures for dates, km and money in rows, totals, facts and cover sublines."
+    ],
+    "donts": [
+      "Don't use soft floating cards or coloured status dots; status lives on a ruled line, in words.",
+      "Don't use Courier Prime outside a visit stamp.",
+      "Don't add a second accent; violet is the only one, and red and amber-brown mean status.",
+      "Don't add drop shadows to blocks or rows; the raised Scan disc is the only shadow.",
+      "Don't round beyond 4px except the stamp, the Scan disc and the small line-item tag.",
+      "Don't size type, padding or targets in px; px is for border widths only."
+    ]
+  }
+}

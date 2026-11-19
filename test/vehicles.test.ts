@@ -270,7 +270,6 @@ describe("the dashboard", () => {
     expect(html).toContain("Etiqa");
     expect(html).toContain("Y15");
     expect(html).toContain(`href="/vehicles/${id}"`);
-    expect(html).toContain('href="/vehicles/new"');
     expect(html).not.toContain("Add your first vehicle");
   });
 
@@ -339,8 +338,8 @@ describe("undoing an archive", () => {
     await addVehicle(user, { name: "Daily Myvi" });
     await post(`/vehicles/${sold}/archive`, user, {});
 
-    const dashboard = await (await app.request("/", { headers: await sessionHeaders(user) }, env)).text();
-    expect(dashboard).toContain('href="/vehicles/archived"');
+    const profile = await (await app.request("/profile", { headers: await sessionHeaders(user) }, env)).text();
+    expect(profile).toContain('href="/vehicles/archived"');
     const list = await app.request("/vehicles/archived", { headers: await sessionHeaders(user) }, env);
     expect(list.status).toBe(200);
     const html = await list.text();

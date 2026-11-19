@@ -2,6 +2,7 @@ import type { FormErrors } from "../form";
 import { ErrorSummary, Field, FieldError, type FieldProps, fieldId, RepeatableRows } from "./fields";
 import type { DetailValues, FormValues, ItemValues } from "../vehicle-form";
 import { isVehicleType, VEHICLE_TYPE_LABELS } from "../lib/templates";
+import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
 const blankItem: ItemValues = { id: "", name: "", km: "", months: "", baseline_date: "", baseline_km: "", remove: "" };
@@ -94,6 +95,12 @@ function Schedule({ items, errors }: { items: ItemValues[]; errors: FormErrors }
 export function NewVehicle({ values, errors = {} }: { values: DetailValues; errors?: FormErrors }) {
   return (
     <Layout title="Add vehicle" signedIn>
+      <p class="crumb">
+        <a href="/profile">
+          <BackIcon />
+          Profile
+        </a>
+      </p>
       <h1>Add a vehicle</h1>
       <ErrorSummary errors={errors} />
       <form method="post" action="/vehicles" class="vehicle-form">
@@ -122,6 +129,12 @@ export function EditVehicle({
 }) {
   return (
     <Layout title={values.details.name || "Edit vehicle"} signedIn>
+      <p class="crumb">
+        <a href={`/vehicles/${id}`}>
+          <BackIcon />
+          {values.details.name || "Vehicle"}
+        </a>
+      </p>
       <h1>{values.details.name || "Edit vehicle"}</h1>
       {archived && <p class="notice">This vehicle is archived and hidden from your dashboard.</p>}
       {saved && (

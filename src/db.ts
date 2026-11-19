@@ -160,6 +160,12 @@ export async function listArchivedVehicles(db: D1Database, userId: number): Prom
   return results;
 }
 
+/** How many of the user's vehicles are archived. */
+export async function countArchivedVehicles(db: D1Database, userId: number): Promise<number> {
+  const row = await db.prepare("SELECT count(*) AS n FROM vehicles WHERE user_id = ? AND archived = 1").bind(userId).first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
 /** Hides the vehicle from the dashboard (archived) or brings it back. Returns false if it isn't the user's. */
 export async function setArchived(db: D1Database, userId: number, id: number, archived: boolean): Promise<boolean> {
   const res = await db

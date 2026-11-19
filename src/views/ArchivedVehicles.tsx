@@ -1,11 +1,15 @@
 import type { Vehicle } from "../db";
+import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 
 export function ArchivedVehicles({ vehicles }: { vehicles: Vehicle[] }) {
   return (
     <Layout title="Archived vehicles" signedIn>
       <p class="crumb">
-        <a href="/">← Dashboard</a>
+        <a href="/profile">
+          <BackIcon />
+          Profile
+        </a>
       </p>
       <h1>Archived vehicles</h1>
       {vehicles.length === 0 ? (

@@ -1,4 +1,5 @@
 import type { Vehicle } from "../db";
+import { PhotoCapture } from "./capture";
 import { Layout } from "./Layout";
 
 export const SCAN_LIMIT_REACHED = "Daily scan limit reached — you can still log manually";
@@ -19,10 +20,7 @@ export function ScanPage({
   const manual = `/services/new?vehicle=${selected ?? vehicles[0].id}`;
   if (left === 0) {
     return (
-      <Layout title="Scan receipt" signedIn>
-        <p class="crumb">
-          <a href="/">← Dashboard</a>
-        </p>
+      <Layout title="Scan receipt" signedIn tab="scan">
         {error && error !== SCAN_LIMIT_REACHED && (
           <p class="error" role="alert">
             {error}
@@ -39,10 +37,7 @@ export function ScanPage({
     );
   }
   return (
-    <Layout title="Scan receipt" signedIn>
-      <p class="crumb">
-        <a href="/">← Dashboard</a>
-      </p>
+    <Layout title="Scan receipt" signedIn tab="scan">
       <h1>Scan a receipt</h1>
       <p>Take a photo of the workshop receipt, or choose one. You'll check the details before anything is saved.</p>
       <p class="muted">{left === 1 ? "1 scan left today" : `${left} scans left today`}</p>
@@ -73,10 +68,7 @@ export function ScanPage({
             </select>
           </label>
         )}
-        <label class="field">
-          <span>Receipt photo</span>
-          <input type="file" name="photo" accept="image/*" required data-compress />
-        </label>
+        <PhotoCapture title="Take or choose a photo" note="The whole receipt, flat and in focus" required />
         <button type="submit" class="button">
           Read receipt
         </button>

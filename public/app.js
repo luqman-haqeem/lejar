@@ -73,12 +73,24 @@ async function shrink(file) {
   return new File([blob], file.name.replace(/\.[^.]*$/, "") + ".jpg", { type: "image/jpeg" });
 }
 
+// Capture targets hide the native file name, so name the chosen photo (or say none is chosen).
+for (const note of document.querySelectorAll("[data-file-name]")) {
+  const input = note.parentElement?.parentElement?.querySelector("input[type=file]");
+  if (!input) continue;
+  const empty = note.textContent;
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    note.textContent = file ? `Chosen: ${file.name}` : empty;
+  });
+}
+
 for (const input of document.querySelectorAll("input[type=file][data-compress]")) {
   input.addEventListener("change", async () => {
     const file = input.files && input.files[0];
     if (!file || !file.type.startsWith("image/")) return;
     const buttons = input.form ? [...input.form.querySelectorAll("button[type=submit]")] : [];
-    const label = input.closest("label")?.querySelector("span");
+    const label = input.parentElement?.querySelector("[data-file-name]") ?? input.closest("label")?.querySelector("span");
+    const named = label?.hasAttribute("data-file-name");
     const original = label?.textContent;
     buttons.forEach((b) => (b.disabled = true));
     if (label) label.textContent = "Preparing photo…";
@@ -91,7 +103,8 @@ for (const input of document.querySelectorAll("input[type=file][data-compress]")
       // Keep the original; the server rejects it if it's too large.
     } finally {
       buttons.forEach((b) => (b.disabled = false));
-      if (label) label.textContent = original;
+      // A capture target names the photo that will actually be sent; a plain label goes back to what it said.
+      if (label) label.textContent = named ? `Chosen: ${input.files[0]?.name ?? file.name}` : original;
     }
   });
 }
@@ -110,4 +123,24 @@ for (const form of document.querySelectorAll("form[data-busy]")) {
 // "Print / Save as PDF": the browser's own print dialog (Save as PDF on iPhone via Share → Print).
 for (const button of document.querySelectorAll("button[data-print]")) {
   button.addEventListener("click", () => window.print());
+}
+
+// Appearance (Profile): text size and theme, saved on this device. The inline script in <head>
+// applies them on every page before it paints; this keeps the radios in sync and applies changes live.
+const PREFS = { "text-size": { key: "kereta-text-size", attr: "textSize" }, theme: { key: "kereta-theme", attr: "theme" } };
+for (const input of document.querySelectorAll("input[data-pref]")) {
+  const pref = PREFS[input.dataset.pref];
+  if (!pref) continue;
+  let saved = null;
+  try {
+    saved = localStorage.getItem(pref.key);
+  } catch {}
+  if (saved) input.checked = input.value === saved;
+  input.addEventListener("change", () => {
+    if (!input.checked) return;
+    document.documentElement.dataset[pref.attr] = input.value;
+    try {
+      localStorage.setItem(pref.key, input.value);
+    } catch {}
+  });
 }
