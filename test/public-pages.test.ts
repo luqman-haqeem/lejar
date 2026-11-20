@@ -33,9 +33,26 @@ describe("adding to the Home Screen", () => {
       expect(html).toContain('<link rel="manifest" href="/manifest.webmanifest"');
       expect(html).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png"');
       expect(html).toContain('<meta name="apple-mobile-web-app-capable" content="yes"');
-      expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Kereta"');
+      expect(html).toContain('<meta name="apple-mobile-web-app-title" content="Lejar"');
       expect(html).toContain('<meta name="theme-color"');
     }
+  });
+
+  it("never shows the old name", async () => {
+    for (const html of [
+      await (await app.request("/login", {}, env)).text(),
+      await (await app.request("/privacy", {}, env)).text(),
+      await (await app.request("/", { headers: await sessionHeaders(await makeUser()) }, env)).text(),
+    ]) {
+      expect(html).not.toMatch(/kereta/i);
+      expect(html).toContain("Lejar");
+    }
+  });
+
+  it("treats an old kereta_session cookie as signed out", async () => {
+    const res = await app.request("/", { headers: { cookie: "kereta_session=anything" } }, env);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/login");
   });
 
   it("has no service worker in Phase 1", async () => {
@@ -48,7 +65,7 @@ describe("adding to the Home Screen", () => {
     const res = await env.ASSETS.fetch("https://kereta.test/manifest.webmanifest");
     expect(res.status).toBe(200);
     const manifest = (await res.json()) as { name: string; display: string; start_url: string; icons: { src: string; sizes: string }[] };
-    expect(manifest).toMatchObject({ name: "Kereta", display: "standalone", start_url: "/" });
+    expect(manifest).toMatchObject({ name: "Lejar", display: "standalone", start_url: "/" });
     expect(manifest.icons.map((i) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
     for (const icon of [...manifest.icons.map((i) => i.src), "/apple-touch-icon.png"]) {
       const png = await env.ASSETS.fetch(`https://kereta.test${icon}`);

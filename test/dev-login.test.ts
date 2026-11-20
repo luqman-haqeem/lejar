@@ -12,10 +12,10 @@ describe("local dev sign-in", () => {
     const res = await signIn("http://localhost:8787/auth/dev", devEnv);
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
-    const session = cookieValue(res, "kereta_session");
+    const session = cookieValue(res, "lejar_session");
     expect(session).toBeTruthy();
 
-    const home = await app.request("http://localhost:8787/", { headers: { cookie: `kereta_session=${session}` } }, devEnv);
+    const home = await app.request("http://localhost:8787/", { headers: { cookie: `lejar_session=${session}` } }, devEnv);
     expect(home.status).toBe(200);
   });
 

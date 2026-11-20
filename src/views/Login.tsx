@@ -2,9 +2,9 @@ import { Layout } from "./Layout";
 
 export function Login({ error, devLogin = false }: { error?: string; /** Offer the local dev sign-in (localhost only). */ devLogin?: boolean }) {
   return (
-    <Layout title="Kereta">
+    <Layout title="Lejar">
       <section class="login">
-        <h1>Kereta</h1>
+        <h1>Lejar</h1>
         <p>Your vehicle service book: every service, receipt and renewal in one place.</p>
         {error && <p class="error">{error}</p>}
         <a class="button" href="/auth/google">

@@ -9,15 +9,15 @@ export function Privacy({ contactEmail }: { contactEmail: string }) {
     <Layout title="Privacy">
       <article class="prose">
         <p class="crumb">
-          <a href="/login">← Kereta</a>
+          <a href="/login">← Lejar</a>
         </p>
         <h1>Privacy</h1>
-        <p>Kereta is a personal vehicle service book. This page explains what it keeps about you and why.</p>
+        <p>Lejar is a personal vehicle service book. This page explains what it keeps about you and why.</p>
 
         <h2>What's stored</h2>
         <ul>
           <li>
-            Your <strong>Google email</strong> and Google account id, from signing in. Kereta asks Google for nothing
+            Your <strong>Google email</strong> and Google account id, from signing in. Lejar asks Google for nothing
             else: not your name, contacts or files.
           </li>
           <li>
@@ -56,7 +56,7 @@ export function Privacy({ contactEmail }: { contactEmail: string }) {
         <h2>Deleting your data</h2>
         <p>
           You can delete any service, receipt photo or vehicle photo yourself. To delete your whole account and everything in it,
-          email <a href={`mailto:${contactEmail}?subject=Kereta%20account%20deletion`}>{contactEmail}</a> from the
+          email <a href={`mailto:${contactEmail}?subject=Lejar%20account%20deletion`}>{contactEmail}</a> from the
           Google address you sign in with.
         </p>
 

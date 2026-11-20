@@ -14,7 +14,7 @@ describe("route guard and sign-in page", () => {
   });
 
   it("redirects a forged session cookie to sign-in", async () => {
-    const res = await app.request("/", { headers: { cookie: "kereta_session=forged.cookie" } }, env);
+    const res = await app.request("/", { headers: { cookie: "lejar_session=forged.cookie" } }, env);
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/login");
   });
@@ -50,7 +50,7 @@ describe("starting Google sign-in", () => {
     expect(url.searchParams.get("state")).toMatch(/^[A-Za-z0-9_-]{20,}$/);
 
     const setCookie = res.headers.get("set-cookie")!;
-    expect(setCookie).toMatch(/^kereta_oauth=/);
+    expect(setCookie).toMatch(/^lejar_oauth=/);
     expect(setCookie).toContain("HttpOnly");
     expect(setCookie).toContain("Max-Age=600");
   });
@@ -71,14 +71,14 @@ describe("returning from Google", () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/");
-    const sessionHeader = res.headers.getSetCookie().find((c) => c.startsWith("kereta_session="))!;
+    const sessionHeader = res.headers.getSetCookie().find((c) => c.startsWith("lejar_session="))!;
     expect(sessionHeader).toContain("HttpOnly");
     expect(sessionHeader).toContain("Secure");
     expect(sessionHeader).toContain(`Max-Age=${30 * 24 * 60 * 60}`);
 
     const dashboard = await app.request(
       "/",
-      { headers: { cookie: `kereta_session=${cookieValue(res, "kereta_session")}` } },
+      { headers: { cookie: `lejar_session=${cookieValue(res, "lejar_session")}` } },
       env,
     );
     expect(dashboard.status).toBe(200);
@@ -95,9 +95,9 @@ describe("returning from Google", () => {
       createApp({ fetchFn: fakeGoogle({ sub: "sub-someone-else", email: "x@example.com", email_verified: true }) }),
     );
 
-    const id1 = await verifySession(cookieValue(first, "kereta_session"), env.SESSION_SECRET);
-    const id2 = await verifySession(cookieValue(second, "kereta_session"), env.SESSION_SECRET);
-    const id3 = await verifySession(cookieValue(other, "kereta_session"), env.SESSION_SECRET);
+    const id1 = await verifySession(cookieValue(first, "lejar_session"), env.SESSION_SECRET);
+    const id2 = await verifySession(cookieValue(second, "lejar_session"), env.SESSION_SECRET);
+    const id3 = await verifySession(cookieValue(other, "lejar_session"), env.SESSION_SECRET);
     expect(id1).not.toBeNull();
     expect(id2).toBe(id1);
     expect(id3).not.toBe(id1);
@@ -116,7 +116,7 @@ describe("refusing to sign in", () => {
 
     expect(res.status).toBe(403);
     expect(await res.text()).toContain("Not authorised");
-    expect(cookieValue(res, "kereta_session")).toBeUndefined();
+    expect(cookieValue(res, "lejar_session")).toBeUndefined();
     const row = await env.DB.prepare("SELECT id FROM users WHERE google_sub = ?").bind("sub-unverified").first();
     expect(row).toBeNull();
   });
@@ -124,20 +124,20 @@ describe("refusing to sign in", () => {
   it("rejects a state that does not match the one we issued", async () => {
     const res = await signInThroughGoogle(createApp({ fetchFn: fakeGoogle(verified) }), { state: "attacker-state" });
     expect(res.status).toBe(400);
-    expect(cookieValue(res, "kereta_session")).toBeUndefined();
+    expect(cookieValue(res, "lejar_session")).toBeUndefined();
   });
 
   it("rejects a callback that arrives without our sign-in cookie", async () => {
     const res = await signInThroughGoogle(createApp({ fetchFn: fakeGoogle(verified) }), { withOauthCookie: false });
     expect(res.status).toBe(400);
-    expect(cookieValue(res, "kereta_session")).toBeUndefined();
+    expect(cookieValue(res, "lejar_session")).toBeUndefined();
   });
 
   it("shows sign-in again with an error when Google refuses the code", async () => {
     const res = await signInThroughGoogle(createApp({ fetchFn: fakeGoogle(verified) }), { code: "expired-code" });
     expect(res.status).toBe(400);
     expect(await res.text()).toContain("Sign in with Google");
-    expect(cookieValue(res, "kereta_session")).toBeUndefined();
+    expect(cookieValue(res, "lejar_session")).toBeUndefined();
   });
 });
 
@@ -161,7 +161,7 @@ describe("edge cases on the way back from Google", () => {
     );
 
     const secureOf = (res: Response) =>
-      res.headers.getSetCookie().find((c) => c.startsWith("kereta_session="))!.includes("Secure");
+      res.headers.getSetCookie().find((c) => c.startsWith("lejar_session="))!.includes("Secure");
     expect(local.status).toBe(302);
     expect(secureOf(https)).toBe(true);
     expect(secureOf(local)).toBe(false);

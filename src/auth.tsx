@@ -7,8 +7,8 @@ import { SESSION_TTL_MS, signSession } from "./session";
 import { upsertUser } from "./users";
 import { Login } from "./views/Login";
 
-export const SESSION_COOKIE = "kereta_session";
-export const OAUTH_COOKIE = "kereta_oauth";
+export const SESSION_COOKIE = "lejar_session";
+export const OAUTH_COOKIE = "lejar_oauth";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";

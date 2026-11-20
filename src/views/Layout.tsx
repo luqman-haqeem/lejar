@@ -7,7 +7,7 @@ export type Tab = "home" | "scan" | "profile";
  * Text size and theme are per-device choices (Profile → Appearance), kept in localStorage. Applied in
  * <head> before first paint so pages never flash the wrong theme or size.
  */
-const PREFS_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("kereta-theme"),s=localStorage.getItem("kereta-text-size");if(t)d.dataset.theme=t;if(s)d.dataset.textSize=s}catch(e){}var m=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)");function a(){var t=d.dataset.theme;d.dataset.scheme=t==="dark"||(t!=="light"&&m&&m.matches)?"dark":"light"}a();if(m&&m.addEventListener)m.addEventListener("change",a);window.keretaScheme=a})();`;
+const PREFS_SCRIPT = `(function(){var d=document.documentElement;try{var t=localStorage.getItem("lejar-theme"),s=localStorage.getItem("lejar-text-size");if(t)d.dataset.theme=t;if(s)d.dataset.textSize=s}catch(e){}var m=window.matchMedia&&matchMedia("(prefers-color-scheme: dark)");function a(){var t=d.dataset.theme;d.dataset.scheme=t==="dark"||(t!=="light"&&m&&m.matches)?"dark":"light"}a();if(m&&m.addEventListener)m.addEventListener("change",a);window.lejarScheme=a})();`;
 
 function TabBar({ tab }: { tab?: Tab }) {
   const current = (t: Tab) => (tab === t ? "page" : undefined);
@@ -51,7 +51,7 @@ export function Layout({
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <title>{title === "Kereta" ? title : `${title} · Kereta`}</title>
+        <title>{title === "Lejar" ? title : `${title} · Lejar`}</title>
         <script dangerouslySetInnerHTML={{ __html: PREFS_SCRIPT }} />
         <meta name="theme-color" content="#24305e" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1d2650" media="(prefers-color-scheme: dark)" />
@@ -60,7 +60,7 @@ export function Layout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="Kereta" />
+        <meta name="apple-mobile-web-app-title" content="Lejar" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="preload" href="/fonts/barlow-600-latin.woff2" as="font" type="font/woff2" crossorigin="" />
         <link rel="stylesheet" href="/app.css" />

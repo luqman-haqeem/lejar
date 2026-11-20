@@ -1,6 +1,6 @@
 {
-  "name": "Kereta",
-  "short_name": "Kereta",
+  "name": "Lejar",
+  "short_name": "Lejar",
   "description": "Your vehicle service book: services, receipts, road tax and insurance.",
   "start_url": "/",
   "scope": "/",

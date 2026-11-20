@@ -144,7 +144,7 @@ for (const button of document.querySelectorAll("button[data-print]")) {
 
 // Appearance (Profile): text size and theme, saved on this device. The inline script in <head>
 // applies them on every page before it paints; this keeps the radios in sync and applies changes live.
-const PREFS = { "text-size": { key: "kereta-text-size", attr: "textSize" }, theme: { key: "kereta-theme", attr: "theme" } };
+const PREFS = { "text-size": { key: "lejar-text-size", attr: "textSize" }, theme: { key: "lejar-theme", attr: "theme" } };
 for (const input of document.querySelectorAll("input[data-pref]")) {
   const pref = PREFS[input.dataset.pref];
   if (!pref) continue;
@@ -156,7 +156,7 @@ for (const input of document.querySelectorAll("input[data-pref]")) {
   input.addEventListener("change", () => {
     if (!input.checked) return;
     document.documentElement.dataset[pref.attr] = input.value;
-    window.keretaScheme?.(); // re-resolve light or dark for the new Theme choice
+    window.lejarScheme?.(); // re-resolve light or dark for the new Theme choice
     try {
       localStorage.setItem(pref.key, input.value);
     } catch {}

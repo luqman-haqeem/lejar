@@ -37,9 +37,9 @@ describe("signing out", () => {
 
     expect(res.status).toBe(302);
     expect(res.headers.get("location")).toBe("/login");
-    const cleared = res.headers.getSetCookie().find((c) => c.startsWith("kereta_session="))!;
+    const cleared = res.headers.getSetCookie().find((c) => c.startsWith("lejar_session="))!;
     expect(cleared).toContain("Max-Age=0");
-    expect(cookieValue(res, "kereta_session")).toBe("");
+    expect(cookieValue(res, "lejar_session")).toBe("");
   });
 
 });
