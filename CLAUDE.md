@@ -1,7 +1,7 @@
-# Kereta
+# Lejar
 
 Vehicle service-book web app (Cloudflare Workers + Hono + D1 + R2).
-Spec: `docs/superpowers/specs/2026-10-18-kereta-design.md`
+Spec: `docs/superpowers/specs/2026-10-18-kereta-design.md` (original, when the app was called Kereta) and `docs/superpowers/specs/2026-11-20-rename-to-lejar-design.md` (the rename)
 Commits: one-line messages, no Co-Authored-By trailer.
 
 ## Agent skills

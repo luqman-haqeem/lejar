@@ -17,7 +17,7 @@ Their jobs:
 
 ## Product Purpose
 
-Kereta is a personal digital service book: every service, receipt and renewal in one place. It replaces the paper service book and the shoebox of receipts. In Phase 1, success means a user signs in with Google, scans a workshop receipt, checks and corrects the fields, and saves. The dashboard then shows which items are due soon, and the user can print or save the vehicle's full history as a PDF.
+Lejar is a personal digital service book: every service, receipt and renewal in one place. It replaces the paper service book and the shoebox of receipts. In Phase 1, success means a user signs in with Google, scans a workshop receipt, checks and corrects the fields, and saves. The dashboard then shows which items are due soon, and the user can print or save the vehicle's full history as a PDF.
 
 ## Positioning
 
@@ -46,13 +46,14 @@ Kereta is a personal digital service book: every service, receipt and renewal in
 
 ## Brand Commitments
 
-- The name **Kereta** is fixed.
+- The name **Lejar** is fixed. It replaced Kereta on 2026-11-20 (`docs/superpowers/specs/2026-11-20-rename-to-lejar-design.md`); stored-data names (D1 `kereta`, R2 `kereta-receipts`) keep the old name on purpose.
 - The voice is plain, direct English. Malay terms Malaysian owners actually use (e.g. road tax, minyak hitam, cukai jalan) are welcome where they read naturally.
-- There are no other binding identity assets. The current look (navy booklet covers, cream ruled pages, violet visit stamps; see DESIGN.md) and the navy "K" Home Screen icons are the incumbent design, not brand commitments.
+- There are no other binding identity assets. The current look (navy booklet covers, cream ruled pages, violet visit stamps; see DESIGN.md) and the violet "LEJAR" stamp icon (`design/icon/`) are the incumbent design, not brand commitments.
 
 ## Evidence on Hand
 
 - The product spec is at `docs/superpowers/specs/2026-10-18-kereta-design.md`.
+- The rename to Lejar is at `docs/superpowers/specs/2026-11-20-rename-to-lejar-design.md`.
 - There are no testimonials, user counts, press or partnerships, and future work must not invent any.
 
 ## Product Principles

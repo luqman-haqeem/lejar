@@ -32,3 +32,4 @@ Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
 ## Features in this repo
 
 - **`kereta-phase1`**: the spec is the existing `docs/superpowers/specs/2026-10-18-kereta-design.md`. It is not copied to `.scratch/kereta-phase1/spec.md`. Tickets go under `.scratch/kereta-phase1/issues/`.
+- **`lejar-rename`**: the spec is `docs/superpowers/specs/2026-11-20-rename-to-lejar-design.md`. Tickets go under `.scratch/lejar-rename/issues/`.

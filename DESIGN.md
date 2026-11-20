@@ -1,5 +1,5 @@
 ---
-name: Kereta
+name: Lejar
 description: The dealer service booklet from the glovebox, as a phone app. Navy covers, cream ruled pages, violet visit stamps.
 colors:
   paper: "#f4efe2"
@@ -210,10 +210,10 @@ components:
     padding: "0.05rem 0.45rem"
 ---
 
-# Design System: Kereta
+# Design System: Lejar
 
 <!-- impeccable:design-map -->
-Name: Kereta
+Name: Lejar
 Colors: primary: violet #6b3fa0; secondary: navy #24305e; tertiary: overdue #a8231c; neutral: paper #f4efe2; primary: violet-ink #ffffff; primary: violet-text #5d3590; primary: violet-tint #efe8f6 (+28 more in the sidecar)
 Fonts: Barlow (display, headline, cover-name, title, body, body-strong, label, tab-label, plate); Courier Prime (stamp-date, stamp-body)
 Spacing: xs 0.25rem, sm 0.5rem, md 0.75rem, lg 1rem, xl 1.5rem, 2xl 2rem, tap-min 2.75rem, row-min 2.875rem, column 36rem, tabbar 4.25rem

@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "kereta",
+	"name": "lejar",
 	"main": "src/index.tsx",
 	"compatibility_date": "2026-11-01",
 	"compatibility_flags": [

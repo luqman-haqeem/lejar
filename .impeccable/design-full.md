@@ -1,5 +1,5 @@
 ---
-name: Kereta
+name: Lejar
 description: The dealer service booklet from the glovebox, as a phone app. Navy covers, cream ruled pages, violet visit stamps.
 colors:
   paper: "#f4efe2"
@@ -210,13 +210,13 @@ components:
     padding: "0.05rem 0.45rem"
 ---
 
-# Design System: Kereta
+# Design System: Lejar
 
 ## Overview
 
 **Creative North Star: "The Stamped Service Book"**
 
-Kereta is the dealer service booklet that lives in the glovebox, rebuilt for a phone held at a workshop counter. Every vehicle opens on a navy booklet cover carrying its name and a black number plate; under it sits a cream, ruled page of schedule rows; every logged visit lands in the history as a slightly crooked rubber stamp in violet ink. The whole interface is paper, ink and one stamp colour. Depth comes from rules and covers, not from floating cards.
+Lejar is the dealer service booklet that lives in the glovebox, rebuilt for a phone held at a workshop counter. Every vehicle opens on a navy booklet cover carrying its name and a black number plate; under it sits a cream, ruled page of schedule rows; every logged visit lands in the history as a slightly crooked rubber stamp in violet ink. The whole interface is paper, ink and one stamp colour. Depth comes from rules and covers, not from floating cards.
 
 Density is that of a printed form: rows at least 2.875rem tall, hairline rules between them, a 2px ink rule heading each ruled block, and tabular figures wherever a number sits in a column. The type is a single sturdy grotesque (Barlow) set at medium weight, with a typewriter face (Courier Prime) reserved for the stamps alone, so the stamp reads as a different instrument from the page it is pressed onto. The world refuses the category's soft cards with coloured status dots: status is told in words, with an icon, in a colour, on a ruled line.
 

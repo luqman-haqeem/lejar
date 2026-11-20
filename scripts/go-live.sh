@@ -222,7 +222,7 @@ if [[ -f "$CF_ENV_FILE" ]]; then
   set -a; . "./$CF_ENV_FILE"; set +a
 fi
 
-banner "Kereta: go live on workers.dev"
+banner "Lejar: go live on workers.dev"
 
 # ── 1 ────────────────────────────────────────────────────────────────────
 stage "Cloudflare: sign in"
@@ -310,26 +310,26 @@ pause
 # ── 6 ────────────────────────────────────────────────────────────────────
 stage "Cloudflare: first deploy (to get the app's address)"
 say "Deploys once so Google can be given the real callback address. Sign-in won't work until stage 9."
-deploy_url() { npx wrangler deploy 2>&1 | tee /dev/stderr | grep -oE 'https://kereta\.[a-z0-9-]+\.workers\.dev' | head -1; }
-KERETA_URL=$(deploy_url || true)
-if [[ -z "$KERETA_URL" ]]; then
+deploy_url() { npx wrangler deploy 2>&1 | tee /dev/stderr | grep -oE 'https://lejar\.[a-z0-9-]+\.workers\.dev' | head -1; }
+APP_URL=$(deploy_url || true)
+if [[ -z "$APP_URL" ]]; then
   warn "Couldn't spot the workers.dev address in the deploy output."
-  ask KERETA_URL "Paste it (https://kereta.<subdomain>.workers.dev):"
+  ask APP_URL "Paste it (https://lejar.<subdomain>.workers.dev):"
 fi
-KERETA_URL="${KERETA_URL%/}"
-say "App address: ${BOLD}$KERETA_URL${RESET}"
+APP_URL="${APP_URL%/}"
+say "App address: ${BOLD}$APP_URL${RESET}"
 pause
 
 # ── 7 ────────────────────────────────────────────────────────────────────
 stage "Google: OAuth client"
 open_url "https://console.cloud.google.com/auth/clients/create"
 step "Pick (or create) a Google Cloud project at the top. The Hermes Gmail project is fine to reuse."
-step "If asked to configure the consent screen first: App name 'Kereta', your email as support"
+step "If asked to configure the consent screen first: App name 'Lejar', your email as support"
 note "  and contact email, Audience 'External'. Then come back to Clients → Create client."
-step "Application type: Web application. Name: Kereta."
+step "Application type: Web application. Name: Lejar."
 step "Authorized redirect URIs → add both:"
 note "    http://localhost:8787/auth/google/callback"
-note "    $KERETA_URL/auth/google/callback"
+note "    $APP_URL/auth/google/callback"
 step "Create, then copy the Client ID and Client secret from the dialog."
 note "(If the console looks different: APIs & Services → Credentials → Create credentials → OAuth client ID.)"
 ask GOOGLE_CLIENT_ID "Paste the Client ID:"
@@ -349,7 +349,7 @@ else
 fi
 write_env SESSION_SECRET "$SESSION_SECRET"
 open_url "https://openrouter.ai/settings/keys"
-step "Create Key → name it 'kereta'. Consider a credit limit (e.g. \$5) as a second bill guard."
+step "Create Key → name it 'lejar'. Consider a credit limit (e.g. \$5) as a second bill guard."
 ask_secret OPENROUTER_API_KEY "Paste the OpenRouter key (sk-or-…):"
 write_env OPENROUTER_API_KEY "$OPENROUTER_API_KEY"
 ask CONTACT_EMAIL "Contact email shown on /privacy:"
@@ -374,24 +374,24 @@ pause
 # ── 10 ───────────────────────────────────────────────────────────────────
 stage "Deploy and check"
 npx wrangler deploy
-HEALTH=$(curl -fsS "$KERETA_URL/healthz" 2>/dev/null || true)
-ROOT=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$KERETA_URL/" || true)
+HEALTH=$(curl -fsS "$APP_URL/healthz" 2>/dev/null || true)
+ROOT=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$APP_URL/" || true)
 if [[ "$HEALTH" == "ok" ]]; then say "${GREEN}✓${RESET} /healthz returns ok"; else warn "/healthz returned '$HEALTH'"; SKIPPED+=("/healthz check"); fi
 if [[ "$ROOT" == 302*"/login" ]]; then say "${GREEN}✓${RESET} / redirects to /login when signed out"; else warn "/ returned '$ROOT'"; SKIPPED+=("sign-in redirect check"); fi
-step "Now sign in at $KERETA_URL from your computer's browser (you're a test user while the app is in Testing)."
-open_url "$KERETA_URL"
+step "Now sign in at $APP_URL from your computer's browser (you're a test user while the app is in Testing)."
+open_url "$APP_URL"
 pause "Signed in and saw the dashboard? Press Enter"
 
 # ── 11 ───────────────────────────────────────────────────────────────────
 stage "Google: open sign-in to everyone"
 open_url "https://console.cloud.google.com/auth/branding"
-step "Branding → App home page: $KERETA_URL/"
-step "Branding → Privacy policy link: $KERETA_URL/privacy"
+step "Branding → App home page: $APP_URL/"
+step "Branding → Privacy policy link: $APP_URL/privacy"
 step "Data access → scopes should be only openid and .../auth/userinfo.email (non-sensitive)."
 step "Audience → Publish app → Confirm."
 warn "Google may require the home page and privacy URLs to be on a domain you've verified."
 note "  You can't verify workers.dev. If Google refuses, either keep the app in Testing (add each"
-note "  person as a test user, up to 100) or put Kereta on a custom domain and use that instead."
+note "  person as a test user, up to 100) or put Lejar on a custom domain and use that instead."
 if confirm "Did publishing succeed?"; then say "Anyone with a verified Google account can now sign in."
 else SKIPPED+=("publish the Google consent screen (see the workers.dev note)"); fi
 pause
@@ -408,9 +408,9 @@ pause
 
 # ── 13 ───────────────────────────────────────────────────────────────────
 stage "iPhone: end to end"
-say "On your iPhone, in Safari, open: ${BOLD}$KERETA_URL${RESET}"
+say "On your iPhone, in Safari, open: ${BOLD}$APP_URL${RESET}"
 step "Sign in with Google."
-step "Share → Add to Home Screen, then open Kereta from the Home Screen icon."
+step "Share → Add to Home Screen, then open Lejar from the Home Screen icon."
 step "Add a vehicle, open its schedule, and set one 'last done' baseline."
 step "Scan a real workshop receipt: check the photo shrinks/uploads and fields prefill, then Save."
 step "Check the dashboard shows due items, road tax and insurance."
@@ -419,7 +419,7 @@ note "If a scan comes back 'Couldn't read receipt', run: npx wrangler tail   (it
 if ! confirm "Everything worked on the iPhone?"; then SKIPPED+=("iPhone end-to-end check"); fi
 
 finish
-say "Kereta is live at $KERETA_URL"
+say "Lejar is live at $APP_URL"
 }
 
 run_wizard "$@"; exit

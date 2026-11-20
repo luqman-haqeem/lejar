@@ -1,4 +1,4 @@
-# Kereta
+# Lejar
 
 A vehicle owner's own service book: the record of what was done to a car or motorbike, when, where and for how much, kept so it can be shown to a buyer.
 
@@ -19,7 +19,7 @@ Optional facts about the part a Service line fitted: its brand, spec, position o
 _Avoid_: Part info, fitment, component
 
 **Warranty until**:
-The date a fitted part's warranty ends, as stated by the workshop or maker. Kereta records it and does not remind about it.
+The date a fitted part's warranty ends, as stated by the workshop or maker. Lejar records it and does not remind about it.
 _Avoid_: Protection, guarantee
 
 **Vehicle photo**:
