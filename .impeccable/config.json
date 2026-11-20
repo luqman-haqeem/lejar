@@ -6,5 +6,110 @@
       "maxFindings": 5,
       "maxChars": 8000
     }
+  },
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          ".superpowers/names/index.html"
+        ],
+        "createdAt": "2026-11-19T14:46:38.221Z",
+        "reason": "Claude's call: throwaway name mockup; 10px labels imitate iOS Home Screen icon labels"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".superpowers/names/index.html"
+        ],
+        "createdAt": "2026-11-19T14:46:38.227Z",
+        "reason": "Claude's call: throwaway name mockup; white labels on wallpaper imitate iOS Home Screen"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".superpowers/names/icons.html"
+        ],
+        "createdAt": "2026-11-19T14:49:46.898Z",
+        "reason": "Claude's call: throwaway icon mockup; white labels on wallpaper imitate iOS Home Screen"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/icons.html"
+        ],
+        "createdAt": "2026-11-19T14:49:56.566Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/icon-v2.html"
+        ],
+        "createdAt": "2026-11-20T06:22:37.605Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/icon-v3.html"
+        ],
+        "createdAt": "2026-11-20T06:22:37.611Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/icon-v4.html"
+        ],
+        "createdAt": "2026-11-20T06:25:52.547Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/names-v2.html"
+        ],
+        "createdAt": "2026-11-20T06:33:31.271Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/names-v3.html"
+        ],
+        "createdAt": "2026-11-20T06:37:12.340Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/lejar-preview.html"
+        ],
+        "createdAt": "2026-11-20T06:40:51.525Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          ".superpowers/names/lejar-preview-v2.html"
+        ],
+        "createdAt": "2026-11-20T06:42:07.685Z",
+        "reason": "Claude's call: mockup reuses the app's documented paper/page tokens from DESIGN.md"
+      }
+    ]
   }
 }
