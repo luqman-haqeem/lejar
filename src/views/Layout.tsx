@@ -56,7 +56,8 @@ export function Layout({
         <meta name="theme-color" content="#24305e" media="(prefers-color-scheme: light)" />
         <meta name="theme-color" content="#1d2650" media="(prefers-color-scheme: dark)" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="icon" href="/icon-192.png" type="image/png" />
+        <link rel="icon" href="/favicon-32.png" type="image/png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/favicon-32-dark.png" type="image/png" media="(prefers-color-scheme: dark)" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />

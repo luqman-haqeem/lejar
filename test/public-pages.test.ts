@@ -61,13 +61,25 @@ describe("adding to the Home Screen", () => {
     expect((await env.ASSETS.fetch("https://kereta.test/sw.js")).status).toBe(404);
   });
 
+  it("has a separate maskable icon", async () => {
+    const manifest = (await (await env.ASSETS.fetch("https://kereta.test/manifest.webmanifest")).json()) as { icons: { src: string; purpose?: string }[] };
+    expect(manifest.icons).toContainEqual(expect.objectContaining({ src: "/icon-512-maskable.png", purpose: "maskable" }));
+    expect(manifest.icons.filter((i) => i.purpose?.includes("maskable"))).toHaveLength(1);
+  });
+
+  it("picks a light or dark favicon from the colour scheme", async () => {
+    const html = await (await app.request("/login", {}, env)).text();
+    expect(html).toContain('<link rel="icon" href="/favicon-32.png" type="image/png" media="(prefers-color-scheme: light)"');
+    expect(html).toContain('<link rel="icon" href="/favicon-32-dark.png" type="image/png" media="(prefers-color-scheme: dark)"');
+  });
+
   it("serves a standalone manifest with 192 px and 512 px icons", async () => {
     const res = await env.ASSETS.fetch("https://kereta.test/manifest.webmanifest");
     expect(res.status).toBe(200);
     const manifest = (await res.json()) as { name: string; display: string; start_url: string; icons: { src: string; sizes: string }[] };
     expect(manifest).toMatchObject({ name: "Lejar", display: "standalone", start_url: "/" });
     expect(manifest.icons.map((i) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
-    for (const icon of [...manifest.icons.map((i) => i.src), "/apple-touch-icon.png"]) {
+    for (const icon of [...manifest.icons.map((i) => i.src), "/apple-touch-icon.png", "/favicon-32.png", "/favicon-32-dark.png"]) {
       const png = await env.ASSETS.fetch(`https://kereta.test${icon}`);
       expect(png.status, icon).toBe(200);
       expect(new Uint8Array(await png.arrayBuffer()).slice(1, 4)).toEqual(new Uint8Array([0x50, 0x4e, 0x47])); // "PNG"
