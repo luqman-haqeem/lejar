@@ -18,14 +18,14 @@
 	"r2_buckets": [
 		{
 			"binding": "RECEIPTS",
-			"bucket_name": "kereta-receipts"
+			"bucket_name": "lejar-receipts"
 		}
 	],
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "kereta",
-			"database_id": "a69ab5a1-8eef-4254-84b5-648c2d283713",
+			"database_name": "lejar",
+			"database_id": "90226b4e-e33a-486b-877d-415b7436cf2c",
 			"migrations_dir": "migrations"
 		}
 	]

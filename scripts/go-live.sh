@@ -267,18 +267,18 @@ pause "R2 enabled? Press Enter"
 stage "Cloudflare: production database (D1)"
 d1_id() {
   npx wrangler d1 list --json 2>/dev/null |
-    python3 -c 'import sys,json; print(next((d["uuid"] for d in json.load(sys.stdin) if d["name"]=="kereta"), ""))' 2>/dev/null || true
+    python3 -c 'import sys,json; print(next((d["uuid"] for d in json.load(sys.stdin) if d["name"]=="lejar"), ""))' 2>/dev/null || true
 }
 DB_ID=$(d1_id)
 if [[ -n "$DB_ID" ]]; then
-  say "Found the existing D1 database 'kereta' ($DB_ID)."
-elif confirm "Create the D1 database 'kereta' now?"; then
+  say "Found the existing D1 database 'lejar' ($DB_ID)."
+elif confirm "Create the D1 database 'lejar' now?"; then
   note "If Wrangler offers to add it to your config, answer No: this wizard does that."
-  npx wrangler d1 create kereta
+  npx wrangler d1 create lejar
   DB_ID=$(d1_id)
 fi
 if [[ -z "$DB_ID" ]]; then
-  warn "No database id; re-run the wizard once 'npx wrangler d1 create kereta' has worked."
+  warn "No database id; re-run the wizard once 'npx wrangler d1 create lejar' has worked."
   exit 1
 fi
 if grep -q '"database_id": "local-placeholder"' wrangler.jsonc; then
@@ -291,10 +291,10 @@ pause
 
 # ── 4 ────────────────────────────────────────────────────────────────────
 stage "Cloudflare: receipt bucket (R2)"
-if npx wrangler r2 bucket list 2>/dev/null | grep -qE "(^|[^a-z-])kereta-receipts([^a-z-]|$)"; then
-  say "The bucket 'kereta-receipts' already exists."
-elif confirm "Create the private R2 bucket 'kereta-receipts' now?"; then
-  npx wrangler r2 bucket create kereta-receipts
+if npx wrangler r2 bucket list 2>/dev/null | grep -qE "(^|[^a-z-])lejar-receipts([^a-z-]|$)"; then
+  say "The bucket 'lejar-receipts' already exists."
+elif confirm "Create the private R2 bucket 'lejar-receipts' now?"; then
+  npx wrangler r2 bucket create lejar-receipts
 fi
 note "It stays private: the app serves photos to their owner only. Don't turn on public access."
 pause
@@ -303,7 +303,7 @@ pause
 stage "Cloudflare: database tables"
 say "Applies migrations/0001…0004 to the production database."
 if confirm "Apply migrations to the REMOTE database now?"; then
-  npx wrangler d1 migrations apply kereta --remote
+  npx wrangler d1 migrations apply lejar --remote
 fi
 pause
 

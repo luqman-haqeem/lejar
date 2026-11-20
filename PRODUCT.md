@@ -46,7 +46,7 @@ Lejar is a personal digital service book: every service, receipt and renewal in 
 
 ## Brand Commitments
 
-- The name **Lejar** is fixed. It replaced Kereta on 2026-11-20 (`docs/superpowers/specs/2026-11-20-rename-to-lejar-design.md`); stored-data names (D1 `kereta`, R2 `kereta-receipts`) keep the old name on purpose.
+- The name **Lejar** is fixed. It replaced Kereta on 2026-11-20 (`docs/superpowers/specs/2026-11-20-rename-to-lejar-design.md`). The database and photo bucket were recreated as D1 `lejar` and R2 `lejar-receipts`, starting empty.
 - The voice is plain, direct English. Malay terms Malaysian owners actually use (e.g. road tax, minyak hitam, cukai jalan) are welcome where they read naturally.
 - There are no other binding identity assets. The current look (navy booklet covers, cream ruled pages, violet visit stamps; see DESIGN.md) and the violet "LEJAR" stamp icon (`design/icon/`) are the incumbent design, not brand commitments.
 
