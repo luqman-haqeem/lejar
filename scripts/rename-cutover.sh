@@ -307,7 +307,7 @@ note "They live in the same database and bucket, so nothing should be missing."
 if ! confirm "Signed in and everything is there?"; then
   warn "Stop here: don't delete the old worker. Kereta still works at ${OLD_URL:-its old address}."
   note "If sign-in says redirect_uri_mismatch, wait a few minutes after stage 5 and retry."
-  SKIPPED+=("sign-in and data check on $APP_URL"); finish; exit 1
+  note "Fix that, then re-run this wizard: it keeps the values already saved."; exit 1
 fi
 open_url "https://console.cloud.google.com/auth/branding"
 step "Branding → App name: Lejar."
