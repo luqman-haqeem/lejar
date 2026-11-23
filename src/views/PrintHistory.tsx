@@ -61,6 +61,7 @@ export function PrintHistory({
                       <tr>
                         <td>
                           {l.description}
+                          {l.category && <span class="tag category">{l.category}</span>}
                           {hasPartDetails(l) && <span class="part-details">{partSummary(l, today)}</span>}
                         </td>
                         <td class="amount">{fmtOptionalRM(l.cost_sen)}</td>
