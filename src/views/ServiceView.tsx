@@ -54,6 +54,7 @@ export function ServiceView({
             <li>
               <span>
                 {l.description}
+                {l.category && <span class="tag category">{l.category}</span>}
                 {l.service_item_id !== null && itemName.has(l.service_item_id) && (
                   <span class="tag">{itemName.get(l.service_item_id)}</span>
                 )}

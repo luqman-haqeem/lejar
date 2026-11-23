@@ -7,10 +7,11 @@ import { receiptUrl } from "../receipts";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 import { parseDateInput } from "../lib/dates";
+import { CATEGORIES } from "../lib/categories";
 import { partSummary, positionsFor } from "../lib/parts";
 import { type HintReading, odometerHint, odometerHintLookup } from "../lib/odometer-hint";
 
-const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "" };
+const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "", category: "" };
 
 const WARRANTY_MONTHS = [12, 18, 24];
 
@@ -120,15 +121,27 @@ function LineRow({
   return (
     <div class="item">
       <Field label="Work or part" name={name("description")} value={line.description} errors={errors} />
+      <Field
+        label="Cost (RM)"
+        name={name("cost")}
+        value={line.cost}
+        errors={errors}
+        inputmode="decimal"
+        highlight={unread.has(name("cost"))}
+      />
       <div class="pair">
-        <Field
-          label="Cost (RM)"
-          name={name("cost")}
-          value={line.cost}
-          errors={errors}
-          inputmode="decimal"
-          highlight={unread.has(name("cost"))}
-        />
+        <label class={name("category") in errors ? "field invalid" : "field"}>
+          <span>Category</span>
+          <select name={name("category")} id={fieldId(name("category"))}>
+            <option value="">No category</option>
+            {CATEGORIES.map((c) => (
+              <option value={c} selected={line.category === c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <FieldError name={name("category")} errors={errors} />
+        </label>
         <label class="field">
           <span>Resets reminder</span>
           <select name={name("item")}>

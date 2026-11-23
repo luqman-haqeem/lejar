@@ -1,4 +1,5 @@
 import { TEMPLATES, type VehicleType } from "./lib/templates";
+import type { Category } from "./lib/categories";
 
 // Vehicle functions take userId and filter by vehicles.user_id. Item functions take a vehicleId the
 // caller has already checked with getVehicle (or check it themselves, like updateVehicle).
@@ -201,13 +202,14 @@ export interface ServiceLine {
   part_spec: string | null;
   part_position: string | null;
   warranty_until: string | null;
+  category: Category | null;
 }
 
 export type ServiceWithLines = Service & { lines: ServiceLine[] };
 
 export type LineInput = Pick<
   ServiceLine,
-  "description" | "cost_sen" | "service_item_id" | "part_brand" | "part_spec" | "part_position" | "warranty_until"
+  "description" | "cost_sen" | "service_item_id" | "part_brand" | "part_spec" | "part_position" | "warranty_until" | "category"
 >;
 export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes" | "receipt_key"> & {
   lines: LineInput[];
@@ -230,8 +232,8 @@ function insertLines(db: D1Database, serviceId: number | null, vehicleId: number
   const serviceRef = serviceId === null ? NEW_SERVICE_ID : "?";
   const stmt = db.prepare(
     `INSERT INTO service_lines
-       (service_id, description, cost_sen, service_item_id, sort, part_brand, part_spec, part_position, warranty_until)
-     VALUES (${serviceRef}, ?, ?, (SELECT id FROM service_items WHERE id = ? AND vehicle_id = ?), ?, ?, ?, ?, ?)`,
+       (service_id, description, cost_sen, service_item_id, sort, part_brand, part_spec, part_position, warranty_until, category)
+     VALUES (${serviceRef}, ?, ?, (SELECT id FROM service_items WHERE id = ? AND vehicle_id = ?), ?, ?, ?, ?, ?, ?)`,
   );
   return lines.map((l, sort) =>
     stmt.bind(
@@ -245,6 +247,7 @@ function insertLines(db: D1Database, serviceId: number | null, vehicleId: number
       l.part_spec,
       l.part_position,
       l.warranty_until,
+      l.category,
     ),
   );
 }
