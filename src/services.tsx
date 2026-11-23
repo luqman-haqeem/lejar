@@ -8,6 +8,7 @@ import {
   getService,
   getVehicle,
   listItems,
+  listOwnCategoryNames,
   receiptKeyInUse,
   serviceWithReceipt,
   type ServiceInput,
@@ -91,7 +92,10 @@ async function submitService(
   currentKey: string | null,
   save: (s: ServiceInput) => Promise<Response>,
 ): Promise<Response> {
-  const items = await listItems(c.env.DB, c.get("userId"), vehicle.id);
+  const [items, own] = await Promise.all([
+    listItems(c.env.DB, c.get("userId"), vehicle.id),
+    listOwnCategoryNames(c.env.DB, c.get("userId")),
+  ]);
   const values = readServiceForm(body);
   // Tagging a line with a schedule item that isn't this vehicle's is treated like any other id that
   // isn't the user's: 404, nothing saved.
@@ -106,6 +110,7 @@ async function submitService(
       <ServiceForm
         vehicle={vehicle}
         items={items}
+        ownCategories={own}
         values={values}
         mode={mode}
         errors={errors}
@@ -116,7 +121,7 @@ async function submitService(
       status,
     );
 
-  const parsed = parseServiceForm(values, items, c.get("today"), vehicle.type);
+  const parsed = parseServiceForm(values, items, c.get("today"), vehicle.type, own);
   if (photo.kind === "problem") {
     return render({ photo: photo.problem.message, ...(parsed.ok ? {} : parsed.errors) }, photo.problem.status);
   }
@@ -142,6 +147,7 @@ export function serviceRoutes() {
         today={c.get("today")}
         vehicle={vehicle}
         items={await listItems(c.env.DB, c.get("userId"), vehicle.id)}
+        ownCategories={await listOwnCategoryNames(c.env.DB, c.get("userId"))}
         values={blankServiceForm(c.req.query("workshop") ?? "")}
         mode={{ kind: "new" }}
         saved={c.req.query("saved") === "1"}
@@ -191,6 +197,7 @@ export function serviceRoutes() {
         today={c.get("today")}
         vehicle={owned.vehicle}
         items={await listItems(c.env.DB, c.get("userId"), owned.vehicle.id)}
+        ownCategories={await listOwnCategoryNames(c.env.DB, c.get("userId"))}
         values={serviceFormValuesOf(owned.service)}
         mode={{ kind: "edit", serviceId: owned.service.id }}
         receiptKey={owned.service.receipt_key}

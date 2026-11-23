@@ -20,6 +20,23 @@ export type Category = (typeof CATEGORIES)[number];
 
 export const isCategory = (s: string): s is Category => (CATEGORIES as readonly string[]).includes(s);
 
+/** The Category picker's "New category…" choice, which asks for the new category's name. */
+export const NEW_CATEGORY = "__new__";
+
+export const MAX_CATEGORY_NAME = 40;
+
+/**
+ * Why `name` can't be a category name, or null if it can: it's blank, too long, or already taken by a
+ * built-in or one of `own` (ignoring case). The message reads on after "<label>: ".
+ */
+export function categoryNameProblem(name: string, own: readonly string[]): string | null {
+  if (name === "") return "enter a name for the category.";
+  if (name === NEW_CATEGORY) return "choose another name for the category.";
+  if (name.length > MAX_CATEGORY_NAME) return `keep the category name to ${MAX_CATEGORY_NAME} characters.`;
+  const taken = [...CATEGORIES, ...own].find((c) => c.toLowerCase() === name.toLowerCase());
+  return taken ? `there's already a category called ${taken}.` : null;
+}
+
 // The built-in schedule items (src/lib/templates.ts) by name, lowercased. Fluids and parts that keep
 // the engine and drivetrain running count as Engine.
 const ITEM_CATEGORIES: Record<string, Category> = {

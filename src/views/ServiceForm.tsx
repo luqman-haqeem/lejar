@@ -7,11 +7,11 @@ import { receiptUrl } from "../receipts";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 import { parseDateInput } from "../lib/dates";
-import { CATEGORIES, itemCategory } from "../lib/categories";
+import { CATEGORIES, itemCategory, MAX_CATEGORY_NAME, NEW_CATEGORY } from "../lib/categories";
 import { partSummary, positionsFor } from "../lib/parts";
 import { type HintReading, odometerHint, odometerHintLookup } from "../lib/odometer-hint";
 
-const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "", category: "" };
+const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "", category: "", new_category: "" };
 
 const WARRANTY_MONTHS = [12, 18, 24];
 
@@ -107,6 +107,7 @@ function LineRow({
   line,
   n,
   items,
+  ownCategories,
   errors,
   unread,
   positions,
@@ -115,6 +116,7 @@ function LineRow({
   line: LineValues;
   n: number | "__N__";
   items: ServiceItem[];
+  ownCategories: readonly string[];
   errors: FormErrors;
   unread: Set<string>;
   positions: readonly string[];
@@ -137,11 +139,14 @@ function LineRow({
           <span>Category</span>
           <select name={name("category")} id={fieldId(name("category"))}>
             <option value="">No category</option>
-            {CATEGORIES.map((c) => (
+            {[...CATEGORIES, ...ownCategories].map((c) => (
               <option value={c} selected={line.category === c}>
                 {c}
               </option>
             ))}
+            <option value={NEW_CATEGORY} selected={line.category === NEW_CATEGORY}>
+              New category…
+            </option>
           </select>
           <FieldError name={name("category")} errors={errors} />
         </label>
@@ -156,6 +161,17 @@ function LineRow({
             ))}
           </select>
         </label>
+      </div>
+      {/* Shown (by app.css) only while the picker is on New category…, so it works without app.js. */}
+      <div class="new-category">
+        <Field
+          label="New category name"
+          name={name("new_category")}
+          value={line.new_category}
+          errors={errors}
+          placeholder="e.g. Dashcam"
+          maxlength={MAX_CATEGORY_NAME}
+        />
       </div>
       <PartDetailsFields line={line} name={name} positions={positions} errors={errors} today={today} />
       {/* The empty line at the end is never saved, so there's nothing to remove; "Add line" rows get one. */}
@@ -241,6 +257,7 @@ export type ServiceFormMode = { kind: "new" } | { kind: "edit"; serviceId: numbe
 export function ServiceForm({
   vehicle,
   items,
+  ownCategories,
   values,
   mode,
   errors = {},
@@ -253,6 +270,8 @@ export function ServiceForm({
 }: {
   vehicle: Vehicle;
   items: ServiceItem[];
+  /** The owner's own category names, offered after the built-in ones. */
+  ownCategories: readonly string[];
   values: ServiceFormValues;
   mode: ServiceFormMode;
   errors?: FormErrors;
@@ -343,6 +362,7 @@ export function ServiceForm({
                 line={line}
                 n={n}
                 items={items}
+                ownCategories={ownCategories}
                 errors={errors}
                 unread={unreadFields}
                 positions={positionsFor(vehicle.type)}

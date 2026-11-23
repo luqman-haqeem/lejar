@@ -3,7 +3,7 @@ import type { AppEnv } from "./app-types";
 import { idOf, notFound } from "./http";
 import { inBackground } from "./background";
 import type { Context } from "hono";
-import { getVehicle, giveBackScan, listItems, listVehicles, scansLeft, takeScan } from "./db";
+import { getVehicle, giveBackScan, listItems, listOwnCategoryNames, listVehicles, scansLeft, takeScan } from "./db";
 import { scanReceipt } from "./openrouter";
 import { cleanupOrphans, photoProblem, putReceipt, uploadTooLarge } from "./receipts";
 import { blankServiceForm, scanFormValues } from "./service-form";
@@ -87,6 +87,7 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
         today={c.get("today")}
         vehicle={vehicle}
         items={items}
+        ownCategories={await listOwnCategoryNames(c.env.DB, userId)}
         values={form.values}
         mode={{ kind: "new" }}
         receiptKey={key}
