@@ -92,6 +92,25 @@ describe("the printable history", () => {
     expect(html).not.toContain("41,234");
   });
 
+  it("shows each line's category, and nothing extra on a line without one", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await post("/services", user, {
+      vehicle_id: String(car),
+      date: "2026-09-02",
+      odometer_km: "52310",
+      total: "",
+      "line.0.description": "Brake pads",
+      "line.0.cost": "220",
+      "line.0.category": "Brakes",
+      "line.1.description": "Labour",
+      "line.1.cost": "50",
+    });
+    const html = await (await get(`/vehicles/${car}/print`, user)).text();
+    expect(html).toMatch(/<td>Brake pads<span class="tag category">Brakes<\/span>/);
+    expect(html).toMatch(/<td>Labour<\/td>/);
+  });
+
   it("leaves out private notes", async () => {
     const { user, car } = await carWithHistory();
     expect(await (await get(`/vehicles/${car}/print`, user)).text()).not.toContain("aircond smell");

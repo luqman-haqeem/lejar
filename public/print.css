@@ -13,6 +13,8 @@
 .print-lines td { padding: 0.15rem 0 0.15rem var(--date-col); }
 .print-lines td.amount { padding-left: 1rem; }
 .print-lines .part-details { font-size: 0.82rem; }
+.print-lines td:first-child { overflow-wrap: anywhere; }
+.print-lines .tag.category { white-space: nowrap; }
 .amount { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .print-total { display: flex; justify-content: space-between; font-size: 1.1rem; margin-top: 1rem; padding-top: 0.6rem; border-top: 2px solid var(--ink); color: var(--ink); }
 
