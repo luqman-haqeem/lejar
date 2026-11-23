@@ -9,6 +9,7 @@ import { Layout } from "./Layout";
 import { parseDateInput } from "../lib/dates";
 import { CATEGORIES, itemCategory } from "../lib/categories";
 import { partSummary, positionsFor } from "../lib/parts";
+import { type HintReading, odometerHint, odometerHintLookup } from "../lib/odometer-hint";
 
 const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "", category: "" };
 
@@ -120,15 +121,27 @@ function LineRow({
   return (
     <div class="item">
       <Field label="Work or part" name={name("description")} value={line.description} errors={errors} />
+      <Field
+        label="Cost (RM)"
+        name={name("cost")}
+        value={line.cost}
+        errors={errors}
+        inputmode="decimal"
+        highlight={unread.has(name("cost"))}
+      />
       <div class="pair">
-        <Field
-          label="Cost (RM)"
-          name={name("cost")}
-          value={line.cost}
-          errors={errors}
-          inputmode="decimal"
-          highlight={unread.has(name("cost"))}
-        />
+        <label class={name("category") in errors ? "field invalid" : "field"}>
+          <span>Category</span>
+          <select name={name("category")} id={fieldId(name("category"))}>
+            <option value="">No category</option>
+            {CATEGORIES.map((c) => (
+              <option value={c} selected={line.category === c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <FieldError name={name("category")} errors={errors} />
+        </label>
         <label class="field">
           <span>Resets reminder</span>
           <select name={name("item")}>
@@ -141,18 +154,6 @@ function LineRow({
           </select>
         </label>
       </div>
-      <label class={name("category") in errors ? "field invalid" : "field"}>
-        <span>Category</span>
-        <select name={name("category")} id={fieldId(name("category"))}>
-          <option value="">No category</option>
-          {CATEGORIES.map((c) => (
-            <option value={c} selected={line.category === c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <FieldError name={name("category")} errors={errors} />
-      </label>
       <PartDetailsFields line={line} name={name} positions={positions} errors={errors} today={today} />
     </div>
   );
@@ -180,6 +181,45 @@ function ReceiptPhoto({ receiptKey, errors }: { receiptKey: string | null; error
   );
 }
 
+/**
+ * The Odometer field with a hint from the vehicle's other readings for the form's date. The page
+ * carries the hint for every date range, and public/app.js swaps it in as the Date field changes.
+ */
+function OdometerField({
+  value,
+  date,
+  readings,
+  errors,
+  highlight,
+}: {
+  value: string;
+  date: string;
+  readings: HintReading[];
+  errors: FormErrors;
+  highlight: boolean;
+}) {
+  const hint = odometerHint(readings, parseDateInput(date));
+  return (
+    <div>
+      <Field
+        label="Odometer (km)"
+        name="odometer_km"
+        value={value}
+        errors={errors}
+        inputmode="numeric"
+        required
+        highlight={highlight}
+        hint={hint ? "odometer-hint" : undefined}
+      />
+      {hint && (
+        <p class="field-hint" id="odometer-hint" data-odometer-hints={JSON.stringify(odometerHintLookup(readings))}>
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export type ServiceFormMode = { kind: "new" } | { kind: "edit"; serviceId: number };
 
 export function ServiceForm({
@@ -193,6 +233,7 @@ export function ServiceForm({
   unread = [],
   notice,
   today,
+  readings,
 }: {
   vehicle: Vehicle;
   items: ServiceItem[];
@@ -208,6 +249,8 @@ export function ServiceForm({
   notice?: string;
   /** For telling a warranty that's still running from one that has expired. */
   today: string;
+  /** The vehicle's Odometer readings for the hint, without the edited Service's own. */
+  readings: HintReading[];
 }) {
   const v = values.service;
   const unreadFields = new Set(unread);
@@ -245,13 +288,11 @@ export function ServiceForm({
           <legend>Visit</legend>
           <div class="pair">
             <Field label="Date" name="date" type="date" value={v.date} errors={errors} required highlight={unreadFields.has("date")} />
-            <Field
-              label="Odometer (km)"
-              name="odometer_km"
+            <OdometerField
               value={v.odometer_km}
+              date={v.date}
+              readings={readings}
               errors={errors}
-              inputmode="numeric"
-              required
               highlight={unreadFields.has("odometer_km")}
             />
           </div>

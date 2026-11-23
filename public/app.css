@@ -323,6 +323,8 @@ a.due-when { color: var(--violet-text); font-weight: 600; min-height: 2.75rem; }
   display: inline-block; margin-left: 0.4rem; padding: 0.05rem 0.45rem; border-radius: 1rem;
   font-size: 0.78rem; font-weight: 600; background: var(--violet-tint); color: var(--violet-text);
 }
+/* A Category labels what a line is about; it never drives a reminder, so it is outlined, not violet. */
+.tag.category { background: transparent; color: var(--muted); border: 1px solid var(--rule); padding-block: 0; }
 .receipt-img { display: block; max-width: 100%; max-height: 28rem; margin: 0.5rem 0 0.75rem; border-radius: var(--radius); border: 1px solid var(--rule); }
 .archive { margin-top: 2rem; text-align: center; }
 
@@ -387,8 +389,6 @@ input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin:
 .chip:hover { background: var(--violet-tint); }
 /* On the service view and the print view: a muted line under the part. */
 .part-details, .line-service { display: block; margin-top: 0.15rem; font-size: 0.85rem; font-weight: 400; color: var(--muted); }
-/* A category sits beside the reminder tag, outlined so the two read apart. */
-.tag.category { background: transparent; border: 1px solid var(--rule); color: var(--muted); }
 /* The vehicle history's category filter: All, then each category its lines use. */
 .category-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.75rem; }
 .category-filter a {

@@ -1,2 +1,3 @@
--- Category: an optional label for what a service line is about, from the built-in list (see GLOSSARY.md).
+-- Category on a service line (see GLOSSARY.md): one of src/lib/categories.ts, or NULL for none.
+-- Existing lines keep NULL: no backfill.
 ALTER TABLE service_lines ADD COLUMN category TEXT;
