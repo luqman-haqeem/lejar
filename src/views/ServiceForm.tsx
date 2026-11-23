@@ -129,9 +129,9 @@ function LineRow({
           highlight={unread.has(name("cost"))}
         />
         <label class="field">
-          <span>Schedule item</span>
+          <span>Resets reminder</span>
           <select name={name("item")}>
-            <option value="">—</option>
+            <option value="">No reminder</option>
             {items.map((i) => (
               <option value={String(i.id)} selected={line.item === String(i.id)}>
                 {i.name}
@@ -261,7 +261,7 @@ export function ServiceForm({
         </fieldset>
         <fieldset id={fieldId("lines")} tabindex={-1}>
           <legend>Lines</legend>
-          <p class="hint">Tag a line with a schedule item to reset when that item is next due.</p>
+          <p class="hint">Pick a reminder for a line to restart its countdown. Anything else, like a gasket, stays on No reminder.</p>
           <FieldError name="lines" errors={errors} />
           <RepeatableRows
             id="lines"

@@ -24,6 +24,16 @@ async function logged(userId: number, vehicleId: number, fields: Record<string, 
 }
 
 describe("logging a service", () => {
+  it("lets each line reset a reminder, with no reminder as a named choice", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const html = await (await get(`/services/new?vehicle=${car}`, user)).text();
+    expect(html).toContain("<span>Resets reminder</span>");
+    expect(html).toContain('<option value="">No reminder</option>');
+    expect(html).not.toContain("Schedule item");
+    expect(html).not.toMatch(/name="line\.0\.item"><option value="">—<\/option>/);
+  });
+
   it("saves the visit, its lines and an odometer reading, then opens the vehicle's history", async () => {
     const user = await makeUser();
     const car = await addCar(user);
