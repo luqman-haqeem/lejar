@@ -1,5 +1,5 @@
 import type { ServiceItem, Vehicle } from "../db";
-import type { FormErrors } from "../form";
+import { type FormErrors, isBlankRow } from "../form";
 import type { LineValues, ServiceFormValues } from "../service-form";
 import { PhotoCapture } from "./capture";
 import { ErrorSummary, Field, FieldError, fieldId, RepeatableRows } from "./fields";
@@ -92,6 +92,9 @@ function PartDetailsFields({
                 {m} months
               </button>
             ))}
+            <button type="button" class="chip" data-no-warranty>
+              No warranty
+            </button>
           </div>
         </div>
       </div>
@@ -154,6 +157,19 @@ function LineRow({
         </label>
       </div>
       <PartDetailsFields line={line} name={name} positions={positions} errors={errors} today={today} />
+      {/* The empty line at the end is never saved, so there's nothing to remove; "Add line" rows get one. */}
+      {(n === "__N__" || !isBlankRow(line)) && (
+        <label class="remove">
+          <input
+            type="checkbox"
+            name={name("remove")}
+            value="1"
+            data-remove-line
+            aria-label={line.description ? `Remove this line: ${line.description}` : undefined}
+          />{" "}
+          Remove this line
+        </label>
+      )}
     </div>
   );
 }

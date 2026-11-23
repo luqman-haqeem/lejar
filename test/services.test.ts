@@ -426,3 +426,141 @@ describe("when each schedule item was last done", () => {
     expect((await lastDoneByItem(env.DB, await makeUser(), car)).size).toBe(0);
   });
 });
+
+describe("removing a service line", () => {
+  it("leaves a ticked line out of a new service, whatever is in it", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const [engineOil] = await itemsOf(car);
+    await logged(user, car, {
+      date: "2026-03-14",
+      odometer_km: "52000",
+      total: "",
+      "line.0.description": "Engine oil",
+      "line.0.cost": "150",
+      "line.1.description": "Wiper blade",
+      "line.1.cost": "40",
+      "line.1.item": String(engineOil.id),
+      "line.1.category": "Wipers",
+      "line.1.brand": "Bosch",
+      "line.1.remove": "1",
+      "line.2.description": "Labour",
+      "line.2.cost": "20",
+    });
+    const [{ id }] = await listServices(env.DB, user, car);
+    const service = await getService(env.DB, user, id);
+    expect(service!.lines.map((l) => l.description)).toEqual(["Engine oil", "Labour"]);
+    expect(service!.total_sen).toBe(17000);
+    expect((await lastDoneByItem(env.DB, user, car)).size).toBe(0);
+  });
+
+  it("saves even when the ticked line has a bad cost or only a warranty date", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, {
+      date: "2026-03-14",
+      odometer_km: "52000",
+      total: "",
+      "line.0.description": "Engine oil",
+      "line.0.cost": "150",
+      "line.1.cost": "abc",
+      "line.1.warranty_until": "not a date",
+      "line.1.remove": "1",
+      "line.2.warranty_until": "2027-03-14",
+      "line.2.remove": "1",
+    });
+    const [{ id }] = await listServices(env.DB, user, car);
+    expect((await getService(env.DB, user, id))!.lines.map((l) => l.description)).toEqual(["Engine oil"]);
+  });
+
+  it("keeps a typed total as it is", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, {
+      date: "2026-03-14",
+      odometer_km: "52000",
+      total: "200",
+      "line.0.description": "Engine oil",
+      "line.0.cost": "150",
+      "line.1.description": "Misread line",
+      "line.1.cost": "50",
+      "line.1.remove": "1",
+    });
+    const [{ id }] = await listServices(env.DB, user, car);
+    expect((await getService(env.DB, user, id))!.total_sen).toBe(20000);
+  });
+
+  it("doesn't bring a removed line back when the form has an error elsewhere", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const res = await logService(user, car, {
+      date: "2026-03-14",
+      odometer_km: "",
+      "line.0.description": "Misread line",
+      "line.0.remove": "1",
+      "line.1.description": "Engine oil",
+      "line.1.cost": "150",
+    });
+    expect(res.status).toBe(400);
+    const html = await res.text();
+    expect(html).not.toContain("Misread line");
+    expect(html).toContain('value="Engine oil"');
+    expect(html).toContain('value="150"');
+  });
+
+  it("deletes a saved line on edit, and its reminder goes back to the earlier service", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const [engineOil] = await itemsOf(car);
+    await logged(user, car, { date: "2026-01-10", odometer_km: "48000", total: "1", "line.0.item": String(engineOil.id) });
+    await logged(user, car, {
+      date: "2026-03-14",
+      odometer_km: "52000",
+      total: "",
+      "line.0.item": String(engineOil.id),
+      "line.0.cost": "150",
+      "line.1.description": "Labour",
+      "line.1.cost": "50",
+    });
+    const [latest] = (await listServices(env.DB, user, car)).filter((s) => s.date === "2026-03-14");
+    const res = await post(`/services/${latest.id}`, user, {
+      date: "2026-03-14",
+      odometer_km: "52000",
+      total: "",
+      "line.0.item": String(engineOil.id),
+      "line.0.cost": "150",
+      "line.0.remove": "1",
+      "line.1.description": "Labour",
+      "line.1.cost": "50",
+    });
+    expect(res.status).toBe(302);
+    const service = await getService(env.DB, user, latest.id);
+    expect(service!.lines.map((l) => l.description)).toEqual(["Labour"]);
+    expect(service!.total_sen).toBe(5000);
+    expect((await lastDoneByItem(env.DB, user, car)).get(engineOil.id)).toEqual({ date: "2026-01-10", km: 48000 });
+  });
+
+  it("deletes a saved line on edit, and its reminder is not done at all if no other service has it", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const [engineOil] = await itemsOf(car);
+    const lines = { "line.0.item": String(engineOil.id), "line.1.description": "Labour", "line.1.cost": "50" };
+    await logged(user, car, { date: "2026-03-14", odometer_km: "52000", total: "", ...lines });
+    const [{ id }] = await listServices(env.DB, user, car);
+    const res = await post(`/services/${id}`, user, { date: "2026-03-14", odometer_km: "52000", total: "", ...lines, "line.0.remove": "1" });
+    expect(res.status).toBe(302);
+    expect((await lastDoneByItem(env.DB, user, car)).has(engineOil.id)).toBe(false);
+  });
+
+  it("offers Remove this line on each filled line and new rows, but not the empty last row", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { date: "2026-03-14", odometer_km: "52000", total: "", "line.0.description": "Engine oil" });
+    const [{ id }] = await listServices(env.DB, user, car);
+    const html = await (await get(`/services/${id}/edit`, user)).text();
+    expect(html).toContain('name="line.0.remove"');
+    expect(html).toContain('name="line.__N__.remove"');
+    expect(html).not.toContain('name="line.1.remove"');
+    expect(html).toContain("Remove this line");
+  });
+});

@@ -243,7 +243,8 @@ for (const details of document.querySelectorAll("fieldset[data-examples]")) {
 
 // Part details: a spec that looks like a tyre size is written the standard way as the field is left
 // ("2055516" → "205/55 R16"; the server does the same), and the warranty quick picks set "until"
-// to that many months after the service date (or today, before a date is entered).
+// to that many months after the service date (or today, before a date is entered), or blank it for
+// "No warranty", which iOS Safari's date picker can't do.
 const TYRE_SIZE = /^(\d{3})\s*[/ ]?\s*(\d{2})\s*[/ ]?\s*R?\s*(\d{2})(?:\s*(\d{2,3}[A-Z]))?$/;
 document.addEventListener("focusout", (e) => {
   const input = e.target;
@@ -257,15 +258,27 @@ const showWarrantyPicks = (root) => {
 showWarrantyPicks(document);
 new MutationObserver(() => showWarrantyPicks(document)).observe(document.getElementById("lines") ?? document.createElement("div"), { childList: true });
 document.addEventListener("click", (e) => {
-  const pick = e.target instanceof Element && e.target.closest("[data-months]");
-  if (!pick) return;
-  const until = pick.closest(".warranty")?.querySelector("input[type=date]");
-  const serviceDate = pick.form?.elements.namedItem("date")?.value;
+  const pick = e.target instanceof Element && e.target.closest("[data-months], [data-no-warranty]");
+  const until = pick && pick.closest(".warranty")?.querySelector("input[type=date]");
   if (!until) return;
+  if (pick.matches("[data-no-warranty]")) {
+    until.value = "";
+    return;
+  }
+  const serviceDate = pick.form?.elements.namedItem("date")?.value;
   const from = /^\d{4}-\d{2}-\d{2}$/.test(serviceDate ?? "") ? new Date(`${serviceDate}T00:00:00Z`) : new Date();
   // Same as addMonths in src/lib/dates.ts: 31 Aug + 18 months is 28 Feb, not 3 Mar.
   const d = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + Number(pick.dataset.months), 1));
   const lastDay = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
   d.setUTCDate(Math.min(from.getUTCDate(), lastDay));
   until.value = d.toISOString().slice(0, 10);
+});
+
+// Service lines: ticking "Remove this line" takes the line off the form at once. Its inputs stay in it,
+// so the server sees the tick and leaves the line out; without this script the tick still works.
+document.addEventListener("change", (e) => {
+  const tick = e.target;
+  if (!(tick instanceof HTMLInputElement) || !tick.matches("[data-remove-line]") || !tick.checked) return;
+  const line = tick.closest(".item");
+  if (line) line.hidden = true;
 });

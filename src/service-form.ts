@@ -20,8 +20,12 @@ export type ServiceFormValues = { service: ServiceValues; lines: LineValues[] };
 
 const AMOUNT_HINT = "must be an amount like 85 or RM 1,234.50.";
 
+/** Lines ticked "Remove line" are dropped here, so they're never checked, saved or shown again. */
 export function readServiceForm(body: Body): ServiceFormValues {
-  return { service: readFields(body, SERVICE_FIELDS, ["date"]), lines: readRows(body, "line", LINE_FIELDS, ["warranty_until"]) };
+  const lines = readRows(body, "line", [...LINE_FIELDS, "remove"], ["warranty_until"])
+    .filter((r) => r.remove === "")
+    .map(({ remove: _, ...line }) => line);
+  return { service: readFields(body, SERVICE_FIELDS, ["date"]), lines };
 }
 
 export function blankServiceForm(workshop = ""): ServiceFormValues {
