@@ -58,7 +58,7 @@ describe("the printable history", () => {
     expect(html).toContain("10/03/2025");
     expect(html).toContain("52,310 km");
     expect(html).toContain("RM 150.00");
-    expect(html).toMatch(/Grand total[^]*?RM 1,234.50/);
+    expect(html).toMatch(/Grand total[\s\S]*?RM 1,234.50/);
   });
 
   it("lists services oldest first, as a service book reads", async () => {

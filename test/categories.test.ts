@@ -144,7 +144,7 @@ describe("the category a reminder item gives a line", () => {
       const vehicle = await addVehicle(user, type);
       const items = await itemsOf(vehicle);
       const fields: Record<string, string> = { ...visit(vehicle) };
-      items.forEach((i, n) => (fields[`line.${n}.item`] = String(i.id)));
+      for (const [n, i] of items.entries()) fields[`line.${n}.item`] = String(i.id);
       const id = await logService(user, fields);
       expect((await categoriesOf(user, id)).filter(([, c]) => c === null)).toEqual([]);
     }

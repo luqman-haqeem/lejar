@@ -149,7 +149,10 @@ export function parseServiceForm(
       const same = newCategories.get(r.new_category.toLowerCase());
       const problem = same ? null : categoryNameProblem(r.new_category, ownCategories);
       if (problem) errors[key("new_category")] = `${label}: ${problem}`;
-      else newCategories.set(r.new_category.toLowerCase(), (category = same ?? r.new_category));
+      else {
+        category = same ?? r.new_category;
+        newCategories.set(r.new_category.toLowerCase(), category);
+      }
     } else if (isCategory(r.category) || ownCategories.includes(r.category)) {
       category = r.category;
     } else if (r.category !== "") {

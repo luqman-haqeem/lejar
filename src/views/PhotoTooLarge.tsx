@@ -10,6 +10,8 @@ export function PhotoTooLarge() {
           Receipt photos can be up to {MAX_PHOTO_BYTES / 1024 / 1024} MB. Go back and choose the photo again; the app
           shrinks it before uploading.
         </p>
+        {/* biome-ignore lint/security/noScriptUrl: static back link, no user input */}
+        {/* biome-ignore lint/a11y/useValidAnchor: same back link */}
         <a class="button" href="javascript:history.back()">
           Go back
         </a>
