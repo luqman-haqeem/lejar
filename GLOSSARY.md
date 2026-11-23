@@ -19,8 +19,8 @@ One item on a Service, such as a part fitted or a labour charge, with an optiona
 _Avoid_: Line item, entry, row
 
 **Category**:
-A label for what a Service line is about (Engine, Brakes, Wipers…), for finding lines later. One per line, optional. Unlike the schedule item a line resets, a Category never drives a reminder: a line on No reminder can still have one.
-_Avoid_: Type, group, tag
+A label from a built-in list (Engine, Filters, Brakes, Tyres, Battery, Wipers, Suspension, Electrical, Body, Other) saying what a Service line is about, so its lines can be found together later. A line has at most one. Unlike a schedule item, which a line resets and which drives reminders, a Category never reminds: a line can have a Category with no reminder (wiper blades, a DIY part). A line that resets a schedule item takes that item's Category unless the owner picks another.
+_Avoid_: Tag, type, group
 
 **Part details**:
 Optional facts about the part a Service line fitted: its brand, spec, position on the vehicle and warranty until date. A Service line without them is still complete.

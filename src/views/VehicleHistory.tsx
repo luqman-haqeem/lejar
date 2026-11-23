@@ -1,8 +1,10 @@
-import type { Reading, Service, Vehicle, YearTotal } from "../db";
+import type { CategoryLine, Reading, Service, Vehicle, YearTotal } from "../db";
 import type { FormErrors } from "../form";
 import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
-import { fmtRM } from "../lib/money";
+import { fmtOptionalRM, fmtRM } from "../lib/money";
+import type { Category } from "../lib/categories";
+import { hasPartDetails, partSummary } from "../lib/parts";
 import { ErrorSummary, Field } from "./fields";
 import { Cover, ScheduleList, type VehicleDue } from "./Dashboard";
 import { BackIcon } from "./icons";
@@ -20,6 +22,9 @@ export function VehicleHistory({
   errors = {},
   stamped = null,
   added = false,
+  categories,
+  filter,
+  today,
 }: {
   vehicle: Vehicle;
   /** What's due on this vehicle, for its full schedule. */
@@ -34,6 +39,11 @@ export function VehicleHistory({
   stamped?: number | null;
   /** Just added: confirm it, since this is where Add vehicle lands. */
   added?: boolean;
+  /** The categories this vehicle's lines use, to filter the history by. */
+  categories: readonly Category[];
+  /** The chosen category and its lines, newest first; null shows the whole history. */
+  filter: { category: Category; lines: CategoryLine[] } | null;
+  today: string;
 }) {
   const justStamped = stamped !== null && services.some((s) => s.id === stamped);
   return (
@@ -106,7 +116,10 @@ export function VehicleHistory({
 
       <section id="history">
         <h2>History</h2>
-        {services.length === 0 ? (
+        {categories.length > 0 && <CategoryFilter vehicleId={vehicle.id} categories={categories} chosen={filter?.category ?? null} />}
+        {filter ? (
+          <CategoryLines lines={filter.lines} today={today} />
+        ) : services.length === 0 ? (
           <div class="stamp-blank">
             <span class="stamp-blank-title">First stamp goes here</span>
             <span>Each logged visit is stamped in this history. Old paper receipts can be backdated.</span>
@@ -174,5 +187,48 @@ export function VehicleHistory({
       </section>
       <script src="/app.js" defer></script>
     </Layout>
+  );
+}
+
+/** All, then each category the vehicle's lines use: links, so a filtered view can be bookmarked. */
+function CategoryFilter({
+  vehicleId,
+  categories,
+  chosen,
+}: {
+  vehicleId: number;
+  categories: readonly Category[];
+  chosen: Category | null;
+}) {
+  const link = (href: string, label: string, current: boolean) => (
+    <a href={href} aria-current={current ? "page" : undefined}>
+      {label}
+    </a>
+  );
+  return (
+    <nav class="category-filter" aria-label="Filter the history by category">
+      {link(`/vehicles/${vehicleId}#history`, "All", chosen === null)}
+      {categories.map((cat) => link(`/vehicles/${vehicleId}?category=${encodeURIComponent(cat)}#history`, cat, cat === chosen))}
+    </nav>
+  );
+}
+
+/** One category's lines across services: the line, its part details and its Service, linking to it. */
+function CategoryLines({ lines, today }: { lines: CategoryLine[]; today: string }) {
+  return (
+    <ul class="lines category-lines">
+      {lines.map((l) => (
+        <li>
+          <span>
+            <a href={`/services/${l.service_id}`}>{l.description}</a>
+            {hasPartDetails(l) && <span class="part-details">{partSummary(l, today)}</span>}
+            <span class="line-service">
+              {[fmtDate(l.date), fmtKm(l.odometer_km), l.workshop].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          <span>{fmtOptionalRM(l.cost_sen)}</span>
+        </li>
+      ))}
+    </ul>
   );
 }

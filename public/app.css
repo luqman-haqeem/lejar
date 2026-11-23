@@ -388,7 +388,16 @@ input[type=radio], input[type=checkbox] { width: 1.3rem; height: 1.3rem; margin:
 }
 .chip:hover { background: var(--violet-tint); }
 /* On the service view and the print view: a muted line under the part. */
-.part-details { display: block; margin-top: 0.15rem; font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+.part-details, .line-service { display: block; margin-top: 0.15rem; font-size: 0.85rem; font-weight: 400; color: var(--muted); }
+/* The vehicle history's category filter: All, then each category its lines use. */
+.category-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.75rem; }
+.category-filter a {
+  display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.8rem; border-radius: 1rem; /* rounded.pill */
+  font-size: 0.88rem; font-weight: 600; color: var(--ink); text-decoration: none;
+  background: var(--page); border: 1.5px solid var(--field-line);
+}
+.category-filter a:hover { background: var(--violet-tint); }
+.category-filter a[aria-current] { background: var(--violet-tint); border-color: var(--violet); color: var(--violet-text); }
 
 /* Common models: one tap fills make, model and name. */
 .picks { margin: 0.25rem 0 1.1rem; }

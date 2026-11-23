@@ -270,6 +270,24 @@ document.addEventListener("click", (e) => {
   until.value = d.toISOString().slice(0, 10);
 });
 
+// Categories: picking a line's reminder fills its category with the item's (the server does the same
+// when none is chosen), and keeps following the reminder until the owner picks a category themselves.
+document.addEventListener("change", (e) => {
+  const select = e.target;
+  if (!(select instanceof HTMLSelectElement)) return;
+  const m = select.name.match(/^line\.(\d+)\.(item|category)$/);
+  if (!m) return;
+  const category = select.form?.elements.namedItem(`line.${m[1]}.category`);
+  if (!(category instanceof HTMLSelectElement)) return;
+  if (m[2] === "category") {
+    delete category.dataset.auto;
+    return;
+  }
+  if (category.value !== "" && !category.dataset.auto) return;
+  category.value = select.selectedOptions[0]?.dataset.category ?? "";
+  category.dataset.auto = "1";
+});
+
 // Service form: the Odometer hint follows the Date field. The server precomputes the text for every
 // date range (data-odometer-hints, see src/lib/odometer-hint.ts); this only finds the one for the date.
 // An empty date counts as after every reading.

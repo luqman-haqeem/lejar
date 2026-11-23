@@ -1,5 +1,5 @@
-import { TEMPLATES, type VehicleType } from "./lib/templates";
 import type { Category } from "./lib/categories";
+import { TEMPLATES, type VehicleType } from "./lib/templates";
 
 // Vehicle functions take userId and filter by vehicles.user_id. Item functions take a vehicleId the
 // caller has already checked with getVehicle (or check it themselves, like updateVehicle).
@@ -202,14 +202,21 @@ export interface ServiceLine {
   part_spec: string | null;
   part_position: string | null;
   warranty_until: string | null;
-  category: Category | null;
+    category: Category | null;
 }
 
 export type ServiceWithLines = Service & { lines: ServiceLine[] };
 
 export type LineInput = Pick<
   ServiceLine,
-  "description" | "cost_sen" | "service_item_id" | "part_brand" | "part_spec" | "part_position" | "warranty_until" | "category"
+  | "description"
+  | "cost_sen"
+  | "service_item_id"
+  | "part_brand"
+  | "part_spec"
+  | "part_position"
+  | "warranty_until"
+  | "category"
 >;
 export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes" | "receipt_key"> & {
   lines: LineInput[];
@@ -338,6 +345,38 @@ export async function listServices(db: D1Database, userId: number, vehicleId: nu
     .prepare(`SELECT * FROM services WHERE ${OWNED_VEHICLE} ORDER BY date DESC, odometer_km DESC, id DESC`)
     .bind(vehicleId, userId)
     .all<Service>();
+  return results;
+}
+
+export type CategoryLine = ServiceLine & Pick<Service, "date" | "odometer_km" | "workshop">;
+
+/** The categories the vehicle's lines use, in no particular order. Empty if the vehicle isn't the user's. */
+export async function usedCategories(db: D1Database, userId: number, vehicleId: number): Promise<Category[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT DISTINCT l.category FROM service_lines l JOIN services s ON s.id = l.service_id
+       WHERE s.${OWNED_VEHICLE} AND l.category IS NOT NULL`,
+    )
+    .bind(vehicleId, userId)
+    .all<{ category: Category }>();
+  return results.map((r) => r.category);
+}
+
+/** The vehicle's lines in one category with their service's date, km and workshop, newest first. */
+export async function listCategoryLines(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+  category: Category,
+): Promise<CategoryLine[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT l.*, s.date, s.odometer_km, s.workshop FROM service_lines l JOIN services s ON s.id = l.service_id
+       WHERE s.${OWNED_VEHICLE} AND l.category = ?
+       ORDER BY s.date DESC, s.odometer_km DESC, s.id DESC, l.sort, l.id`,
+    )
+    .bind(vehicleId, userId, category)
+    .all<CategoryLine>();
   return results;
 }
 
