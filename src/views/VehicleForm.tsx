@@ -40,6 +40,7 @@ function QuickPicks({ type }: { type: VehicleType }) {
         Common models
       </span>
       {Object.entries(QUICK_PICKS).map(([t, picks]) => (
+        // biome-ignore lint/a11y/useSemanticElements: styled row of buttons, a fieldset would change layout
         <div class="pick-row" role="group" aria-labelledby="picks-label" data-type={t} hidden={t !== type}>
           {picks.map((p) => (
             <button

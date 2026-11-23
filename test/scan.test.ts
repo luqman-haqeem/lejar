@@ -136,7 +136,7 @@ describe("scanning a receipt", () => {
     expect(inputValue(html, "line.0.brand")).toBe("Michelin");
     expect(inputValue(html, "line.0.spec")).toBe("205/55 R16");
     expect(inputValue(html, "line.0.warranty_until")).toBe("2027-09-02");
-    expect(html).toMatch(/name="line\.0\.position"[^]*?<option value="Front" selected=""/);
+    expect(html).toMatch(/name="line\.0\.position"[\s\S]*?<option value="Front" selected=""/);
     expect(html).toContain("Michelin · 205/55 R16 · Front · Warranty until 02/09/2027");
     expect(inputValue(html, "line.1.brand")).toBe("");
     expect(html).not.toMatch(/class="field unread"><span>(Brand|Spec|Warranty until)/);
