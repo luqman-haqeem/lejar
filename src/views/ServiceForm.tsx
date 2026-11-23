@@ -213,42 +213,84 @@ function ReceiptPhoto({ receiptKey, errors }: { receiptKey: string | null; error
   );
 }
 
+export const NO_KM_WARNING = "No odometer reading. Type the km, or press Save again to save without it.";
+
 /**
  * The Odometer field with a hint from the vehicle's other readings for the form's date. The page
  * carries the hint for every date range, and public/app.js swaps it in as the Date field changes.
+ * It may be left blank, but only once the owner is warned (`warned`, or public/app.js) and confirms
+ * through the hidden `no_km` field.
  */
 function OdometerField({
   value,
   date,
+  noKm,
+  warned,
   readings,
   errors,
   highlight,
 }: {
   value: string;
   date: string;
+  noKm: string;
+  warned: boolean;
   readings: HintReading[];
   errors: FormErrors;
   highlight: boolean;
 }) {
   const hint = odometerHint(readings, parseDateInput(date));
+  const describedBy = [hint && "odometer-hint", warned && "odometer-warning"].filter(Boolean).join(" ");
   return (
-    <div>
+    <div class={warned ? "odometer no-km" : "odometer"} data-no-km-warning={NO_KM_WARNING}>
+      <input type="hidden" name="no_km" value={noKm} />
       <Field
         label="Odometer (km)"
         name="odometer_km"
         value={value}
         errors={errors}
         inputmode="numeric"
-        required
         highlight={highlight}
-        hint={hint ? "odometer-hint" : undefined}
+        hint={describedBy || undefined}
       />
+      {warned && (
+        <p class="field-warning" id="odometer-warning" role="status">
+          {NO_KM_WARNING}
+        </p>
+      )}
       {hint && (
         <p class="field-hint" id="odometer-hint" data-odometer-hints={JSON.stringify(odometerHintLookup(readings))}>
           {hint}
         </p>
       )}
     </div>
+  );
+}
+
+/** A save button; it says "without km" when it's the one that will save the visit with no km. */
+function SaveButton({
+  action,
+  label,
+  without,
+  primary,
+  warned,
+}: {
+  action: string;
+  label: string;
+  without: string;
+  primary: boolean;
+  warned: boolean;
+}) {
+  return (
+    <button
+      type="submit"
+      class={primary ? "button" : "secondary"}
+      name="action"
+      value={action}
+      data-label={label}
+      data-label-no-km={without}
+    >
+      {warned ? without : label}
+    </button>
   );
 }
 
@@ -267,6 +309,7 @@ export function ServiceForm({
   notice,
   today,
   readings,
+  warnNoKm,
 }: {
   vehicle: Vehicle;
   items: ServiceItem[];
@@ -286,6 +329,8 @@ export function ServiceForm({
   today: string;
   /** The vehicle's Odometer readings for the hint, without the edited Service's own. */
   readings: HintReading[];
+  /** Set when the km was left blank without confirming: the button pressed, now saving without km. */
+  warnNoKm?: "save" | "save_add";
 }) {
   const v = values.service;
   const unreadFields = new Set(unread);
@@ -326,6 +371,8 @@ export function ServiceForm({
             <OdometerField
               value={v.odometer_km}
               date={v.date}
+              noKm={v.no_km}
+              warned={warnNoKm !== undefined}
               readings={readings}
               errors={errors}
               highlight={unreadFields.has("odometer_km")}
@@ -372,13 +419,15 @@ export function ServiceForm({
           />
         </fieldset>
         <div class="actions">
-          <button type="submit" class="button" name="action" value="save">
-            Save
-          </button>
+          <SaveButton action="save" label="Save" without="Save without km" primary warned={warnNoKm === "save"} />
           {isNew && (
-            <button type="submit" class="secondary" name="action" value="save_add">
-              Save &amp; add another
-            </button>
+            <SaveButton
+              action="save_add"
+              label="Save & add another"
+              without="Save without km & add another"
+              primary={false}
+              warned={warnNoKm === "save_add"}
+            />
           )}
         </div>
       </form>

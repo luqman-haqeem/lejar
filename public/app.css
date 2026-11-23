@@ -347,6 +347,10 @@ a.due-when { color: var(--violet-text); font-weight: 600; min-height: 2.75rem; }
 .field-error { display: block; margin-top: 0.3rem; font-size: 0.9rem; color: var(--danger); font-weight: 600; }
 .field.unread input, .field.unread select { border-color: var(--soon); background: var(--soon-bg); }
 .field.unread > span:first-child::after { content: " · couldn't read"; color: var(--soon); }
+/* A blank Odometer field the owner is being asked about (see ServiceForm.tsx): the same amber. */
+.odometer.no-km .field input { border-color: var(--soon); background: var(--soon-bg); }
+.field-warning { margin: -0.55rem 0 0.85rem; font-size: 0.9rem; font-weight: 600; color: var(--soon); }
+.field-warning + .field-hint { margin-top: 0; }
 .pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; }
 .pair > * { min-width: 0; }
 /* iOS Safari gives date inputs an intrinsic min width and centred text; without this they overflow a half-width column. */

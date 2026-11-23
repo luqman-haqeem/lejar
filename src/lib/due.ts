@@ -60,18 +60,39 @@ export function estimateKm(readings: KmReading[], today: string): number | null 
 }
 
 /**
+ * The km on `date` worked out from the readings: a straight line between the nearest reading on or
+ * before it and the nearest on or after it (a reading on the date is its own km). Null unless there's
+ * a reading on each side: it never extends past the readings.
+ */
+export function kmOnDate(readings: KmReading[], date: string): number | null {
+  const sorted = [...readings].sort((a, b) => a.date.localeCompare(b.date) || a.km - b.km);
+  const before = sorted.filter((r) => r.date <= date).at(-1);
+  const after = sorted.find((r) => r.date >= date);
+  if (!before || !after) return null;
+  if (before.date === date || before.date === after.date) return before.km;
+  const share = daysBetween(before.date, date) / daysBetween(before.date, after.date);
+  return Math.round(before.km + (after.km - before.km) * share);
+}
+
+/** The latest Service that reset an item; `km` is null when that Service has no Odometer reading. */
+export type LastDone = { date: string; km: number | null };
+
+/**
  * The item's due point and status. "Last done" is its latest logged service, else its baseline
- * (date and/or km), else it's unknown. Whichever of km or date comes first decides the status.
+ * (date and/or km), else it's unknown. A latest service with no km takes the km worked out from the
+ * vehicle's `readings` for its date (kmOnDate), else none, so it's due by date only.
+ * Whichever of km or date comes first decides the status.
  */
 export function itemDue(
   item: ScheduleItem,
-  lastDone: KmReading | null,
+  lastDone: LastDone | null,
   estKm: number | null,
   vehicleType: VehicleType,
   today: string,
+  readings: KmReading[] = [],
 ): ItemDue {
   const lastDate = lastDone ? lastDone.date : item.baseline_date;
-  const lastKm = lastDone ? lastDone.km : item.baseline_km;
+  const lastKm = lastDone ? (lastDone.km ?? kmOnDate(readings, lastDone.date)) : item.baseline_km;
 
   const dueKm = lastKm !== null && item.interval_km !== null ? lastKm + item.interval_km : null;
   const dueDate = lastDate !== null && item.interval_months !== null ? addMonths(lastDate, item.interval_months) : null;

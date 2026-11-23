@@ -7,7 +7,7 @@ A vehicle owner's own service book: the record of what was done to a car or moto
 ### Service record
 
 **Service**:
-One workshop visit on a date at an odometer reading, with a total paid and optionally its receipt photo.
+One workshop visit on a date, with a total paid, and optionally an Odometer reading and its receipt photo. A Service whose km the owner doesn't know has no Odometer reading; that's an honest blank, not a missing field.
 _Avoid_: Visit, job, invoice
 
 **Odometer reading**:

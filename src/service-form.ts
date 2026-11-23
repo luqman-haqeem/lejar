@@ -10,7 +10,8 @@ import type { ScanResult } from "./openrouter";
 
 // The service form posts the visit's fields by name, and its lines as "line.<n>.<field>".
 
-export const SERVICE_FIELDS = ["date", "odometer_km", "workshop", "total", "notes"] as const;
+// "no_km" is "1" once the owner has confirmed the visit has no Odometer reading.
+export const SERVICE_FIELDS = ["date", "odometer_km", "workshop", "total", "notes", "no_km"] as const;
 // "new_category" is the name typed after choosing "New category…" as the line's category.
 export const LINE_FIELDS = ["description", "cost", "item", "brand", "spec", "position", "warranty_until", "category", "new_category"] as const;
 export const MAX_LINES = 50;
@@ -30,7 +31,7 @@ export function readServiceForm(body: Body): ServiceFormValues {
 }
 
 export function blankServiceForm(workshop = ""): ServiceFormValues {
-  return { service: { date: "", odometer_km: "", workshop, total: "", notes: "" }, lines: [] };
+  return { service: { date: "", odometer_km: "", workshop, total: "", notes: "", no_km: "" }, lines: [] };
 }
 
 /**
@@ -54,6 +55,7 @@ export function scanFormValues(
     workshop: field("workshop", scan.workshop, String),
     total: field("total", scan.total_sen, amount),
     notes: "",
+    no_km: "",
   };
   const lines = scan.lines.map((l, n) => {
     const item = items.find((i) => i.id === suggestItem(l.description, items));
@@ -82,10 +84,12 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
   return {
     service: {
       date: s.date,
-      odometer_km: String(s.odometer_km),
+      odometer_km: toField(s.odometer_km),
       workshop: s.workshop,
       total: amount(s.total_sen),
       notes: s.notes,
+      // A Service already saved with no km saves again without asking.
+      no_km: s.odometer_km === null ? "1" : "",
     },
     lines: s.lines.map((l) => ({
       description: l.description,
@@ -100,6 +104,12 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
     })),
   };
 }
+
+/**
+ * True when the km is blank and the owner hasn't yet confirmed saving without it: the form goes back
+ * in its "warned" state instead of saving.
+ */
+export const kmUnconfirmed = (v: ServiceValues) => v.odometer_km === "" && v.no_km !== "1";
 
 /**
  * Blank line rows are dropped. Callers 404 on item ids that aren't the vehicle's. A line tagged with a
@@ -122,9 +132,9 @@ export function parseServiceForm(
   else if (date === null) errors.date = "The service date isn't a valid date.";
   else if (date > today) errors.date = "The service date can't be in the future.";
 
+  // A blank km is only saved once confirmed (kmUnconfirmed); a km that's there is checked as usual.
   const km = parseCount(v.odometer_km, 0, 10_000_000);
-  if (km === null) errors.odometer_km = "Enter the odometer reading.";
-  else if (km === undefined) errors.odometer_km = "The odometer reading must be a whole number of km.";
+  if (km === undefined) errors.odometer_km = "The odometer reading must be a whole number of km.";
 
   const lines: LineInput[] = [];
   // New categories named so far, by lowercased name.
@@ -175,12 +185,12 @@ export function parseServiceForm(
   const total = v.total === "" ? lines.reduce((sum, l) => sum + (l.cost_sen ?? 0), 0) : parseRM(v.total);
   if (total === null) errors.total = `Total ${AMOUNT_HINT}`;
 
-  if (Object.keys(errors).length > 0) return { ok: false, errors };
+  if (Object.keys(errors).length > 0 || kmUnconfirmed(v)) return { ok: false, errors };
   return {
     ok: true,
     value: {
       date: date!,
-      odometer_km: km!,
+      odometer_km: km ?? null,
       workshop: v.workshop,
       total_sen: total!,
       notes: v.notes,

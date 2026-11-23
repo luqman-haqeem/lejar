@@ -109,6 +109,44 @@ for (const input of document.querySelectorAll("input[type=file][data-compress]")
   });
 }
 
+// Service form: a blank Odometer field is saved only once the owner has been warned. The first press
+// of either save button shows the same warning the server would send back (src/views/ServiceForm.tsx)
+// without reloading, and sets the hidden no_km; the next press saves. Typing a km takes it all back.
+// Registered before data-busy below, which ignores the cancelled submit.
+for (const holder of document.querySelectorAll("[data-no-km-warning]")) {
+  const form = holder.closest("form");
+  const km = form?.elements.namedItem("odometer_km");
+  const noKm = form?.elements.namedItem("no_km");
+  if (!(km instanceof HTMLInputElement) || !(noKm instanceof HTMLInputElement)) continue;
+  const buttons = [...form.querySelectorAll("button[data-label-no-km]")];
+  const reset = () => {
+    holder.classList.remove("no-km");
+    holder.querySelector("#odometer-warning")?.remove();
+    km.setAttribute("aria-describedby", (km.getAttribute("aria-describedby") ?? "").replace("odometer-warning", "").trim());
+    if (!km.getAttribute("aria-describedby")) km.removeAttribute("aria-describedby");
+    for (const b of buttons) b.textContent = b.dataset.label;
+    noKm.value = "";
+  };
+  km.addEventListener("input", reset);
+  form.addEventListener("submit", (e) => {
+    if (km.value.trim() !== "" || noKm.value === "1") return; // a normal save, or the second press
+    e.preventDefault();
+    noKm.value = "1";
+    holder.classList.add("no-km");
+    const note = document.createElement("p");
+    note.className = "field-warning";
+    note.id = "odometer-warning";
+    note.setAttribute("role", "status");
+    note.textContent = holder.dataset.noKmWarning;
+    km.closest(".field").after(note);
+    km.setAttribute("aria-describedby", `${km.getAttribute("aria-describedby") ?? ""} odometer-warning`.trim());
+    const pressed = e.submitter ?? buttons[0];
+    if (pressed?.dataset.labelNoKm) pressed.textContent = pressed.dataset.labelNoKm;
+    km.scrollIntoView({ block: "center" });
+    km.focus({ preventScroll: true });
+  });
+}
+
 // Forms with data-busy can't be sent twice (a second tap while the first is on its way would save
 // twice), and show that message on the pressed button while the server works. Buttons are disabled
 // only after the browser has read the form, so the pressed button's value (e.g. "Save & add
