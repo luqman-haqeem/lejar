@@ -10,6 +10,10 @@ A vehicle owner's own service book: the record of what was done to a car or moto
 One workshop visit on a date at an odometer reading, with a total paid and optionally its receipt photo.
 _Avoid_: Visit, job, invoice
 
+**Odometer reading**:
+The km shown on a vehicle's odometer on a date, recorded either with a Service or on its own.
+_Avoid_: Mileage, odo
+
 **Service line**:
 One item on a Service, such as a part fitted or a labour charge, with an optional cost.
 _Avoid_: Line item, entry, row

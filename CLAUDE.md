@@ -8,7 +8,7 @@ Commits: one-line messages, no Co-Authored-By trailer.
 
 ### Issue tracker
 
-Local markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+GitHub issues in `luqman-haqeem/lejar` (public), via `gh`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
