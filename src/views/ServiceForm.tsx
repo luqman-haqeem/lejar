@@ -73,7 +73,7 @@ function PartDetailsFields({
           <label class={name("position") in errors ? "field invalid" : "field"}>
             <span>Position</span>
             <select name={name("position")} id={fieldId(name("position"))}>
-              <option value="">—</option>
+              <option value="">Not specified</option>
               {positions.map((p) => (
                 <option value={p} selected={line.position === p}>
                   {p}

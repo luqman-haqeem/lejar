@@ -45,6 +45,14 @@ async function logTyresAndBattery(user: number, car: number): Promise<number> {
 }
 
 describe("part details on a service line", () => {
+  it("names the empty position choice instead of showing a dash", async () => {
+    const user = await makeUser();
+    const car = await addVehicle(user);
+    const html = await (await get(`/services/new?vehicle=${car}`, user)).text();
+    expect(html).toMatch(/name="line\.0\.position"[^>]*><option value="">Not specified<\/option>/);
+    expect(html).not.toContain('<option value="">—</option>');
+  });
+
   it("are saved with the line, the spec written the standard way", async () => {
     const user = await makeUser();
     const car = await addVehicle(user);
