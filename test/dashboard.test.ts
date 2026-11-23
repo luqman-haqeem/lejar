@@ -85,6 +85,28 @@ describe("what's due on the dashboard", () => {
     expect(html).toContain("~54,000 km");
   });
 
+  it("works out the km due for an item reset by a Service with no km, from the readings either side", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const [engineOil] = await itemsOf(car);
+    await post(`/vehicles/${car}/readings`, user, { date: "2026-03-01", km: "45000" });
+    await post(`/vehicles/${car}/readings`, user, { date: "2026-07-01", km: "49000" });
+    const res = await post("/services", user, {
+      vehicle_id: String(car),
+      date: "2026-05-01",
+      odometer_km: "",
+      no_km: "1",
+      total: "150",
+      "line.0.description": "Engine oil",
+      "line.0.item": String(engineOil.id),
+    });
+    expect(res.status).toBe(302);
+
+    // Done at ~47,000 km (halfway from 01/03 to 01/07), so due at 57,000; today's estimate is 52,574.
+    const html = await dashboard(user);
+    expect(html).toMatch(/<span class="due-name">Engine oil<\/span>[\s\S]*?in 4,426 km/);
+  });
+
   it("links an item with no history straight to setting its baseline", async () => {
     const user = await makeUser();
     const car = await addCar(user);

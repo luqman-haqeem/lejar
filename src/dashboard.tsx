@@ -6,7 +6,7 @@ import { Dashboard, type VehicleDue } from "./views/Dashboard";
 
 export function vehicleDue({ vehicle, items, lastDone, readings }: DashboardVehicle, today: string): VehicleDue {
   const estKm = estimateKm(readings, today);
-  const due = items.map((i) => itemDue(i, lastDone.get(i.id) ?? null, estKm, vehicle.type, today));
+  const due = items.map((i) => itemDue(i, lastDone.get(i.id) ?? null, estKm, vehicle.type, today, readings));
   return {
     vehicle,
     estKm,

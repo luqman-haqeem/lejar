@@ -95,12 +95,12 @@ describe("logging a service", () => {
     expect((await listServices(env.DB, user, car))[0]).toMatchObject({ date: "2019-05-01", total_sen: 8500 });
   });
 
-  it("refuses bad amounts, a future date and a missing odometer, keeping what was typed", async () => {
+  it("refuses bad amounts and a future date, keeping what was typed", async () => {
     const user = await makeUser();
     const car = await addCar(user);
     const res = await logService(user, car, {
       date: "2099-01-01",
-      odometer_km: "",
+      odometer_km: "50000",
       workshop: "Ah Seng",
       total: "-5",
       "line.0.description": "Oil",
@@ -109,12 +109,163 @@ describe("logging a service", () => {
     expect(res.status).toBe(400);
     const html = await res.text();
     expect(html).toContain("The service date can&#39;t be in the future.");
-    expect(html).toContain("Enter the odometer reading.");
     expect(html).toContain("Total must be an amount like 85 or RM 1,234.50.");
     expect(html).toContain("Oil: cost must be an amount like 85 or RM 1,234.50.");
     expect(html).toContain('value="Ah Seng"');
     expect(html).toContain('value="abc"');
     expect(await listServices(env.DB, user, car)).toEqual([]);
+  });
+});
+
+describe("a service whose km the owner doesn't know", () => {
+  const backfill = {
+    date: "2019-05-01",
+    odometer_km: "",
+    workshop: "Ah Seng",
+    total: "85",
+    "line.0.description": "Engine oil",
+    "line.0.cost": "70",
+    "line.0.brand": "Castrol",
+  };
+
+  const WARNING = "No odometer reading. Type the km, or press Save again to save without it.";
+  /** The form's save buttons as [action, label]. */
+  const buttons = (html: string) =>
+    [...html.matchAll(/<button type="submit"[^>]*value="(\w+)"[^>]*>([^<]*)<\/button>/g)].map((m) => [m[1], m[2]]);
+
+  it("warns instead of saving when the km is left blank, keeping what was typed", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const res = await logService(user, car, { ...backfill, action: "save" });
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain(WARNING);
+    expect(html).toContain('name="no_km" value="1"');
+    expect(buttons(html)).toEqual([
+      ["save", "Save without km"],
+      ["save_add", "Save &amp; add another"],
+    ]);
+    expect(html).not.toContain("error-summary");
+    for (const typed of ['value="Ah Seng"', 'value="85"', 'value="Engine oil"', 'value="70"', 'value="Castrol"']) {
+      expect(html).toContain(typed);
+    }
+    expect(await listServices(env.DB, user, car)).toEqual([]);
+  });
+
+  it("warns the same way from 'Save & add another', relabelling that button", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const html = await (await logService(user, car, { ...backfill, action: "save_add" })).text();
+    expect(html).toContain(WARNING);
+    expect(buttons(html)).toEqual([
+      ["save", "Save"],
+      ["save_add", "Save without km &amp; add another"],
+    ]);
+    expect(await listServices(env.DB, user, car)).toEqual([]);
+
+    const res = await logService(user, car, { ...backfill, no_km: "1", action: "save_add" });
+    expect(res.status).toBe(302);
+    expect(new URL(res.headers.get("location")!, "https://lejar.test").pathname).toBe("/services/new");
+    expect(await listServices(env.DB, user, car)).toHaveLength(1);
+  });
+
+  it("doesn't warn on a fresh form", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const html = await (await get(`/services/new?vehicle=${car}`, user)).text();
+    expect(html).not.toContain('id="odometer-warning"');
+    expect(html).toContain('name="no_km" value=""');
+    expect(buttons(html)).toEqual([
+      ["save", "Save"],
+      ["save_add", "Save &amp; add another"],
+    ]);
+  });
+
+  it("ignores no_km when a km is typed, checking it as usual", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { date: "2026-06-01", odometer_km: "49000", total: "1" });
+    const res = await logService(user, car, { date: "2026-07-01", odometer_km: "39000", total: "1", no_km: "1" });
+    expect(res.status).toBe(422);
+    await logged(user, car, { date: "2026-07-01", odometer_km: "50000", total: "1", no_km: "1" });
+    expect((await listReadings(env.DB, user, car)).map((r) => r.km)).toEqual([49000, 50000]);
+  });
+
+  it("shows 'km not recorded' on the vehicle's history and the Service view", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { ...backfill, "line.0.category": "Engine", no_km: "1" });
+    const [{ id }] = await listServices(env.DB, user, car);
+    expect(await (await get(`/vehicles/${car}`, user)).text()).toContain("km not recorded");
+    expect(await (await get(`/vehicles/${car}?category=Engine`, user)).text()).toContain("01/05/2019 · km not recorded · Ah Seng");
+    expect(await (await get(`/services/${id}`, user)).text()).toContain("km not recorded");
+  });
+
+  it("saves an edit to a km-less Service straight through, still with no km", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { ...backfill, no_km: "1" });
+    const [{ id }] = await listServices(env.DB, user, car);
+    const form = await (await get(`/services/${id}/edit`, user)).text();
+    expect(form).toContain('name="no_km" value="1"');
+    expect(form).not.toContain('id="odometer-warning"');
+    expect(buttons(form)).toEqual([["save", "Save"]]);
+
+    const res = await post(`/services/${id}`, user, { ...backfill, workshop: "Bengkel Ah Seng", no_km: "1" });
+    expect(res.status).toBe(302);
+    expect(await getService(env.DB, user, id)).toMatchObject({ workshop: "Bengkel Ah Seng", odometer_km: null });
+  });
+
+  it("warns when an edit clears the km, and removes the reading once confirmed", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { date: "2026-03-14", odometer_km: "52000", total: "100" });
+    const [{ id }] = await listServices(env.DB, user, car);
+    const form = await (await get(`/services/${id}/edit`, user)).text();
+    expect(form).toContain('name="no_km" value=""');
+
+    const cleared = { date: "2026-03-14", odometer_km: "", total: "100" };
+    const warned = await post(`/services/${id}`, user, cleared);
+    expect(warned.status).toBe(200);
+    const html = await warned.text();
+    expect(html).toContain(WARNING);
+    expect(buttons(html)).toEqual([["save", "Save without km"]]);
+    expect(await getService(env.DB, user, id)).toMatchObject({ odometer_km: 52000 });
+
+    expect((await post(`/services/${id}`, user, { ...cleared, no_km: "1" })).status).toBe(302);
+    expect(await getService(env.DB, user, id)).toMatchObject({ odometer_km: null });
+    expect(await listReadings(env.DB, user, car)).toEqual([]);
+  });
+
+  it("creates the reading when the km is added on edit, after the usual conflict check", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { date: "2026-06-01", odometer_km: "49000", total: "1" });
+    await logged(user, car, { ...backfill, date: "2026-03-14", no_km: "1" });
+    const service = (await listServices(env.DB, user, car)).find((s) => s.odometer_km === null)!;
+
+    const typo = await post(`/services/${service.id}`, user, { ...backfill, date: "2026-03-14", odometer_km: "50000", no_km: "1" });
+    expect(typo.status).toBe(422);
+    expect(await listReadings(env.DB, user, car)).toHaveLength(1);
+
+    const fixed = await post(`/services/${service.id}`, user, { ...backfill, date: "2026-03-14", odometer_km: "45000", no_km: "1" });
+    expect(fixed.status).toBe(302);
+    expect((await listReadings(env.DB, user, car)).map((r) => [r.date, r.km, r.service_id])).toEqual([
+      ["2026-03-14", 45000, service.id],
+      ["2026-06-01", 49000, expect.any(Number)],
+    ]);
+  });
+
+  it("saves with no Odometer reading once the owner confirms there's no km", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const res = await logService(user, car, { ...backfill, no_km: "1" });
+    expect(res.status).toBe(302);
+    const [summary] = await listServices(env.DB, user, car);
+    const service = await getService(env.DB, user, summary.id);
+    expect(service).toMatchObject({ date: "2019-05-01", odometer_km: null, workshop: "Ah Seng", total_sen: 8500 });
+    expect(service!.lines.map((l) => [l.description, l.part_brand])).toEqual([["Engine oil", "Castrol"]]);
+    expect(await listReadings(env.DB, user, car)).toEqual([]);
   });
 });
 
@@ -616,7 +767,8 @@ describe("removing a service line", () => {
     const car = await addCar(user);
     const res = await logService(user, car, {
       date: "2026-03-14",
-      odometer_km: "",
+      odometer_km: "50000",
+      total: "abc",
       "line.0.description": "Misread line",
       "line.0.remove": "1",
       "line.1.description": "Engine oil",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estimateKm, expiryStatus, itemDue, odometerStale, sortByUrgency, type ItemDue } from "../src/lib/due";
+import { estimateKm, expiryStatus, itemDue, kmOnDate, odometerStale, sortByUrgency, type ItemDue } from "../src/lib/due";
 
 const TODAY = "2026-10-18";
 const oil = { id: 1, name: "Engine oil", interval_km: 10000, interval_months: 6, baseline_date: null, baseline_km: null };
@@ -93,6 +93,41 @@ describe("where 'last done' comes from", () => {
     const kmOnly = { ...oil, interval_months: null, baseline_date: "2026-06-01" };
     expect(itemDue(kmOnly, null, 55000, "car", TODAY)).toMatchObject({ status: "unknown", needs: "last_done" });
     expect(itemDue(oil, { date: "2026-09-01", km: 55000 }, 56000, "car", TODAY).needs).toBeNull();
+  });
+});
+
+describe("an item last done at a Service with no km", () => {
+  const readings = [
+    { date: "2026-01-01", km: 40000 },
+    { date: "2026-03-01", km: 45900 },
+    { date: "2026-07-01", km: 49050 },
+  ];
+
+  it("works out the km on a date along a straight line between the nearest readings either side", () => {
+    // 3,150 km over the 122 days from 01/03 to 01/07; 01/05 is 61 days in.
+    expect(kmOnDate(readings, "2026-05-01")).toBe(47475);
+  });
+
+  it("is the reading's own km on a reading's date", () => {
+    expect(kmOnDate(readings, "2026-03-01")).toBe(45900);
+  });
+
+  it("is none with no reading after the date, or none before it", () => {
+    expect(kmOnDate(readings, "2026-08-01")).toBeNull();
+    expect(kmOnDate(readings, "2025-12-31")).toBeNull();
+    expect(kmOnDate([], "2026-05-01")).toBeNull();
+  });
+
+  it("is due at the worked-out km plus the interval, and by date from that visit", () => {
+    const due = itemDue(oil, { date: "2026-05-01", km: null }, 50000, "car", TODAY, readings);
+    expect(due).toMatchObject({ lastDate: "2026-05-01", lastKm: 47475, dueKm: 57475, dueDate: "2026-11-01" });
+  });
+
+  it("goes by date only when there's no later reading, never using an earlier Service's km or the baseline", () => {
+    const item = { ...oil, baseline_date: "2025-01-01", baseline_km: 30000 };
+    // The 01/07 reading is an earlier oil change with a km; the latest one, on 01/08, had none.
+    const due = itemDue(item, { date: "2026-08-01", km: null }, 50000, "car", TODAY, readings);
+    expect(due).toMatchObject({ lastDate: "2026-08-01", lastKm: null, dueKm: null, kmLeft: null, dueDate: "2027-02-01", status: "ok" });
   });
 });
 

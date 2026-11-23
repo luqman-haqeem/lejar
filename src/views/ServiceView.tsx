@@ -1,6 +1,6 @@
 import type { ServiceItem, ServiceWithLines, Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
-import { fmtKm } from "../lib/km";
+import { fmtServiceKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { receiptUrl } from "../receipts";
 import { BackIcon } from "./icons";
@@ -35,7 +35,7 @@ export function ServiceView({
         </div>
         <div>
           <dt>Odometer</dt>
-          <dd>{fmtKm(service.odometer_km)}</dd>
+          <dd>{fmtServiceKm(service.odometer_km)}</dd>
         </div>
         <div>
           <dt>Total</dt>

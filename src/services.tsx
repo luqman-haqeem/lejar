@@ -27,7 +27,7 @@ import {
   receiptExists,
   uploadTooLarge,
 } from "./receipts";
-import { blankServiceForm, parseServiceForm, readServiceForm, serviceFormValuesOf } from "./service-form";
+import { blankServiceForm, kmUnconfirmed, parseServiceForm, readServiceForm, serviceFormValuesOf } from "./service-form";
 import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { ServiceForm, type ServiceFormMode } from "./views/ServiceForm";
 import { ServiceView } from "./views/ServiceView";
@@ -82,7 +82,8 @@ async function resolvePhoto(c: Context<AppEnv>, body: Body, currentKey: string |
  * Validates a posted service form, stores any new photo, and checks the odometer against the
  * vehicle's other readings. A line tagged with another vehicle's schedule item, or a photo key that
  * isn't the user's, is a 404. Otherwise it re-renders the form keeping what was typed (and the photo)
- * with 413/415 for a bad photo, 400 for other errors, or 422 for an odometer conflict, or calls `save`.
+ * with 413/415 for a bad photo, 400 for other errors, 422 for an odometer conflict, or 200 "warned"
+ * for a blank km the owner hasn't confirmed, or calls `save`.
  */
 async function submitService(
   c: Context<AppEnv>,
@@ -105,13 +106,16 @@ async function submitService(
   const photo = await resolvePhoto(c, body, currentKey);
   if (photo.kind === "not-found") return notFound(c);
   const editing = mode.kind === "edit" ? mode.serviceId : null;
-  const render = async (errors: Record<string, string>, status: 400 | 413 | 415 | 422) =>
+  // A blank km not yet confirmed comes back "warned": the next press of the same button saves without it.
+  const warnNoKm = kmUnconfirmed(values.service);
+  const render = async (errors: Record<string, string>, status: 200 | 400 | 413 | 415 | 422) =>
     c.html(
       <ServiceForm
         vehicle={vehicle}
         items={items}
         ownCategories={own}
-        values={values}
+        values={warnNoKm ? { ...values, service: { ...values.service, no_km: "1" } } : values}
+        warnNoKm={warnNoKm ? (body.action === "save_add" ? "save_add" : "save") : undefined}
         mode={mode}
         errors={errors}
         receiptKey={photo.key}
@@ -125,9 +129,10 @@ async function submitService(
   if (photo.kind === "problem") {
     return render({ photo: photo.problem.message, ...(parsed.ok ? {} : parsed.errors) }, photo.problem.status);
   }
-  if (!parsed.ok) return render(parsed.errors, 400);
+  if (!parsed.ok) return render(parsed.errors, Object.keys(parsed.errors).length > 0 ? 400 : 200);
   const { date, odometer_km } = parsed.value;
-  const conflict = await checkOdometer(c.env.DB, c.get("userId"), vehicle.id, date, odometer_km, editing);
+  const conflict =
+    odometer_km !== null && (await checkOdometer(c.env.DB, c.get("userId"), vehicle.id, date, odometer_km, editing));
   if (conflict) return render({ odometer_km: conflict }, 422);
   return save({ ...parsed.value, receipt_key: photo.key });
 }

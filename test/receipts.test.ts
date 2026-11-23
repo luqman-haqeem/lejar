@@ -108,11 +108,11 @@ describe("refusing an upload", () => {
     const user = await makeUser();
     const car = await addCar(user);
     const pdf = photo(new Uint8Array([1]), "application/pdf", "r.pdf");
-    const res = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: pdf });
+    const res = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, total: "abc", photo: pdf });
     expect(res.status).toBe(415);
     const html = await res.text();
     expect(html).toContain("Unsupported image");
-    expect(html).toContain("Enter the odometer reading.");
+    expect(html).toContain("Total must be an amount like 85 or RM 1,234.50.");
   });
 
   it("rejects a file that isn't JPEG, PNG or WebP with 415", async () => {
@@ -130,7 +130,7 @@ describe("keeping the photo through a failed save", () => {
   it("holds on to an uploaded photo while the user fixes the form", async () => {
     const user = await makeUser();
     const car = await addCar(user);
-    const first = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: photo() });
+    const first = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, total: "abc", photo: photo() });
     expect(first.status).toBe(400);
     const [key] = await storedKeys(user);
     const html = await first.text();
@@ -141,6 +141,23 @@ describe("keeping the photo through a failed save", () => {
     expect(second.status).toBe(302);
     const [{ id }] = await listServices(env.DB, user, car);
     expect((await getService(env.DB, user, id))!.receipt_key).toBe(key);
+  });
+
+  it("holds on to the photo through the no-km warning, then saves it on the second press", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const first = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: photo() });
+    expect(first.status).toBe(200);
+    const [key] = await storedKeys(user);
+    const html = await first.text();
+    expect(html).toContain(`name="receipt_key" value="${key}"`);
+    expect(html).toContain('name="no_km" value="1"');
+    expect(await listServices(env.DB, user, car)).toEqual([]);
+
+    const second = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", no_km: "1", receipt_key: key });
+    expect(second.status).toBe(302);
+    const [{ id }] = await listServices(env.DB, user, car);
+    expect(await getService(env.DB, user, id)).toMatchObject({ receipt_key: key, odometer_km: null });
   });
 
   it("never lets a photo end up on two services", async () => {
@@ -241,7 +258,7 @@ describe("sending a scanned form twice", () => {
     const user = await makeUser();
     const car = await addCar(user);
     // The scan flow: the photo is stored first and the form carries its key.
-    const scanned = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, odometer_km: "", photo: photo() });
+    const scanned = await postMultipart("/services", user, { vehicle_id: String(car), ...visit, total: "abc", photo: photo() });
     const [key] = await storedKeys(user);
     expect(scanned.status).toBe(400);
 

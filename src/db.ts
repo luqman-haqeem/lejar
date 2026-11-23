@@ -1,3 +1,4 @@
+import type { LastDone } from "./lib/due";
 import { TEMPLATES, type VehicleType } from "./lib/templates";
 
 // Vehicle functions take userId and filter by vehicles.user_id. Item functions take a vehicleId the
@@ -183,7 +184,8 @@ export interface Service {
   id: number;
   vehicle_id: number;
   date: string;
-  odometer_km: number;
+  /** Null when the owner doesn't know the km; such a Service has no Odometer reading. */
+  odometer_km: number | null;
   workshop: string;
   total_sen: number;
   notes: string;
@@ -262,7 +264,8 @@ function insertLines(db: D1Database, serviceId: number | null, vehicleId: number
 }
 
 /**
- * Writes the service, its lines, its odometer reading and any new own categories in one batch.
+ * Writes the service, its lines, its odometer reading (if it has a km) and any new own categories in
+ * one batch.
  * Returns the new id, or null (writing nothing) if the vehicle isn't the user's.
  */
 export async function createService(
@@ -280,12 +283,16 @@ export async function createService(
       )
       .bind(vehicleId, s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, s.receipt_key, new Date().toISOString()),
     ...insertLines(db, null, vehicleId, s.lines),
-    db
-      .prepare(
-        `INSERT INTO odometer_readings (vehicle_id, date, km, source, service_id)
-         VALUES (?, ?, ?, 'service', ${NEW_SERVICE_ID})`,
-      )
-      .bind(vehicleId, s.date, s.odometer_km, vehicleId),
+    ...(s.odometer_km === null
+      ? []
+      : [
+          db
+            .prepare(
+              `INSERT INTO odometer_readings (vehicle_id, date, km, source, service_id)
+               VALUES (?, ?, ?, 'service', ${NEW_SERVICE_ID})`,
+            )
+            .bind(vehicleId, s.date, s.odometer_km, vehicleId),
+        ]),
     ...insertOwnCategories(db, userId, s.new_categories),
   ]);
   return inserted.results[0].id;
@@ -308,7 +315,10 @@ export async function getService(db: D1Database, userId: number, id: number): Pr
   return { ...service, lines: results };
 }
 
-/** Replaces the service's fields and lines and moves its reading. Returns false if it isn't the user's. */
+/**
+ * Replaces the service's fields and lines, and moves its reading: a km cleared deletes the reading,
+ * a km added creates one. Returns false if it isn't the user's.
+ */
 export async function updateService(db: D1Database, userId: number, id: number, s: ServiceInput): Promise<boolean> {
   const current = await getService(db, userId, id);
   if (!current) return false;
@@ -321,7 +331,14 @@ export async function updateService(db: D1Database, userId: number, id: number, 
       .bind(s.date, s.odometer_km, s.workshop, s.total_sen, s.notes, s.receipt_key, id),
     db.prepare("DELETE FROM service_lines WHERE service_id = ?").bind(id),
     ...insertLines(db, id, current.vehicle_id, s.lines),
-    db.prepare("UPDATE odometer_readings SET date = ?, km = ? WHERE service_id = ?").bind(s.date, s.odometer_km, id),
+    s.odometer_km === null
+      ? db.prepare("DELETE FROM odometer_readings WHERE service_id = ?").bind(id)
+      : db
+          .prepare(
+            `INSERT INTO odometer_readings (vehicle_id, date, km, source, service_id) VALUES (?, ?, ?, 'service', ?)
+             ON CONFLICT (service_id) DO UPDATE SET date = excluded.date, km = excluded.km`,
+          )
+          .bind(current.vehicle_id, s.date, s.odometer_km, id),
   ]);
   return true;
 }
@@ -558,7 +575,7 @@ export async function vehicleDueData(
   };
 }
 
-/** Per schedule item, the date and odometer of the latest service with a line linked to it. */
+/** Per schedule item, the date and odometer (null if it has none) of the latest service with a line linked to it. */
 export async function lastDoneByItem(
   db: D1Database,
   userId: number,
@@ -568,8 +585,7 @@ export async function lastDoneByItem(
   return toLastDone(results);
 }
 
-export type LastDone = { date: string; km: number };
-type LastDoneRow = { vehicle_id: number; item_id: number; date: string; km: number };
+type LastDoneRow = { vehicle_id: number; item_id: number; date: string; km: number | null };
 
 function lastDoneQuery(db: D1Database, scope: Scope) {
   const where = scoped("s.vehicle_id", scope);
@@ -583,7 +599,8 @@ function lastDoneQuery(db: D1Database, scope: Scope) {
     .bind(...where.binds);
 }
 
-// Rows come oldest first, so the latest service for each item wins.
+// Rows come oldest first, so the latest service for each item wins. On one date, a Service with a km
+// (SQLite sorts NULL first) wins over one without.
 const toLastDone = (rows: LastDoneRow[]) => new Map(rows.map((r) => [r.item_id, { date: r.date, km: r.km }]));
 
 export type DashboardVehicle = {
@@ -713,7 +730,10 @@ export async function giveBackScan(db: D1Database, userId: number, today: string
     .run();
 }
 
-/** The vehicle's services with their lines, oldest first (as a service book reads), in one round trip. */
+/**
+ * The vehicle's services with their lines, oldest first (as a service book reads), in one round trip.
+ * A Service with no km comes last within its date.
+ */
 export async function listServicesWithLines(
   db: D1Database,
   userId: number,
@@ -721,7 +741,7 @@ export async function listServicesWithLines(
 ): Promise<ServiceWithLines[]> {
   const own = scoped("s.vehicle_id", { userId, vehicleId });
   const [services, lines] = await db.batch<unknown>([
-    db.prepare(`SELECT * FROM services s WHERE ${own.sql} ORDER BY date, odometer_km, id`).bind(...own.binds),
+    db.prepare(`SELECT * FROM services s WHERE ${own.sql} ORDER BY date, odometer_km IS NULL, odometer_km, id`).bind(...own.binds),
     db
       .prepare(
         `SELECT l.* FROM service_lines l JOIN services s ON s.id = l.service_id

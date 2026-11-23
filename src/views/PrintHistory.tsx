@@ -1,6 +1,6 @@
 import type { ServiceWithLines, Vehicle } from "../db";
 import { fmtDate } from "../lib/dates";
-import { fmtKm } from "../lib/km";
+import { fmtServiceKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { vehicleSummary } from "../lib/templates";
 import { Layout } from "./Layout";
@@ -50,7 +50,7 @@ export function PrintHistory({
             <section class="print-service">
               <div class="print-service-head">
                 <strong>{fmtDate(s.date)}</strong>
-                <span>{fmtKm(s.odometer_km)}</span>
+                <span>{fmtServiceKm(s.odometer_km)}</span>
                 <span>{s.workshop}</span>
                 <strong class="amount">{fmtRM(s.total_sen)}</strong>
               </div>

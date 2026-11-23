@@ -1,7 +1,7 @@
 import type { CategoryLine, Reading, Service, Vehicle, YearTotal } from "../db";
 import type { FormErrors } from "../form";
 import { fmtDate } from "../lib/dates";
-import { fmtKm } from "../lib/km";
+import { fmtKm, fmtServiceKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
 import { hasPartDetails, partSummary } from "../lib/parts";
 import { ErrorSummary, Field } from "./fields";
@@ -131,7 +131,7 @@ export function VehicleHistory({
                   <span class="stamp-date">{fmtDate(s.date)}</span>
                   <span class="stamp-shop">{s.workshop || "Service"}</span>
                   <span class="stamp-figures">
-                    <span>{fmtKm(s.odometer_km)}</span>
+                    <span>{fmtServiceKm(s.odometer_km)}</span>
                     <span>{fmtRM(s.total_sen)}</span>
                   </span>
                 </a>
@@ -222,7 +222,7 @@ function CategoryLines({ lines, today }: { lines: CategoryLine[]; today: string 
             <a href={`/services/${l.service_id}`}>{l.description}</a>
             {hasPartDetails(l) && <span class="part-details">{partSummary(l, today)}</span>}
             <span class="line-service">
-              {[fmtDate(l.date), fmtKm(l.odometer_km), l.workshop].filter(Boolean).join(" · ")}
+              {[fmtDate(l.date), fmtServiceKm(l.odometer_km), l.workshop].filter(Boolean).join(" · ")}
             </span>
           </span>
           <span>{fmtOptionalRM(l.cost_sen)}</span>

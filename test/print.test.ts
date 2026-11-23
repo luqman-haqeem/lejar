@@ -111,6 +111,23 @@ describe("the printable history", () => {
     expect(html).toMatch(/<td>Labour<\/td>/);
   });
 
+  it("says 'km not recorded' for a service the owner saved without its km", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await post("/services", user, { vehicle_id: String(car), date: "2019-05-01", odometer_km: "", no_km: "1", total: "85" });
+    const html = await (await get(`/vehicles/${car}/print`, user)).text();
+    expect(html).toMatch(/<strong>01\/05\/2019<\/strong><span>km not recorded<\/span>/);
+  });
+
+  it("puts a service without its km after one with a km on the same date", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await post("/services", user, { vehicle_id: String(car), date: "2026-05-01", odometer_km: "", no_km: "1", workshop: "Tyre Shop", total: "1" });
+    await post("/services", user, { vehicle_id: String(car), date: "2026-05-01", odometer_km: "47000", workshop: "Ah Seng", total: "1" });
+    const html = await (await get(`/vehicles/${car}/print`, user)).text();
+    expect(html.indexOf("Ah Seng")).toBeLessThan(html.indexOf("Tyre Shop"));
+  });
+
   it("leaves out private notes", async () => {
     const { user, car } = await carWithHistory();
     expect(await (await get(`/vehicles/${car}/print`, user)).text()).not.toContain("aircond smell");
