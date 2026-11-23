@@ -92,6 +92,7 @@ describe("part details on a service line", () => {
     expect(html).toContain('<option value="Front" selected="">Front</option>');
     expect(html).toMatch(/name="line\.1\.warranty_until"[^>]*value="2026-05-14"/);
     expect(html).toContain("+ Part details"); // the labour line has none
+    expect(html).toContain("No warranty"); // a quick pick that blanks the date
   });
 
   it("are cleared when edited away", async () => {
