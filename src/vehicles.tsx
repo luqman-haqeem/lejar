@@ -10,15 +10,18 @@ import {
   getVehicle,
   listArchivedVehicles,
   listItems,
+  listCategoryLines,
   listServices,
   setArchived,
   setVehiclePhoto,
   updateVehicle,
+  usedCategories,
   vehicleDueData,
   type Vehicle,
   yearTotals,
 } from "./db";
 import { type Body, type FormErrors, parseCount, readFields } from "./form";
+import { CATEGORIES } from "./lib/categories";
 import { parseDateInput } from "./lib/dates";
 import { checkOdometer } from "./odometer";
 import { deletePhoto, photoProblem, putVehiclePhoto, uploadTooLarge } from "./receipts";
@@ -42,13 +45,19 @@ async function history(
   errors: FormErrors = {},
   stamped: number | null = null,
   added = false,
+  category: string | null = null,
 ) {
   const userId = c.get("userId");
-  const [services, totals, { items, lastDone, readings }] = await Promise.all([
+  const [services, totals, { items, lastDone, readings }, used] = await Promise.all([
     listServices(c.env.DB, userId, vehicle.id),
     yearTotals(c.env.DB, userId, vehicle.id),
     vehicleDueData(c.env.DB, userId, vehicle.id),
+    usedCategories(c.env.DB, userId, vehicle.id),
   ]);
+  const categories = CATEGORIES.filter((cat) => used.includes(cat));
+  // A category no line uses can't be chosen: the page shows the whole history instead.
+  const chosen = categories.find((cat) => cat === category) ?? null;
+  const categoryLines = chosen ? await listCategoryLines(c.env.DB, userId, vehicle.id, chosen) : [];
   const due = vehicleDue({ vehicle, items, lastDone, readings }, c.get("today"));
   const manualReadings = readings.filter((r) => r.source === "manual").reverse();
   return (
@@ -62,6 +71,9 @@ async function history(
       errors={errors}
       stamped={stamped}
       added={added}
+      categories={categories}
+      filter={chosen && { category: chosen, lines: categoryLines }}
+      today={c.get("today")}
     />
   );
 }
@@ -110,6 +122,7 @@ export function vehicleRoutes() {
         {},
         Number.isInteger(stamped) ? stamped : null,
         c.req.query("added") === "1",
+        c.req.query("category") ?? null,
       ),
     );
   });

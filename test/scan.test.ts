@@ -224,3 +224,39 @@ describe("scanning a receipt", () => {
     expect(await storedKeys(bob)).toEqual([]);
   });
 });
+
+/** The selected option's value in the select named `name`, or "" when none is marked selected. */
+const selectedValue = (html: string, name: string) => {
+  const select = html.match(new RegExp(`<select[^>]*name="${name.replace(/\./g, "\\.")}"[^>]*>(.*?)</select>`, "s"))?.[1];
+  return select?.match(/<option value="([^"]*)" selected="">/)?.[1] ?? "";
+};
+
+describe("categories on a scanned receipt", () => {
+  it("are suggested per line, following the suggested reminder's category, for the owner to review", async () => {
+    const { app } = appReplying(
+      JSON.stringify({
+        date: "2026-09-02",
+        odometer_km: 52310,
+        workshop: null,
+        total: 900,
+        lines: [
+          { description: "Minyak hitam 4L", cost: 180 },
+          { description: "Penapis minyak", cost: 30 },
+          { description: "Tayar Michelin x2", cost: 600 },
+          { description: "Wiper blade", cost: 45 },
+          { description: "Upah", cost: 45 },
+        ],
+      }),
+    );
+    const user = await makeUser();
+    const car = await addCar(app, user);
+    const html = await (await scan(app, user, { vehicle: String(car), photo: photo() })).text();
+    expect([0, 1, 2, 3, 4].map((n) => selectedValue(html, `line.${n}.category`))).toEqual([
+      "Engine",
+      "Filters",
+      "Tyres",
+      "Wipers",
+      "",
+    ]);
+  });
+});

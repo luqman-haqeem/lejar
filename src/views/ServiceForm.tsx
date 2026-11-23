@@ -7,9 +7,10 @@ import { receiptUrl } from "../receipts";
 import { BackIcon } from "./icons";
 import { Layout } from "./Layout";
 import { parseDateInput } from "../lib/dates";
+import { CATEGORIES, itemCategory } from "../lib/categories";
 import { partSummary, positionsFor } from "../lib/parts";
 
-const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "" };
+const blankLine: LineValues = { description: "", cost: "", item: "", brand: "", spec: "", position: "", warranty_until: "", category: "" };
 
 const WARRANTY_MONTHS = [12, 18, 24];
 
@@ -133,13 +134,25 @@ function LineRow({
           <select name={name("item")}>
             <option value="">No reminder</option>
             {items.map((i) => (
-              <option value={String(i.id)} selected={line.item === String(i.id)}>
+              <option value={String(i.id)} selected={line.item === String(i.id)} data-category={itemCategory(i.name) ?? undefined}>
                 {i.name}
               </option>
             ))}
           </select>
         </label>
       </div>
+      <label class={name("category") in errors ? "field invalid" : "field"}>
+        <span>Category</span>
+        <select name={name("category")} id={fieldId(name("category"))}>
+          <option value="">No category</option>
+          {CATEGORIES.map((c) => (
+            <option value={c} selected={line.category === c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <FieldError name={name("category")} errors={errors} />
+      </label>
       <PartDetailsFields line={line} name={name} positions={positions} errors={errors} today={today} />
     </div>
   );
@@ -261,7 +274,7 @@ export function ServiceForm({
         </fieldset>
         <fieldset id={fieldId("lines")} tabindex={-1}>
           <legend>Lines</legend>
-          <p class="hint">Pick a reminder for a line to restart its countdown. Anything else, like a gasket, stays on No reminder.</p>
+          <p class="hint">Pick a reminder for a line to restart its countdown. Anything else, like a gasket, stays on No reminder. A category files the line so you can find it later, reminder or not; a line with a reminder takes its category unless you pick another.</p>
           <FieldError name="lines" errors={errors} />
           <RepeatableRows
             id="lines"

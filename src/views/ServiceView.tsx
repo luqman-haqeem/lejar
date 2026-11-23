@@ -57,6 +57,7 @@ export function ServiceView({
                 {l.service_item_id !== null && itemName.has(l.service_item_id) && (
                   <span class="tag">{itemName.get(l.service_item_id)}</span>
                 )}
+                {l.category && <span class="tag category">{l.category}</span>}
                 {hasPartDetails(l) && <span class="part-details">{partSummary(l, today)}</span>}
               </span>
               <span>{fmtOptionalRM(l.cost_sen)}</span>
