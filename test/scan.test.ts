@@ -184,6 +184,42 @@ describe("scanning a receipt", () => {
     expect((await getService(env.DB, user, id))?.receipt_key).toBe(key);
   });
 
+  it("lets the user remove a line the scan got wrong, keeping the total it read", async () => {
+    const { app } = appReplying(READ);
+    const user = await makeUser();
+    const car = await addCar(app, user);
+    const html = await (await scan(app, user, { vehicle: String(car), photo: photo() })).text();
+    for (const n of [0, 1, 2]) expect(html).toContain(`name="line.${n}.remove"`);
+    expect(html).not.toContain('name="line.3.remove"');
+
+    const res = await app.request(
+      "/services",
+      {
+        method: "POST",
+        headers: await sessionHeaders(user),
+        body: new URLSearchParams({
+          vehicle_id: String(car),
+          date: "2026-09-02",
+          odometer_km: "52310",
+          total: "245.00",
+          "line.0.description": "Minyak hitam 4L",
+          "line.0.cost": "180.00",
+          "line.1.description": "Penapis minyak",
+          "line.1.cost": "30.00",
+          "line.1.remove": "1",
+          "line.2.description": "Wiper blade",
+          "line.2.cost": "",
+        }),
+      },
+      env,
+    );
+    expect(res.status).toBe(302);
+    const [{ id }] = await listServices(env.DB, user, car);
+    const service = await getService(env.DB, user, id);
+    expect(service!.lines.map((l) => l.description)).toEqual(["Minyak hitam 4L", "Wiper blade"]);
+    expect(service!.total_sen).toBe(24500);
+  });
+
   it("still opens the form with the photo when the AI fails", async () => {
     for (const { app } of [appReplying("", 500), appReplying("I cannot read this receipt.")]) {
       const user = await makeUser();
