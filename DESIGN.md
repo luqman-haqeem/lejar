@@ -208,6 +208,12 @@ components:
     textColor: "{colors.violet-text}"
     rounded: "{rounded.pill}"
     padding: "0.05rem 0.45rem"
+  tag-category:
+    backgroundColor: "transparent"
+    textColor: "{colors.muted}"
+    border: "1px solid {colors.rule}"
+    rounded: "{rounded.pill}"
+    padding: "0 0.45rem"
 ---
 
 # Design System: Lejar

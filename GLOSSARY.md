@@ -18,6 +18,10 @@ _Avoid_: Mileage, odo
 One item on a Service, such as a part fitted or a labour charge, with an optional cost.
 _Avoid_: Line item, entry, row
 
+**Category**:
+A label for what a Service line is about (Engine, Brakes, Wipers…), for finding lines later. One per line, optional. Unlike the schedule item a line resets, a Category never drives a reminder: a line on No reminder can still have one.
+_Avoid_: Type, group, tag
+
 **Part details**:
 Optional facts about the part a Service line fitted: its brand, spec, position on the vehicle and warranty until date. A Service line without them is still complete.
 _Avoid_: Part info, fitment, component

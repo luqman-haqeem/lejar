@@ -1,6 +1,7 @@
 import type { LineInput, ServiceItem, ServiceInput, ServiceWithLines } from "./db";
 import { type Body, type FormErrors, isBlankRow, type Parsed, parseCount, readFields, readRows, toField } from "./form";
 import { parseDateInput } from "./lib/dates";
+import { isCategory } from "./lib/categories";
 import { formatPartSpec, positionsFor } from "./lib/parts";
 import type { VehicleType } from "./lib/templates";
 import { suggestItem } from "./lib/matchItems";
@@ -10,7 +11,7 @@ import type { ScanResult } from "./openrouter";
 // The service form posts the visit's fields by name, and its lines as "line.<n>.<field>".
 
 export const SERVICE_FIELDS = ["date", "odometer_km", "workshop", "total", "notes"] as const;
-export const LINE_FIELDS = ["description", "cost", "item", "brand", "spec", "position", "warranty_until"] as const;
+export const LINE_FIELDS = ["description", "cost", "item", "brand", "spec", "position", "warranty_until", "category"] as const;
 export const MAX_LINES = 50;
 
 export type ServiceValues = Record<(typeof SERVICE_FIELDS)[number], string>;
@@ -57,6 +58,7 @@ export function scanFormValues(
     spec: l.part?.spec ?? "",
     position: l.part?.position && positionsFor(vehicleType).includes(l.part.position) ? l.part.position : "",
     warranty_until: l.part?.warranty_until ?? "",
+    category: "",
   }));
   return { values: { service, lines }, unread };
 }
@@ -81,6 +83,7 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
       spec: l.part_spec ?? "",
       position: l.part_position ?? "",
       warranty_until: l.warranty_until ?? "",
+      category: l.category ?? "",
     })),
   };
 }
@@ -123,6 +126,7 @@ export function parseServiceForm(
     if (r.position !== "" && !positionsFor(vehicleType).includes(r.position)) {
       errors[key("position")] = `${label}: choose a position from the list.`;
     }
+    if (r.category !== "" && !isCategory(r.category)) errors[key("category")] = `${label}: choose a category from the list.`;
     lines.push({
       description,
       cost_sen: cost,
@@ -131,6 +135,7 @@ export function parseServiceForm(
       part_spec: formatPartSpec(r.spec) || null,
       part_position: r.position || null,
       warranty_until: warranty,
+      category: isCategory(r.category) ? r.category : null,
     });
   });
   if (lines.length > MAX_LINES) errors.lines = `A service can have at most ${MAX_LINES} lines.`;

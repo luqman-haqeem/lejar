@@ -314,7 +314,7 @@ The booklet is flat. Depth is told by material, not by shadow: the navy cover si
 
 ## Shapes
 
-Corners are small and printed: 4px (`corner`) on buttons, inputs, notices, covers, ruled pages and the receipt image. A cover over a page rounds only its top; the page rounds only its bottom, so the pair reads as one booklet. Plates are tighter (0.2rem) black badges. The visit stamp is the one softer, hand-made shape: a 0.55rem radius, a 2px violet border with a 1px inner rule inset 6px (a double-ruled stamp frame), and a slight tilt that varies by position (-1.6deg, 1.3deg, 0.7deg, -0.9deg across each four). The Scan disc is a circle. The line-item tag is a small pill.
+Corners are small and printed: 4px (`corner`) on buttons, inputs, notices, covers, ruled pages and the receipt image. A cover over a page rounds only its top; the page rounds only its bottom, so the pair reads as one booklet. Plates are tighter (0.2rem) black badges. The visit stamp is the one softer, hand-made shape: a 0.55rem radius, a 2px violet border with a 1px inner rule inset 6px (a double-ruled stamp frame), and a slight tilt that varies by position (-1.6deg, 1.3deg, 0.7deg, -0.9deg across each four). The Scan disc is a circle. The line-item tag is a small pill: violet-tint for the reminder a line resets, outlined in a ruled hairline with muted text for its Category (which never drives a reminder).
 
 Borders carry the form language: 1px hairlines between rows, 2px ink rules heading blocks, 1.5px ink on secondary buttons and segmented controls, 1.5px field line on inputs and common-model picks, 2px dashed violet on the receipt capture face.
 
