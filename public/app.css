@@ -345,7 +345,11 @@ a.due-when { color: var(--violet-text); font-weight: 600; min-height: 2.75rem; }
 .field-error { display: block; margin-top: 0.3rem; font-size: 0.9rem; color: var(--danger); font-weight: 600; }
 .field.unread input, .field.unread select { border-color: var(--soon); background: var(--soon-bg); }
 .field.unread > span:first-child::after { content: " · couldn't read"; color: var(--soon); }
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.75rem; }
+.pair > * { min-width: 0; }
+/* iOS Safari gives date inputs an intrinsic min width and centred text; without this they overflow a half-width column. */
+.field input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; display: block; }
+.field input[type=date]::-webkit-date-and-time-value { text-align: left; }
 .type-choice { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-bottom: 0.75rem; border-radius: var(--radius); }
 .type-choice label { display: flex; align-items: center; gap: 0.5rem; min-height: 2.75rem; font-weight: 600; }
 .type-choice .field-error { flex-basis: 100%; margin-top: 0; }
