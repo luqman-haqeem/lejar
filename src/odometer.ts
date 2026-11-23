@@ -1,4 +1,4 @@
-import { findOdometerConflict } from "./db";
+import { findOdometerConflict, listReadings, type Reading } from "./db";
 import { fmtDate } from "./lib/dates";
 import { fmtKm } from "./lib/km";
 
@@ -16,4 +16,18 @@ export async function checkOdometer(
 ): Promise<string | null> {
   const conflict = await findOdometerConflict(db, userId, vehicleId, date, km, excludeServiceId);
   return conflict && `Odometer ${fmtKm(km)} conflicts with ${fmtDate(conflict.date)} reading of ${fmtKm(conflict.km)}`;
+}
+
+/**
+ * The vehicle's Odometer readings the hint on the service form is built from: all of them, less the
+ * edited Service's own (the same readings the conflict check compares against).
+ */
+export async function hintReadings(
+  db: D1Database,
+  userId: number,
+  vehicleId: number,
+  excludeServiceId: number | null = null,
+): Promise<Reading[]> {
+  const readings = await listReadings(db, userId, vehicleId);
+  return readings.filter((r) => excludeServiceId === null || r.service_id !== excludeServiceId);
 }

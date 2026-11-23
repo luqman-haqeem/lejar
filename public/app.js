@@ -269,3 +269,24 @@ document.addEventListener("click", (e) => {
   d.setUTCDate(Math.min(from.getUTCDate(), lastDay));
   until.value = d.toISOString().slice(0, 10);
 });
+
+// Service form: the Odometer hint follows the Date field. The server precomputes the text for every
+// date range (data-odometer-hints, see src/lib/odometer-hint.ts); this only finds the one for the date.
+// An empty date counts as after every reading.
+for (const hint of document.querySelectorAll("[data-odometer-hints]")) {
+  const date = hint.closest("form")?.elements.namedItem("date");
+  if (!(date instanceof HTMLInputElement)) continue;
+  const { before, dates } = JSON.parse(hint.dataset.odometerHints);
+  const textFor = (d) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return dates.at(-1)[2];
+    let text = before;
+    for (const [on, sameDay, after] of dates) {
+      if (on === d) return sameDay;
+      if (on < d) text = after;
+    }
+    return text;
+  };
+  const update = () => (hint.textContent = textFor(date.value));
+  date.addEventListener("input", update);
+  date.addEventListener("change", update);
+}

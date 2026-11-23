@@ -10,6 +10,7 @@ import { blankServiceForm, scanFormValues } from "./service-form";
 import { PhotoTooLarge } from "./views/PhotoTooLarge";
 import { SCAN_LIMIT_REACHED, ScanPage } from "./views/ScanPage";
 import { ServiceForm } from "./views/ServiceForm";
+import { hintReadings } from "./odometer";
 
 
 /** The caps from config (wrangler.jsonc vars). A malformed value is logged and the safe default used. */
@@ -91,6 +92,7 @@ export function scanRoutes(aiFetch: typeof fetch = fetch) {
         receiptKey={key}
         unread={form.unread}
         notice={result ? SCAN_READ : SCAN_FAILED}
+        readings={await hintReadings(c.env.DB, userId, vehicle.id)}
       />,
     );
   });
