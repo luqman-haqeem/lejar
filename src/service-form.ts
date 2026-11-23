@@ -1,7 +1,7 @@
 import type { LineInput, ServiceItem, ServiceInput, ServiceWithLines } from "./db";
 import { type Body, type FormErrors, isBlankRow, type Parsed, parseCount, readFields, readRows, toField } from "./form";
 import { parseDateInput } from "./lib/dates";
-import { isCategory, itemCategory, suggestCategory } from "./lib/categories";
+import { categoryNameProblem, isCategory, itemCategory, NEW_CATEGORY, suggestCategory } from "./lib/categories";
 import { formatPartSpec, positionsFor } from "./lib/parts";
 import type { VehicleType } from "./lib/templates";
 import { suggestItem } from "./lib/matchItems";
@@ -11,7 +11,8 @@ import type { ScanResult } from "./openrouter";
 // The service form posts the visit's fields by name, and its lines as "line.<n>.<field>".
 
 export const SERVICE_FIELDS = ["date", "odometer_km", "workshop", "total", "notes"] as const;
-export const LINE_FIELDS = ["description", "cost", "item", "brand", "spec", "position", "warranty_until", "category"] as const;
+// "new_category" is the name typed after choosing "New category…" as the line's category.
+export const LINE_FIELDS = ["description", "cost", "item", "brand", "spec", "position", "warranty_until", "category", "new_category"] as const;
 export const MAX_LINES = 50;
 
 export type ServiceValues = Record<(typeof SERVICE_FIELDS)[number], string>;
@@ -66,7 +67,9 @@ export function scanFormValues(
       position: l.part?.position && positionsFor(vehicleType).includes(l.part.position) ? l.part.position : "",
       warranty_until: l.part?.warranty_until ?? "",
       // The suggested reminder's category, else keywords; the owner reviews it before saving.
+      // Only built-in categories are suggested, never the owner's own.
       category: (item && itemCategory(item.name)) ?? suggestCategory(l.description) ?? "",
+      new_category: "",
     };
   });
   return { values: { service, lines }, unread };
@@ -93,6 +96,7 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
       position: l.part_position ?? "",
       warranty_until: l.warranty_until ?? "",
       category: l.category ?? "",
+      new_category: "",
     })),
   };
 }
@@ -101,12 +105,15 @@ export function serviceFormValuesOf(s: ServiceWithLines): ServiceFormValues {
  * Blank line rows are dropped. Callers 404 on item ids that aren't the vehicle's. A line tagged with a
  * schedule item but no description takes the item's
  * name. A blank total becomes the sum of the line costs. Any past date is fine; future ones aren't.
+ * A line's category is a built-in one, one of `ownCategories`, or a new one named on the line; lines
+ * naming the same new one (ignoring case) share it.
  */
 export function parseServiceForm(
   { service: v, lines: rows }: ServiceFormValues,
   items: ServiceItem[],
   today: string,
   vehicleType: VehicleType,
+  ownCategories: readonly string[],
 ): Parsed<Omit<ServiceInput, "receipt_key">> {
   const errors: FormErrors = {};
 
@@ -120,6 +127,8 @@ export function parseServiceForm(
   else if (km === undefined) errors.odometer_km = "The odometer reading must be a whole number of km.";
 
   const lines: LineInput[] = [];
+  // New categories named so far, by lowercased name.
+  const newCategories = new Map<string, string>();
   rows.forEach((r, n) => {
     if (isBlankRow(r)) return;
     const key = (f: string) => `line.${n}.${f}`;
@@ -135,8 +144,17 @@ export function parseServiceForm(
     if (r.position !== "" && !positionsFor(vehicleType).includes(r.position)) {
       errors[key("position")] = `${label}: choose a position from the list.`;
     }
-    const category = isCategory(r.category) ? r.category : null;
-    if (r.category !== "" && !category) errors[key("category")] = `${label}: choose a category from the list.`;
+    let category: string | null = null;
+    if (r.category === NEW_CATEGORY) {
+      const same = newCategories.get(r.new_category.toLowerCase());
+      const problem = same ? null : categoryNameProblem(r.new_category, ownCategories);
+      if (problem) errors[key("new_category")] = `${label}: ${problem}`;
+      else newCategories.set(r.new_category.toLowerCase(), (category = same ?? r.new_category));
+    } else if (isCategory(r.category) || ownCategories.includes(r.category)) {
+      category = r.category;
+    } else if (r.category !== "") {
+      errors[key("category")] = `${label}: choose a category from the list.`;
+    }
     lines.push({
       description,
       cost_sen: cost,
@@ -157,6 +175,14 @@ export function parseServiceForm(
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   return {
     ok: true,
-    value: { date: date!, odometer_km: km!, workshop: v.workshop, total_sen: total!, notes: v.notes, lines },
+    value: {
+      date: date!,
+      odometer_km: km!,
+      workshop: v.workshop,
+      total_sen: total!,
+      notes: v.notes,
+      lines,
+      new_categories: [...newCategories.values()],
+    },
   };
 }

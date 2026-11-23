@@ -276,6 +276,7 @@ document.addEventListener("click", (e) => {
 
 // Categories: picking a line's reminder fills its category with the item's (the server does the same
 // when none is chosen), and keeps following the reminder until the owner picks a category themselves.
+// Picking New category… moves to the name field app.css shows for it.
 document.addEventListener("change", (e) => {
   const select = e.target;
   if (!(select instanceof HTMLSelectElement)) return;
@@ -285,6 +286,7 @@ document.addEventListener("change", (e) => {
   if (!(category instanceof HTMLSelectElement)) return;
   if (m[2] === "category") {
     delete category.dataset.auto;
+    if (category.value === "__new__") select.form.elements.namedItem(`line.${m[1]}.new_category`)?.focus();
     return;
   }
   if (category.value !== "" && !category.dataset.auto) return;

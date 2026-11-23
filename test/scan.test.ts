@@ -295,4 +295,25 @@ describe("categories on a scanned receipt", () => {
       "",
     ]);
   });
+
+  it("never suggest the owner's own categories, though the form offers them", async () => {
+    const { app } = appReplying(
+      JSON.stringify({ date: "2026-09-02", odometer_km: 52310, workshop: null, total: 350, lines: [{ description: "Dashcam", cost: 350 }] }),
+    );
+    const user = await makeUser();
+    const car = await addCar(app, user);
+    const headers = await sessionHeaders(user);
+    const own = new URLSearchParams({
+      vehicle_id: String(car),
+      date: "2026-08-01",
+      odometer_km: "50000",
+      "line.0.description": "Dashcam fitting",
+      "line.0.category": "__new__",
+      "line.0.new_category": "Dashcam",
+    });
+    expect((await app.request("/services", { method: "POST", headers, body: own }, env)).status).toBe(302);
+    const html = await (await scan(app, user, { vehicle: String(car), photo: photo() })).text();
+    expect(html).toContain('<option value="Dashcam">Dashcam</option>');
+    expect(selectedValue(html, "line.0.category")).toBe("");
+  });
 });

@@ -1,4 +1,3 @@
-import type { Category } from "./lib/categories";
 import { TEMPLATES, type VehicleType } from "./lib/templates";
 
 // Vehicle functions take userId and filter by vehicles.user_id. Item functions take a vehicleId the
@@ -202,7 +201,8 @@ export interface ServiceLine {
   part_spec: string | null;
   part_position: string | null;
   warranty_until: string | null;
-    category: Category | null;
+  /** A built-in category or one of the owner's own, by name. */
+  category: string | null;
 }
 
 export type ServiceWithLines = Service & { lines: ServiceLine[] };
@@ -220,6 +220,8 @@ export type LineInput = Pick<
 >;
 export type ServiceInput = Pick<Service, "date" | "odometer_km" | "workshop" | "total_sen" | "notes" | "receipt_key"> & {
   lines: LineInput[];
+  /** Own categories typed on the lines' pickers, created along with the service. */
+  new_categories: string[];
 };
 
 export interface Reading {
@@ -260,8 +262,8 @@ function insertLines(db: D1Database, serviceId: number | null, vehicleId: number
 }
 
 /**
- * Writes the service, its lines and its odometer reading in one batch. Returns the new id, or null
- * (writing nothing) if the vehicle isn't the user's.
+ * Writes the service, its lines, its odometer reading and any new own categories in one batch.
+ * Returns the new id, or null (writing nothing) if the vehicle isn't the user's.
  */
 export async function createService(
   db: D1Database,
@@ -284,6 +286,7 @@ export async function createService(
          VALUES (?, ?, ?, 'service', ${NEW_SERVICE_ID})`,
       )
       .bind(vehicleId, s.date, s.odometer_km, vehicleId),
+    ...insertOwnCategories(db, userId, s.new_categories),
   ]);
   return inserted.results[0].id;
 }
@@ -310,6 +313,7 @@ export async function updateService(db: D1Database, userId: number, id: number, 
   const current = await getService(db, userId, id);
   if (!current) return false;
   await db.batch([
+    ...insertOwnCategories(db, userId, s.new_categories),
     db
       .prepare(
         "UPDATE services SET date = ?, odometer_km = ?, workshop = ?, total_sen = ?, notes = ?, receipt_key = ? WHERE id = ?",
@@ -351,14 +355,14 @@ export async function listServices(db: D1Database, userId: number, vehicleId: nu
 export type CategoryLine = ServiceLine & Pick<Service, "date" | "odometer_km" | "workshop">;
 
 /** The categories the vehicle's lines use, in no particular order. Empty if the vehicle isn't the user's. */
-export async function usedCategories(db: D1Database, userId: number, vehicleId: number): Promise<Category[]> {
+export async function usedCategories(db: D1Database, userId: number, vehicleId: number): Promise<string[]> {
   const { results } = await db
     .prepare(
       `SELECT DISTINCT l.category FROM service_lines l JOIN services s ON s.id = l.service_id
        WHERE s.${OWNED_VEHICLE} AND l.category IS NOT NULL`,
     )
     .bind(vehicleId, userId)
-    .all<{ category: Category }>();
+    .all<{ category: string }>();
   return results.map((r) => r.category);
 }
 
@@ -367,7 +371,7 @@ export async function listCategoryLines(
   db: D1Database,
   userId: number,
   vehicleId: number,
-  category: Category,
+  category: string,
 ): Promise<CategoryLine[]> {
   const { results } = await db
     .prepare(
@@ -378,6 +382,74 @@ export async function listCategoryLines(
     .bind(vehicleId, userId, category)
     .all<CategoryLine>();
   return results;
+}
+
+// ---- Own categories ----
+
+export interface OwnCategory {
+  id: number;
+  name: string;
+  /** How many of the owner's lines use it, on any of their vehicles, archived or not. */
+  lines: number;
+}
+
+/** Filters service_lines to those on any of the user's vehicles. Binds (userId). */
+const USER_LINES = "service_id IN (SELECT s.id FROM services s JOIN vehicles v ON v.id = s.vehicle_id WHERE v.user_id = ?)";
+
+/** Creates the user's own categories that don't exist yet (a name differing only in case exists). */
+function insertOwnCategories(db: D1Database, userId: number, names: string[]) {
+  const stmt = db.prepare("INSERT OR IGNORE INTO categories (user_id, name, created_at) VALUES (?, ?, ?)");
+  return names.map((name) => stmt.bind(userId, name, new Date().toISOString()));
+}
+
+/** The user's own categories by name, with how many lines use each. */
+export async function listOwnCategories(db: D1Database, userId: number): Promise<OwnCategory[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT c.id, c.name, (SELECT COUNT(*) FROM service_lines WHERE category = c.name AND ${USER_LINES}) AS lines
+       FROM categories c WHERE c.user_id = ? ORDER BY c.name COLLATE NOCASE, c.id`,
+    )
+    .bind(userId, userId)
+    .all<OwnCategory>();
+  return results;
+}
+
+/** The names of the user's own categories, in the order they're offered after the built-in ones. */
+export async function listOwnCategoryNames(db: D1Database, userId: number): Promise<string[]> {
+  const { results } = await db
+    .prepare("SELECT name FROM categories WHERE user_id = ? ORDER BY name COLLATE NOCASE, id")
+    .bind(userId)
+    .all<{ name: string }>();
+  return results.map((r) => r.name);
+}
+
+/**
+ * Renames the user's own category and every one of their lines that uses it. The caller checks the
+ * name. Returns false if the category isn't the user's.
+ */
+export async function renameOwnCategory(db: D1Database, userId: number, id: number, name: string): Promise<boolean> {
+  const current = await db
+    .prepare("SELECT name FROM categories WHERE id = ? AND user_id = ?")
+    .bind(id, userId)
+    .first<{ name: string }>();
+  if (!current) return false;
+  await db.batch([
+    db.prepare("UPDATE categories SET name = ? WHERE id = ?").bind(name, id),
+    db.prepare(`UPDATE service_lines SET category = ? WHERE category = ? AND ${USER_LINES}`).bind(name, current.name, userId),
+  ]);
+  return true;
+}
+
+/** Deletes the user's own category if no line uses it. Returns whether it was deleted. */
+export async function deleteOwnCategory(db: D1Database, userId: number, id: number): Promise<boolean> {
+  const { meta } = await db
+    .prepare(
+      `DELETE FROM categories WHERE id = ? AND user_id = ?
+       AND NOT EXISTS (SELECT 1 FROM service_lines WHERE category = categories.name AND ${USER_LINES})`,
+    )
+    .bind(id, userId, userId)
+    .run();
+  return meta.changes > 0;
 }
 
 export type YearTotal = { year: string; total_sen: number };

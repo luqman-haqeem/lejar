@@ -16,7 +16,7 @@ async function addCar(userId: number): Promise<number> {
 const visit = { date: "2026-10-02", odometer_km: "84210", workshop: "Ah Seng", total: "" };
 
 describe("a category on a service line", () => {
-  it("is an optional choice from the built-in list on each line, beside Resets reminder", async () => {
+  it("is an optional choice from the built-in list (or a new one) on each line, beside Resets reminder", async () => {
     const user = await makeUser();
     const car = await addCar(user);
     const html = await (await get(`/services/new?vehicle=${car}`, user)).text();
@@ -25,6 +25,7 @@ describe("a category on a service line", () => {
     expect([...select!.matchAll(/<option value="([^"]*)"[^>]*>([^<]*)</g)].map((m) => [m[1], m[2]])).toEqual([
       ["", "No category"],
       ...["Engine", "Filters", "Brakes", "Tyres", "Battery", "Wipers", "Suspension", "Electrical", "Body", "Other"].map((c) => [c, c]),
+      ["__new__", "New category…"],
     ]);
     expect(html).toMatch(/<span>Category<\/span>[\s\S]*?line\.0\.category[\s\S]*?<span>Resets reminder<\/span>/);
   });

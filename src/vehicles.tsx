@@ -11,6 +11,7 @@ import {
   listArchivedVehicles,
   listItems,
   listCategoryLines,
+  listOwnCategoryNames,
   listServices,
   setArchived,
   setVehiclePhoto,
@@ -48,13 +49,15 @@ async function history(
   category: string | null = null,
 ) {
   const userId = c.get("userId");
-  const [services, totals, { items, lastDone, readings }, used] = await Promise.all([
+  const [services, totals, { items, lastDone, readings }, used, own] = await Promise.all([
     listServices(c.env.DB, userId, vehicle.id),
     yearTotals(c.env.DB, userId, vehicle.id),
     vehicleDueData(c.env.DB, userId, vehicle.id),
     usedCategories(c.env.DB, userId, vehicle.id),
+    listOwnCategoryNames(c.env.DB, userId),
   ]);
-  const categories = CATEGORIES.filter((cat) => used.includes(cat));
+  // Built-in categories first, then the owner's own, as on a line's picker.
+  const categories = [...CATEGORIES, ...own].filter((cat) => used.includes(cat));
   // A category no line uses can't be chosen: the page shows the whole history instead.
   const chosen = categories.find((cat) => cat === category) ?? null;
   const categoryLines = chosen ? await listCategoryLines(c.env.DB, userId, vehicle.id, chosen) : [];
@@ -72,7 +75,7 @@ async function history(
       stamped={stamped}
       added={added}
       categories={categories}
-      filter={chosen && { category: chosen, lines: categoryLines }}
+      filter={chosen === null ? null : { category: chosen, lines: categoryLines }}
       today={c.get("today")}
     />
   );

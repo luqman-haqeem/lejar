@@ -3,7 +3,6 @@ import type { FormErrors } from "../form";
 import { fmtDate } from "../lib/dates";
 import { fmtKm } from "../lib/km";
 import { fmtOptionalRM, fmtRM } from "../lib/money";
-import type { Category } from "../lib/categories";
 import { hasPartDetails, partSummary } from "../lib/parts";
 import { ErrorSummary, Field } from "./fields";
 import { Cover, ScheduleList, type VehicleDue } from "./Dashboard";
@@ -40,9 +39,9 @@ export function VehicleHistory({
   /** Just added: confirm it, since this is where Add vehicle lands. */
   added?: boolean;
   /** The categories this vehicle's lines use, to filter the history by. */
-  categories: readonly Category[];
+  categories: readonly string[];
   /** The chosen category and its lines, newest first; null shows the whole history. */
-  filter: { category: Category; lines: CategoryLine[] } | null;
+  filter: { category: string; lines: CategoryLine[] } | null;
   today: string;
 }) {
   const justStamped = stamped !== null && services.some((s) => s.id === stamped);
@@ -197,8 +196,8 @@ function CategoryFilter({
   chosen,
 }: {
   vehicleId: number;
-  categories: readonly Category[];
-  chosen: Category | null;
+  categories: readonly string[];
+  chosen: string | null;
 }) {
   const link = (href: string, label: string, current: boolean) => (
     <a href={href} aria-current={current ? "page" : undefined}>

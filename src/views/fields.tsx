@@ -45,6 +45,7 @@ export type FieldProps = {
   required?: boolean;
   autocapitalize?: "characters";
   max?: string;
+  maxlength?: number;
   /** Id of a <datalist> of suggestions. */
   list?: string;
   autocomplete?: "off";
