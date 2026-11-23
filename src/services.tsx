@@ -15,7 +15,7 @@ import {
   type Vehicle,
 } from "./db";
 import type { Body } from "./form";
-import { checkOdometer } from "./odometer";
+import { checkOdometer, hintReadings } from "./odometer";
 import { inBackground } from "./background";
 import {
   cleanupOrphans,
@@ -100,7 +100,8 @@ async function submitService(
 
   const photo = await resolvePhoto(c, body, currentKey);
   if (photo.kind === "not-found") return notFound(c);
-  const render = (errors: Record<string, string>, status: 400 | 413 | 415 | 422) =>
+  const editing = mode.kind === "edit" ? mode.serviceId : null;
+  const render = async (errors: Record<string, string>, status: 400 | 413 | 415 | 422) =>
     c.html(
       <ServiceForm
         vehicle={vehicle}
@@ -110,6 +111,7 @@ async function submitService(
         errors={errors}
         receiptKey={photo.key}
         today={c.get("today")}
+        readings={await hintReadings(c.env.DB, c.get("userId"), vehicle.id, editing)}
       />,
       status,
     );
@@ -120,7 +122,6 @@ async function submitService(
   }
   if (!parsed.ok) return render(parsed.errors, 400);
   const { date, odometer_km } = parsed.value;
-  const editing = mode.kind === "edit" ? mode.serviceId : null;
   const conflict = await checkOdometer(c.env.DB, c.get("userId"), vehicle.id, date, odometer_km, editing);
   if (conflict) return render({ odometer_km: conflict }, 422);
   return save({ ...parsed.value, receipt_key: photo.key });
@@ -144,6 +145,7 @@ export function serviceRoutes() {
         values={blankServiceForm(c.req.query("workshop") ?? "")}
         mode={{ kind: "new" }}
         saved={c.req.query("saved") === "1"}
+        readings={await hintReadings(c.env.DB, c.get("userId"), vehicle.id)}
       />,
     );
   });
@@ -192,6 +194,7 @@ export function serviceRoutes() {
         values={serviceFormValuesOf(owned.service)}
         mode={{ kind: "edit", serviceId: owned.service.id }}
         receiptKey={owned.service.receipt_key}
+        readings={await hintReadings(c.env.DB, c.get("userId"), owned.vehicle.id, owned.service.id)}
       />,
     );
   });

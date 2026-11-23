@@ -426,3 +426,124 @@ describe("when each schedule item was last done", () => {
     expect((await lastDoneByItem(env.DB, await makeUser(), car)).size).toBe(0);
   });
 });
+
+describe("the odometer hint on the service form", () => {
+  /** The hint text under the Odometer field, or null when there is none. */
+  const hintIn = (html: string) => html.match(/<p class="field-hint" id="odometer-hint"[^>]*>([^<]*)<\/p>/)?.[1] ?? null;
+  const newForm = async (user: number, car: number) => (await get(`/services/new?vehicle=${car}`, user)).text();
+
+  it("shows the latest reading and its date on a new form", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    await logged(user, car, { date: "2026-01-01", odometer_km: "40000", total: "1" });
+    await logged(user, car, { date: "2026-06-01", odometer_km: "52000", total: "1" });
+    expect(hintIn(await newForm(user, car))).toBe("Last: 52,000 km · 01/06/2026");
+  });
+
+  /** A vehicle with readings on 1 Jan (40,000), 1 Mar (45,200 manual) and 1 Jun 2026 (52,000). */
+  async function carWithReadings(user: number) {
+    const car = await addCar(user);
+    await logged(user, car, { date: "2026-01-01", odometer_km: "40000", total: "1" });
+    await post(`/vehicles/${car}/readings`, user, { date: "2026-03-01", km: "45200" });
+    await logged(user, car, { date: "2026-06-01", odometer_km: "52000", total: "1" });
+    return car;
+  }
+  const editForm = async (user: number, car: number, date: string, km: string) => {
+    await logged(user, car, { date, odometer_km: km, total: "1" });
+    const service = (await listServices(env.DB, user, car)).find((s) => s.date === date && s.odometer_km === Number(km))!;
+    return (await get(`/services/${service.id}/edit`, user)).text();
+  };
+
+  it("shows the readings either side of an edited Service's date", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    expect(hintIn(await editForm(user, car, "2026-04-15", "48000"))).toBe("Between 45,200 and 52,000 km");
+  });
+
+  it("shows the upper limit for an edited Service older than every other reading", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    expect(hintIn(await editForm(user, car, "2025-06-01", "30000"))).toBe("Under 40,000 km");
+  });
+
+  it("shows a manual reading on the same day as the edited Service, the highest if several", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    await post(`/vehicles/${car}/readings`, user, { date: "2026-03-01", km: "45500" });
+    expect(hintIn(await editForm(user, car, "2026-03-01", "45300"))).toBe("Same day: 45,500 km");
+  });
+
+  it("leaves out the edited Service's own reading", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const html = await editForm(user, car, "2026-03-01", "45000");
+    expect(html).not.toContain("odometer-hint");
+  });
+
+  it("re-shows the hint for the posted date after a failed save", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    const res = await logService(user, car, { date: "2025-12-01", odometer_km: "41000", total: "1" });
+    expect(res.status).toBe(422);
+    expect(hintIn(await res.text())).toBe("Under 40,000 km");
+  });
+
+  it("uses only this vehicle's readings", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    const other = await addCar(user, "Axia");
+    await post(`/vehicles/${other}/readings`, user, { date: "2026-07-01", km: "90000" });
+    expect(hintIn(await newForm(user, car))).toBe("Last: 52,000 km · 01/06/2026");
+    expect(hintIn(await newForm(user, other))).toBe("Last: 90,000 km · 01/07/2026");
+  });
+
+  it("is plain text linked to the Odometer field, never an estimate or a copy button", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    const html = await newForm(user, car);
+    expect(html).toMatch(/<input name="odometer_km" id="f-odometer_km"[^>]*aria-describedby="odometer-hint"/);
+    expect(html).not.toMatch(/<button[^>]*odometer|estimat/i);
+  });
+
+  it("carries the hint for every date range, agreeing with the rendered wording", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    const html = await editForm(user, car, "2026-04-15", "48000");
+    const json = html.match(/data-odometer-hints="([^"]*)"/)![1].replaceAll("&quot;", '"').replaceAll("&amp;", "&");
+    const lookup = JSON.parse(json) as { before: string; dates: [string, string, string][] };
+    // The edited Service's own reading (15 Apr) is left out of the lookup too.
+    expect(lookup).toEqual({
+      before: "Under 40,000 km",
+      dates: [
+        ["2026-01-01", "Same day: 40,000 km", "Between 40,000 and 45,200 km"],
+        ["2026-03-01", "Same day: 45,200 km", "Between 45,200 and 52,000 km"],
+        ["2026-06-01", "Same day: 52,000 km", "Last: 52,000 km · 01/06/2026"],
+      ],
+    });
+    expect(lookup.dates[1][2]).toBe(hintIn(html));
+  });
+
+  it("matches the scanned date on a scanned receipt's form", async () => {
+    const user = await makeUser();
+    const car = await carWithReadings(user);
+    const aiFetch = (async () =>
+      Response.json({ choices: [{ message: { content: JSON.stringify({ date: "2026-02-10", odometer_km: 42000, total: 1, lines: [] }) } }] })) as unknown as typeof fetch;
+    const scanApp = createApp({ now: () => new Date("2026-11-18T02:00:00Z"), aiFetch });
+    const form = new FormData();
+    form.append("vehicle", String(car));
+    form.append("photo", new File([new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 9, 0xff, 0xd9])], "r.jpg", { type: "image/jpeg" }));
+    const encoded = new Request("https://lejar.test", { method: "POST", body: form });
+    const body = await encoded.arrayBuffer();
+    const headers = { ...(await sessionHeaders(user)), "content-type": encoded.headers.get("content-type")!, "content-length": String(body.byteLength) };
+    const res = await scanApp.request("/scan", { method: "POST", headers, body }, env);
+    expect(res.status).toBe(200);
+    expect(hintIn(await res.text())).toBe("Between 40,000 and 45,200 km");
+  });
+
+  it("shows no hint for a vehicle with no readings", async () => {
+    const user = await makeUser();
+    const car = await addCar(user);
+    const html = await newForm(user, car);
+    expect(html).not.toContain("odometer-hint");
+  });
+});
