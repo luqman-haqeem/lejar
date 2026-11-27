@@ -7,12 +7,24 @@ A vehicle owner's own service book: the record of what was done to a car or moto
 ### Service record
 
 **Service**:
-One workshop visit on a date, with a total paid, and optionally an Odometer reading and its receipt photo. A Service whose km the owner doesn't know has no Odometer reading; that's an honest blank, not a missing field.
+One workshop visit on a date, with a total paid, and optionally an Odometer reading, its receipt photo and Receipt number. A Service whose km the owner doesn't know has no Odometer reading; that's an honest blank, not a missing field.
 _Avoid_: Visit, job, invoice
 
 **Odometer reading**:
 The km shown on a vehicle's odometer on a date, recorded either with a Service or on its own.
 _Avoid_: Mileage, odo
+
+**Receipt number**:
+The number a workshop prints or writes on its receipt for a Service, when it gives one. Optional: many receipts have none.
+_Avoid_: Invoice number, bill no., ref
+
+**Likely duplicate**:
+A Service on the same vehicle as another with the same Receipt number, or with the same date and total paid. The owner is warned but may keep both, since two real Services can match.
+_Avoid_: Duplicate, double entry
+
+**Receipt scan**:
+The app reading a receipt photo to prefill a new Service. Nothing is recorded until the owner saves that Service.
+_Avoid_: OCR, import
 
 **Service line**:
 One item on a Service, such as a part fitted or a labour charge, with an optional cost.
